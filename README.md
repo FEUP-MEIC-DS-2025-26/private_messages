@@ -1,8 +1,8 @@
 # Prototype of team 51
 
-> Faculty of Engineering at University of Porto
-> Master's Degree in Informatics and Computing Engineering
-> Large Scale Software Development (M.EIC002) 2025/2026
+> Faculty of Engineering at University of Porto  
+> Master's Degree in Informatics and Computing Engineering  
+> Large Scale Software Development (M.EIC002) 2025/2026  
 >
 > - Ademar Manuel Teixeira de Aguiar (Regent of the curricular unit)
 > - Filipe Figueiredo Correia (Theoretical-Practical classes)
