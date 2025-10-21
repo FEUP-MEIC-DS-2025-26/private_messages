@@ -17,4 +17,4 @@ Feel free to create a pull request from a fork or a branch to main.
 To notify us about the PR, place the Scrum Master as a reviewer of the PR.
 
 ## Notify about a security vulnerability
-Check (SECURITY.md)[./SECURITY.md].
+Check [SECURITY.md](./SECURITY.md).
