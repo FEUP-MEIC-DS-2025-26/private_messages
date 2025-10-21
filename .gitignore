@@ -1,0 +1,12 @@
+# Rust
+/target
+
+# Nix
+/.direnv
+
+# NextJS
+.next
+
+# IDEs
+/.vscode
+/.zed
