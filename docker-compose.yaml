@@ -1,0 +1,7 @@
+services:
+  web-server:
+    container_name: "ds_2025_g51_private_messages"
+    build:
+      context: .
+    ports:
+      - "8080:8080"
