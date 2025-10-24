@@ -4,17 +4,24 @@ COPY frontend/next.config.ts frontend/package.json frontend/package-lock.json fr
 COPY frontend/app ./app
 COPY frontend/public ./public
 ENV NEXT_TELEMETRY_DISABLED="1"
-RUN npm install
-RUN npm run build
+RUN npm install && npm run build
 
-FROM rust:1.90-slim AS backend
+# Source: https://kerkour.com/rust-docker-from-scratch
+FROM rust:1.90-alpine AS backend
+RUN apk update && \
+    apk upgrade --no-cache && \
+    apk add --no-cache lld mold musl musl-dev libc-dev cmake clang clang-dev openssl file \
+    libressl-dev git make build-base bash curl wget zip gnupg coreutils gcc g++ zstd binutils ca-certificates upx
 WORKDIR /app
-COPY --from=frontend /app/frontend/out /app/frontend/out
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 ENV RUSTFLAGS="-C target-cpu=native"
 RUN cargo build --release
 
-EXPOSE 8080
+FROM scratch
+WORKDIR /app
+COPY --from=backend /app/target/release/ds-prototype /app/ds-prototype
+COPY --from=frontend /app/frontend/out /app/frontend/out
 
-CMD ["./target/release/ds-prototype"]
+EXPOSE 8080
+CMD ["./ds-prototype"]
