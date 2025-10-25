@@ -23,9 +23,7 @@ async fn run_backend_code() -> anyhow::Result<()> {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let local = tokio::task::LocalSet::new();
-    let ufc = local
-        .run_until(async { tokio::task::spawn_local(run_user_facing_code()) })
-        .await;
+    let ufc = local.run_until(async { tokio::task::spawn_local(run_user_facing_code()).await });
 
     let backend = tokio::task::spawn(run_backend_code());
 
