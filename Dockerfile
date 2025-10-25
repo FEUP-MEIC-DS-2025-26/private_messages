@@ -15,7 +15,7 @@ RUN apk update && \
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
-ENV RUSTFLAGS="-C target-cpu=native"
+ENV RUSTFLAGS="-C target-cpu=x86-64-v2"
 RUN cargo build --release
 
 FROM scratch
