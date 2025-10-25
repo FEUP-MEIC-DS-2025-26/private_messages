@@ -7,6 +7,9 @@
 # NextJS
 .next
 
+# Terraform
+/.terraform
+
 # IDEs
 /.vscode
 /.zed

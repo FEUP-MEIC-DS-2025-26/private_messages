@@ -55,6 +55,7 @@
         {
           default = pkgs.mkShell {
             packages = with pkgs; [
+              # Rust
               rustToolchain
               openssl
               pkg-config
@@ -64,12 +65,15 @@
               rust-analyzer
               watchexec
 
+              # NodeJS (NextJS)
               node2nix
               nodejs
               nodePackages.pnpm
               yarn
               
-              
+              # Deployment
+              google-cloud-sdk
+              opentofu
             ];
 
             env = {
