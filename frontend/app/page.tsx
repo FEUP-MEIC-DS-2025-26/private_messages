@@ -2,7 +2,7 @@ import UserMessagePreview from './components/UserMessagePreview';
 
 export default function Home() {
   return (
-    <main className="flex flex-col m-20 justify-center">
+    <>
       <UserMessagePreview
         name="John Doe"
         profilePictureURL="https://thispersondoesnotexist.com/"
@@ -24,6 +24,6 @@ export default function Home() {
         lastMessage="Boa tarde, as laranjas ainda estão à venda?"
         lastMessageDate="21/05/2026"
       />
-    </main>
+    </>
   );
 }
