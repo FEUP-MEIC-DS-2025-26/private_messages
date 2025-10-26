@@ -1,7 +1,7 @@
 use actix_files::Files;
 use actix_web::{App, HttpServer};
 
-mod grpc;
+mod database;
 mod pages;
 mod rest;
 
