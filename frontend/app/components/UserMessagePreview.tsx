@@ -13,8 +13,10 @@ export default function UserMessagePreview({
   unreadMessages,
   lastMessage,
 }: UserMessagePreviewProps) {
+  const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
+
   return (
-    <div className="flex items-center gap-3 w-full p-3 bg-[#107ab0] rounded-xl">
+    <div className="flex items-center gap-5 w-full px-4 py-6 border-b hover:bg-biloba-flower-500">
       <Image
         className="border-solid rounded-full"
         src={profilePictureURL}
@@ -22,10 +24,15 @@ export default function UserMessagePreview({
         width={56}
         height={56}
       />
-      <div>
+      <div className="flex-grow">
         <strong>{name}</strong>
         <p>{lastMessage}</p>
       </div>
+      {unreadMessages > 0 && (
+        <span className="inline-flex w-5 h-5 items-center justify-center text-xs bg-red-600 rounded-full">
+          {notificationText}
+        </span>
+      )}
     </div>
   );
 }
