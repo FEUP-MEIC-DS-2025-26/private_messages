@@ -1,17 +1,27 @@
 import Image from 'next/image';
 
 interface UserMessagePreviewProps {
-  name: string /** The display name of the user. */;
-  profilePictureURL: string /** The URL of the user's profile picture. */;
-  unreadMessages: number /** The number of unread messages from the user. */;
-  lastMessage: string /** The last message sent by the user */;
+  /** The display name of the user. */
+  name: string;
+  /** The URL of the user's profile picture. */
+  profilePictureURL: string;
+  /** The number of unread messages from the user. */
+  unreadMessages: number;
+  /** The last message sent by the user */
+  lastMessage: string;
+  /** The date when the last message was sent. */
+  lastMessageDate: string;
 }
 
+/**
+ * A preview of the messages chat with a given user.
+ */
 export default function UserMessagePreview({
   name,
   profilePictureURL,
   unreadMessages,
   lastMessage,
+  lastMessageDate,
 }: UserMessagePreviewProps) {
   const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
 
@@ -31,8 +41,9 @@ export default function UserMessagePreview({
           </span>
         )}
       </div>
-      <div className="flex-grow">
+      <div>
         <strong>{name}</strong>
+        <span className="text-xs ml-3">{lastMessageDate}</span>
         <p>{lastMessage}</p>
       </div>
     </div>
