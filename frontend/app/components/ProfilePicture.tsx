@@ -12,7 +12,7 @@ interface ProfilePictureProps {
 export default function ProfilePicture({
   URL,
   name,
-  size = 56,
+  size,
 }: ProfilePictureProps) {
   return (
     <Image
