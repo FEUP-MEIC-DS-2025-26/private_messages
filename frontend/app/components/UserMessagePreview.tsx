@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import ProfilePicture from './ProfilePicture';
 
 interface UserMessagePreviewProps {
   /** The display name of the user. */
@@ -28,13 +28,7 @@ export default function UserMessagePreview({
   return (
     <div className="flex items-center gap-5 w-full px-4 py-6 border-b hover:bg-biloba-flower-500">
       <div className="relative">
-        <Image
-          className="border-solid rounded-full"
-          src={profilePictureURL}
-          alt={`${name}'${name.endsWith('s') ? '' : 's'} profile picture`}
-          width={56}
-          height={56}
-        />
+        <ProfilePicture name={name} URL={profilePictureURL} size={56} />
         {unreadMessages > 0 && (
           <span className="inline-flex w-5 h-5 items-center justify-center text-xs bg-red-600 rounded-full absolute top-0 right-0">
             {notificationText}

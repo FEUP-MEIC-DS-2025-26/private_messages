@@ -1,4 +1,4 @@
-import UserMessage from '../components/UserMessage';
+import UserMessage from './components/UserMessage';
 
 export default function Chat() {
   return (
