@@ -145,19 +145,16 @@ mod test {
                 }
             }
 
-            let id = self
-                .db
-                .read()
-                .await
+            let mut querier = self.db.write().await;
+
+            let id = querier
                 .conversations
                 .keys()
                 .max_by_key(|x| x.0)
                 .map(|x| x.0 + 1)
                 .unwrap_or(0);
             let id = ConversationId(id);
-            self.db
-                .write()
-                .await
+            querier
                 .conversations
                 .insert(id.clone(), (*my_id, *their_id));
             Ok(id)
@@ -169,19 +166,16 @@ mod test {
             my_id: &Self::UserId,
             conversation: &Self::ConversationId,
         ) -> Result<Self::MessageId, Self::Error> {
-            let id = self
-                .db
-                .read()
-                .await
+            let mut querier = self.db.write().await;
+
+            let id = querier
                 .messages
                 .keys()
                 .max_by_key(|x| x.0)
                 .map(|x| x.0 + 1)
                 .unwrap_or(0);
             let id = MessageId(id);
-            self.db
-                .write()
-                .await
+            querier
                 .messages
                 .insert(id.clone(), (*my_id, *conversation, msg));
             Ok(id)
@@ -204,21 +198,16 @@ mod test {
                 return Ok(*id);
             }
 
-            let id = self
-                .db
-                .read()
-                .await
+            let mut querier = self.db.write().await;
+
+            let id = querier
                 .users
                 .keys()
                 .max_by_key(|x| x.0)
                 .map(|x| x.0 + 1)
                 .unwrap_or(0);
             let id = UserId(id);
-            self.db
-                .write()
-                .await
-                .users
-                .insert(id.clone(), profile.clone());
+            querier.users.insert(id.clone(), profile.clone());
             Ok(id)
         }
 
