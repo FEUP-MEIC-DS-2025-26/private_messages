@@ -1,3 +1,10 @@
+import Form from 'next/form';
+
+// icons
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+
+// assets
 import ProfilePicture from '../components/ProfilePicture';
 import UserMessage from './components/UserMessage';
 
@@ -19,7 +26,7 @@ export default function Chat() {
       </header>
 
       {/** Chat */}
-      <ul className="flex flex-col gap-3">
+      <ul className="flex-grow flex flex-col gap-3">
         <li>
           <UserMessage
             isFromUser={false}
@@ -33,6 +40,25 @@ export default function Chat() {
             content="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
           />
         </li>
+
+        {/* Text bar */}
+        <Form
+          action=""
+          className="sticky flex items-center gap-2 px-4 py-1 rounded-full border-1"
+        >
+          <input
+            className="flex-grow"
+            name="message"
+            type="text"
+            placeholder="Type your message here"
+          />
+          <button>
+            <FontAwesomeIcon
+              className="text-biloba-flower-500 cursor-pointer"
+              icon={faPaperPlane}
+            />
+          </button>
+        </Form>
       </ul>
     </>
   );
