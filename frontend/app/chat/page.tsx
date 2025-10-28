@@ -2,7 +2,7 @@ import Form from 'next/form';
 
 // icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 
 // assets
 import ProfilePicture from '../components/ProfilePicture';
@@ -17,6 +17,12 @@ export default function Chat() {
   return (
     <>
       <header className="flex items-center gap-5 mb-6 pl-4 pb-4 border-b">
+        <a
+          className="inline-flex items-center justify-center w-8 h-8 hover:bg-gray-600 hover:rounded-full transition-all"
+          href="/"
+        >
+          <FontAwesomeIcon icon={faArrowLeft} />
+        </a>
         <ProfilePicture
           name={mockUser.name}
           URL={mockUser.profilePictureURL}
@@ -74,7 +80,7 @@ export default function Chat() {
           type="text"
           placeholder="Type your message here"
         />
-        <button>
+        <button className="w-6 h-6 hover:bg-biloba-flower-800 hover:rounded-full transition-all">
           <FontAwesomeIcon
             className="text-biloba-flower-500 cursor-pointer"
             icon={faPaperPlane}

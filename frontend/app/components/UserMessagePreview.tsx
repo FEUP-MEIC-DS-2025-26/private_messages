@@ -26,7 +26,10 @@ export default function UserMessagePreview({
   const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
 
   return (
-    <div className="flex items-center gap-5 w-full px-4 py-6 border-b hover:bg-biloba-flower-500">
+    <a
+      className="flex items-center gap-5 w-full px-4 py-6 border-b hover:bg-biloba-flower-500 transition-colors"
+      href="/chat"
+    >
       <div className="relative">
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
         {unreadMessages > 0 && (
@@ -40,6 +43,6 @@ export default function UserMessagePreview({
         <span className="text-xs ml-3">{lastMessageDate}</span>
         <p>{lastMessage}</p>
       </div>
-    </div>
+    </a>
   );
 }
