@@ -26,7 +26,7 @@ export default function Chat() {
       </header>
 
       {/** Chat */}
-      <ul className="flex-grow flex flex-col gap-3 mb-6">
+      <ul className="grow overflow-scroll flex flex-col gap-3 px-3 mb-6">
         <li>
           <UserMessage
             isFromUser={false}
@@ -40,15 +40,36 @@ export default function Chat() {
             content="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
           />
         </li>
+
+        <li>
+          <UserMessage
+            isFromUser={true}
+            content="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+          />
+        </li>
+
+        <li>
+          <UserMessage
+            isFromUser={true}
+            content="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+          />
+        </li>
+
+        <li>
+          <UserMessage
+            isFromUser={false}
+            content="Boa tarde, as laranjas ainda estão à venda?"
+          />
+        </li>
       </ul>
 
       {/* Text bar */}
       <Form
         action=""
-        className="sticky flex items-center gap-2 px-4 py-1 rounded-full border-1"
+        className="sticky flex items-center gap-2 px-6 py-1 rounded-full border"
       >
         <input
-          className="flex-grow"
+          className="grow"
           name="message"
           type="text"
           placeholder="Type your message here"

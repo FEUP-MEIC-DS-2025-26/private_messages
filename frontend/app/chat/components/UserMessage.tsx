@@ -15,7 +15,7 @@ export default function UserMessage({ isFromUser, content }: UserMessageProps) {
 
   return (
     <div
-      className={`w-fit max-w-3/4 p-4 rounded-3xl text-justify ${extraStyles}`}
+      className={`w-fit max-w-3/4 p-3 rounded-3xl text-justify ${extraStyles}`}
     >
       {content}
     </div>
