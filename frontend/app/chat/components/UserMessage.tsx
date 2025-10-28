@@ -10,8 +10,8 @@ interface UserMessageProps {
  */
 export default function UserMessage({ isFromUser, content }: UserMessageProps) {
   const extraStyles = isFromUser
-    ? 'ml-auto rounded-br-none bg-biloba-flower-500'
-    : 'rounded-bl-none bg-zinc-500';
+    ? 'ml-auto rounded-br-sm bg-biloba-flower-500'
+    : 'rounded-bl-sm bg-zinc-500';
 
   return (
     <div
