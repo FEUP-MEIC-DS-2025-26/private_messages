@@ -72,19 +72,17 @@ export default function Chat() {
       {/* Text bar */}
       <Form
         action=""
-        className="sticky flex items-center gap-2 px-6 py-1 rounded-full border"
+        className="sticky flex items-center gap-2 px-6 py-1 rounded-full border-2 focus-within:border-biloba-flower-500 transition-all"
       >
         <input
-          className="grow"
+          className="grow focus:outline-none focus:caret-biloba-flower-500 focus:caret-2"
           name="message"
           type="text"
           placeholder="Type your message here"
+          required
         />
-        <button className="w-6 h-6 hover:bg-biloba-flower-800 hover:rounded-full transition-all">
-          <FontAwesomeIcon
-            className="text-biloba-flower-500 cursor-pointer"
-            icon={faPaperPlane}
-          />
+        <button className="w-6 h-6 cursor-pointer hover:text-biloba-flower-500 transition-color">
+          <FontAwesomeIcon icon={faPaperPlane} />
         </button>
       </Form>
     </>
