@@ -1,12 +1,13 @@
-import Form from 'next/form';
-
-// icons
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+'use client';
 
 // assets
 import ProfilePicture from '../components/ProfilePicture';
 import UserMessage from './components/UserMessage';
+import MessageInput from './components/MessageInput';
+
+// icons
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 const mockUser = {
   name: 'John Doe',
@@ -70,21 +71,7 @@ export default function Chat() {
       </ul>
 
       {/* Text bar */}
-      <Form
-        action=""
-        className="sticky flex items-center gap-2 px-6 py-1 rounded-full border-2 focus-within:border-biloba-flower-500 transition-all"
-      >
-        <input
-          className="grow focus:outline-none focus:caret-biloba-flower-500 focus:caret-2"
-          name="message"
-          type="text"
-          placeholder="Type your message here"
-          required
-        />
-        <button className="w-6 h-6 cursor-pointer hover:text-biloba-flower-500 transition-color">
-          <FontAwesomeIcon icon={faPaperPlane} />
-        </button>
-      </Form>
+      <MessageInput />
     </>
   );
 }
