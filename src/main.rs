@@ -1,13 +1,20 @@
 use actix_files::Files;
-use actix_web::{App, HttpServer};
+use actix_web::{App, HttpServer, web};
+
+use crate::database::mock::MockDb;
 
 mod database;
 mod pages;
 mod rest;
 
 async fn run_user_facing_code() -> anyhow::Result<()> {
-    HttpServer::new(|| {
-        App::new().service(Files::new("/", "frontend/out").index_file("index.html"))
+    let db = MockDb::default();
+    let wd = web::Data::new(db);
+
+    HttpServer::new(move || {
+        App::new()
+            .app_data(wd.clone())
+            .service(Files::new("/", "frontend/out").index_file("index.html"))
     })
     .bind(("0.0.0.0", 8080))?
     .run()
