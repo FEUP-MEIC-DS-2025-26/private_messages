@@ -2,14 +2,27 @@
 
 import Form from 'next/form';
 import EmojiPicker from 'emoji-picker-react';
-import { useState } from 'react';
+import { useRef } from 'react';
 
 // icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane, faSmile } from '@fortawesome/free-solid-svg-icons';
 
 export default function MessageInput() {
-  const [message, setMessage] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // a function for handling emoji clicks
+  const handleEmojiClick = (emoji: string) => {
+    const input: HTMLInputElement | null = inputRef.current;
+
+    // insert emoji at cursor position
+    input?.setRangeText(
+      emoji,
+      input.selectionStart ?? 0,
+      input.selectionEnd ?? 0,
+      'end',
+    );
+  };
 
   return (
     <Form
@@ -18,12 +31,11 @@ export default function MessageInput() {
     >
       {/** Input area */}
       <input
+        ref={inputRef}
         className="grow focus:outline-none focus:caret-biloba-flower-500 focus:caret-2"
         name="message"
         type="text"
         placeholder="Type your message here"
-        value={message}
-        onChange={(event) => setMessage(event.target.value)}
         required
       />
 
@@ -39,7 +51,7 @@ export default function MessageInput() {
 
       <div id="emoji-picker" popover="auto">
         <EmojiPicker
-          onEmojiClick={(emoji) => setMessage(message + emoji.emoji)}
+          onEmojiClick={(emojiData) => handleEmojiClick(emojiData.emoji)}
         />
       </div>
 
