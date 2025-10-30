@@ -71,6 +71,10 @@
               nodePackages.pnpm
               yarn
               
+              # SQLite
+              sqlite
+              sqlx-cli
+              
               # Deployment
               google-cloud-sdk
               opentofu

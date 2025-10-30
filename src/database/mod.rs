@@ -1,4 +1,4 @@
-use crate::database::mock::MessageId;
+pub mod sqlite;
 
 pub trait Database {
     type Error;
@@ -52,7 +52,7 @@ pub trait Database {
     async fn get_latest_message(
         &self,
         conversation: &Self::ConversationId
-    ) -> Result<Option<MessageId>, Self::Error>;
+    ) -> Result<Option<Self::MessageId>, Self::Error>;
 }
 
 /// Example implementation: Mock Database
@@ -60,18 +60,19 @@ pub mod mock {
     use anyhow::anyhow;
     use std::collections::HashMap;
     use tokio::sync::{RwLock, RwLockReadGuard};
-
-    use crate::database::Database;
-
+    
     #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub struct ConversationId(u64);
+    
     #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub struct UserId(u64);
+    
     #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub struct MessageId(u64);
-
+    
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub struct Message(String);
+    
     #[derive(Debug, Clone)]
     pub struct UserProfile {
         username: String,
@@ -291,6 +292,7 @@ pub mod mock {
 
     #[cfg(test)]
     mod test {
+        use crate::database::Database;
         use crate::database::mock::*;
 
         #[tokio::test]

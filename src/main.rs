@@ -1,14 +1,13 @@
 use actix_files::Files;
 use actix_web::{App, HttpServer, web};
-
-use crate::database::mock::MockDb;
+use crate::database::sqlite::SQLiteDB;
 
 mod database;
 mod pages;
 mod rest;
 
 async fn run_user_facing_code() -> anyhow::Result<()> {
-    let db = MockDb::default();
+    let db = SQLiteDB::new("sqlite:.db").await?;
     let wd = web::Data::new(db);
 
     HttpServer::new(move || {
