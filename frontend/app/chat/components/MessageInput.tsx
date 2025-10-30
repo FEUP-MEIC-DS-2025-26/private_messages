@@ -43,7 +43,7 @@ export default function MessageInput() {
 
         {/** Button to toggle the emoji picker */}
         <button
-          className="cursor-pointer hover:text-biloba-flower-500 transition-color"
+          className={`cursor-pointer transition-color ${showEmojis ? '' : 'hover:'}text-biloba-flower-500`}
           type="button"
           onClick={() => setShowEmojis(!showEmojis)}
         >
@@ -57,11 +57,7 @@ export default function MessageInput() {
       </Form>
 
       {/* Emoji picker */}
-      <div
-        id="emoji-picker"
-        className="absolute right-0 bottom-10 z-10"
-        hidden={!showEmojis}
-      >
+      <div className="absolute right-0 bottom-10 z-10" hidden={!showEmojis}>
         <EmojiPicker onEmojiClick={handleEmojiClick} />
       </div>
     </div>
