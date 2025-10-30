@@ -1,5 +1,3 @@
-'use client';
-
 // assets
 import ProfilePicture from '../components/ProfilePicture';
 import UserMessage from './components/UserMessage';
@@ -17,7 +15,7 @@ const mockUser = {
 export default function Chat() {
   return (
     <>
-      <header className="flex items-center gap-5 mb-6 pl-4 pb-4 border-b">
+      <header className="flex items-center gap-5 pl-4 pb-4 border-b">
         <a
           className="inline-flex items-center justify-center w-8 h-8 hover:bg-gray-600 hover:rounded-full transition-all"
           href="/"
@@ -33,7 +31,7 @@ export default function Chat() {
       </header>
 
       {/** Chat */}
-      <ul className="grow overflow-scroll flex flex-col gap-3 px-3 mb-6">
+      <ul className="grow overflow-scroll flex flex-col gap-3 px-3">
         <li>
           <UserMessage
             isFromUser={false}

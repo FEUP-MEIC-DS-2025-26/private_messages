@@ -27,7 +27,7 @@ export default function UserMessagePreview({
 
   return (
     <a
-      className="flex items-center gap-5 w-full px-4 py-6 border-b hover:bg-biloba-flower-500 transition-colors"
+      className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors"
       href="/chat"
     >
       <div className="relative">
