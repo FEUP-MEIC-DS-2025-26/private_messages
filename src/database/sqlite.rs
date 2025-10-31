@@ -122,7 +122,17 @@ impl Database for SQLiteDB {
         self.pool.try_acquire().ok_or(sqlx::Error::PoolClosed)
     }
 
-    async fn add_user(&mut self, profile: &Self::UserProfile) -> Result<Self::UserId, Self::Error> {  
+    async fn add_user(&mut self, profile: &Self::UserProfile) -> Result<Self::UserId, Self::Error> {
+        let existing_user = sqlx::query_as!(Self::UserId, r#"
+            SELECT id as "id!"
+            FROM user
+            WHERE username = ?;
+        "#, profile.username).fetch_optional(&self.pool).await?;
+        
+        if let Some(user) = existing_user {
+            return Ok(user);
+        }
+        
         let record = sqlx::query!(r#"
             INSERT INTO user (username, name)
             VALUES (?, ?)
