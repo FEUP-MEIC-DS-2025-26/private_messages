@@ -3,6 +3,8 @@ import ProfilePicture from '../components/ProfilePicture';
 import UserMessage from './components/UserMessage';
 import MessageInput from './components/MessageInput';
 
+import Link from 'next/link';
+
 // icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
@@ -16,12 +18,11 @@ export default function Chat() {
   return (
     <>
       <header className="flex items-center gap-5 pl-4 pb-4 border-b">
-        <a
+        <Link
           className="inline-flex items-center justify-center w-8 h-8 hover:bg-gray-600 hover:rounded-full transition-all"
-          href="/"
-        >
+          href="/">
           <FontAwesomeIcon icon={faArrowLeft} />
-        </a>
+        </Link>
         <ProfilePicture
           name={mockUser.name}
           URL={mockUser.profilePictureURL}
