@@ -1,5 +1,5 @@
 use actix_files::Files;
-use actix_web::{App, HttpServer, web};
+use actix_web::{App, HttpServer, HttpResponse, Responder, web};
 use clap::Parser;
 use crate::database::sqlite::SQLiteDB;
 
@@ -15,17 +15,26 @@ struct Cli {
     port: u16,
 }
 
+const ADDRESS: &'static str = "0.0.0.0";
+
+async fn chat() -> impl Responder {
+    HttpResponse::Ok().body("<!DOCTYPE html><html lang=\"en\"><body><h1>This isn't a chat!</h1></body></html>")
+}
+
 async fn run_user_facing_code() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let db = SQLiteDB::new(&cli.db_url).await?;
     let wd = web::Data::new(db);
 
+    println!("Running server on {}:{}", ADDRESS, cli.port);
+
     HttpServer::new(move || {
         App::new()
+            .route("/chat", web::get().to(chat))
             .app_data(wd.clone())
             .service(Files::new("/", "frontend/out").index_file("index.html"))
     })
-    .bind(("0.0.0.0", cli.port))?
+    .bind((ADDRESS, cli.port))?
     .run()
     .await?;
 
