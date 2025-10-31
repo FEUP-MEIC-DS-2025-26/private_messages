@@ -23,9 +23,8 @@ impl SQLiteDB {
 }
 
 #[derive(Debug, sqlx::Type, PartialEq, Copy, Clone)]
-pub struct UserId {
-    id: i64
-}
+#[sqlx(transparent)]
+pub struct UserId(pub i64);
 
 #[derive(Debug, sqlx::Type, PartialEq, Clone)]
 pub struct UserProfile {
@@ -33,20 +32,31 @@ pub struct UserProfile {
     name: String,
 }
 
-#[derive(Debug, sqlx::Type, PartialEq, Copy, Clone)]
-pub struct ConversationId {
-    id: i64
+impl UserProfile {
+    pub fn new(username: String, name: String) -> Self {
+        Self { username, name }
+    }
+    
+    pub fn username(&self) -> String {
+        self.username.clone()
+    }
+    
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
 }
+
+#[derive(Debug, sqlx::Type, PartialEq, Copy, Clone, serde::Serialize, serde::Deserialize)]
+#[sqlx(transparent)]
+pub struct ConversationId(pub i64);
 
 #[derive(Debug, sqlx::Type, PartialEq, Clone)]
-pub struct Message {
-    content: String
-}
+#[sqlx(transparent)]
+pub struct Message(pub String);
 
 #[derive(Debug, sqlx::Type, PartialEq, Copy, Clone)]
-pub struct MessageId {
-    id: i64
-}
+#[sqlx(transparent)]
+pub struct MessageId(pub i64);
 
 impl Database for SQLiteDB {
     type Error = sqlx::Error;
@@ -67,11 +77,13 @@ impl Database for SQLiteDB {
         &self,
         my_id: &Self::UserId,
     ) -> Result<Vec<Self::ConversationId>, Self::Error> {
-        sqlx::query_as!(ConversationId, r#"
+        let record = sqlx::query!(r#"
             SELECT id as "id!"
             FROM conversation 
             WHERE sender_id = ? OR receiver_id = ?;
-        "#, my_id.id, my_id.id).fetch_all(&self.pool).await
+        "#, my_id, my_id).fetch_all(&self.pool).await?;
+        
+        Ok(record.iter().map(|r| ConversationId(r.id)).collect())
     }
 
     async fn get_peer(
@@ -79,11 +91,13 @@ impl Database for SQLiteDB {
         my_id: &Self::UserId,
         conversation: &Self::ConversationId,
     ) -> Result<Self::UserId, Self::Error> {
-        sqlx::query_as!(UserId, r#"
+        let record = sqlx::query!(r#"
             SELECT id as "id!"
             FROM conversation
             WHERE id = ? AND (sender_id = ? OR receiver_id = ?)
-        "#, conversation.id, my_id.id, my_id.id).fetch_one(&self.pool).await
+        "#, conversation, my_id, my_id).fetch_one(&self.pool).await?;
+        
+        Ok(UserId(record.id))
     }
 
     async fn get_user_profile(
@@ -94,7 +108,7 @@ impl Database for SQLiteDB {
             SELECT username as "username!", name as "name!"
             FROM user
             WHERE id = ?
-        "#, their_id.id).fetch_one(&self.pool).await
+        "#, their_id).fetch_one(&self.pool).await
     }
 
     async fn get_message(
@@ -105,13 +119,13 @@ impl Database for SQLiteDB {
             SELECT sender_id as "sender_id!", content as "content!", previous_message_id
             FROM message
             WHERE id = ?
-        "#, message.id).fetch_one(&self.pool).await;
+        "#, message).fetch_one(&self.pool).await;
         
         match result {
             Ok(res) => Ok((
-                UserId {id: res.sender_id}, 
-                Message {content: String::from_utf8_lossy(res.content.as_slice()).to_string()}, 
-                res.previous_message_id.map(|x| MessageId {id: x})
+                UserId(res.sender_id), 
+                Message(String::from_utf8_lossy(res.content.as_slice()).to_string()), 
+                res.previous_message_id.map(|x| MessageId(x))
             )),
             Err(e) => Err(e)
         }
@@ -124,14 +138,14 @@ impl Database for SQLiteDB {
     async fn add_user(&mut self, profile: &Self::UserProfile) -> Result<Self::UserId, Self::Error> {
         let mut transaction = self.pool.begin().await?;
         
-        let existing_user = sqlx::query_as!(Self::UserId, r#"
+        let record = sqlx::query!(r#"
             SELECT id as "id!"
             FROM user
             WHERE username = ?;
         "#, profile.username).fetch_optional(&mut *transaction).await?;
         
-        if let Some(user) = existing_user {
-            return Ok(user);
+        if let Some(user) = record {
+            return Ok(UserId(user.id));
         }
         
         let record = sqlx::query!(r#"
@@ -141,7 +155,7 @@ impl Database for SQLiteDB {
         "#, profile.username, profile.name).fetch_one(&mut *transaction).await;
         
         transaction.commit().await?;
-        record.map(|i| Self::UserId { id: i.id })
+        record.map(|i| UserId(i.id))
     }
 
     async fn start_conversation(
@@ -151,24 +165,24 @@ impl Database for SQLiteDB {
     ) -> Result<Self::ConversationId, Self::Error> {
         let mut transaction = self.pool.begin().await?;
         
-        let existing_convo = sqlx::query!(r#"
+        let record = sqlx::query!(r#"
             SELECT id as "id!"
             FROM conversation
             WHERE (sender_id = ? AND receiver_id = ?) OR (receiver_id = ? AND sender_id = ?);
-        "#, my_id.id, their_id.id, my_id.id, their_id.id).fetch_optional(&mut *transaction).await?;
+        "#, my_id, their_id, my_id, their_id).fetch_optional(&mut *transaction).await?;
         
-        if let Some(record) = existing_convo {
-            return Ok(Self::ConversationId { id: record.id });
+        if let Some(convo) = record {
+            return Ok(ConversationId(convo.id));
         }
         
         let record = sqlx::query!(r#"
             INSERT INTO conversation (sender_id, receiver_id)
             VALUES (?, ?)
             RETURNING id as "id!"
-        "#, my_id.id, their_id.id).fetch_one(&mut *transaction).await;
+        "#, my_id, their_id).fetch_one(&mut *transaction).await;
         
         transaction.commit().await?;
-        record.map(|i| Self::ConversationId { id: i.id })
+        record.map(|i| ConversationId(i.id))
     }
 
     async fn post_msg(
@@ -183,22 +197,22 @@ impl Database for SQLiteDB {
             SELECT last_message_id
             FROM conversation
             WHERE id = ?;
-        "#, conversation.id).fetch_one(&mut *transaction).await?.last_message_id;
+        "#, conversation).fetch_one(&mut *transaction).await?.last_message_id;
         
         let msg_id = sqlx::query!(r#"
             INSERT INTO message (content, sender_id, conversation_id, previous_message_id)
             VALUES (?, ?, ?, ?)
             RETURNING id as "id!"
-        "#, msg.content, my_id.id, conversation.id, prev_id).fetch_one(&mut *transaction).await?.id;
+        "#, msg, my_id, conversation, prev_id).fetch_one(&mut *transaction).await?.id;
         
         sqlx::query!(r#"
             UPDATE conversation
             SET last_message_id = ?
             WHERE id = ?;
-        "#, msg_id, conversation.id).execute(&mut *transaction).await?;
+        "#, msg_id, conversation).execute(&mut *transaction).await?;
         
         transaction.commit().await?;
-        Ok(Self::MessageId { id: msg_id })
+        Ok(MessageId(msg_id))
     }
 
     async fn get_latest_message(
@@ -209,9 +223,9 @@ impl Database for SQLiteDB {
             SELECT last_message_id
             FROM conversation
             WHERE id = ?;
-        "#, conversation.id).fetch_one(&self.pool).await;
+        "#, conversation).fetch_one(&self.pool).await;
         
-        record.map(|i| i.last_message_id.map(|i| Self::MessageId { id: i }))
+        record.map(|i| i.last_message_id.map(|i| MessageId(i)))
     }
 }
 
@@ -246,7 +260,7 @@ mod test {
 
         assert_eq!(convo_id, same_id);
 
-        let hello = Message { content: "Hello Bob!".to_owned() };
+        let hello = Message("Hello Bob!".to_owned());
         let hello_id = db.post_msg(hello, &alice_id, &convo_id).await?;
 
         // Example queries
@@ -257,7 +271,7 @@ mod test {
                 SELECT COUNT(*) as "count!: i64"
                 FROM message
                 WHERE conversation_id = ?;
-            "#, convo_id.id).fetch_one(querier).await?;
+            "#, convo_id).fetch_one(querier).await?;
             let msg_count: i64 = msg_count.into();
             assert_eq!(msg_count, 1);
             // Make sure that the only message is the 'Hello Bob!' one.
@@ -265,18 +279,18 @@ mod test {
                 SELECT id as "id!"
                 FROM message
                 WHERE conversation_id = ?;
-            "#, convo_id.id).fetch_one(querier).await?;
-            assert!(MessageId {id: msg_id.id} == hello_id);
+            "#, convo_id).fetch_one(querier).await?;
+            assert!(MessageId(msg_id.id) == hello_id);
             // Retrieve all messages between Alice and Bob
             let messages = sqlx::query!(r#"
                 SELECT content as "content!"
                 FROM message
                 WHERE conversation_id = ?;
-            "#, convo_id.id).fetch_all(querier).await?;
-            messages.iter().map(|m| Message {content: String::from_utf8_lossy(m.content.as_slice()).to_string()}).collect()
+            "#, convo_id).fetch_all(querier).await?;
+            messages.iter().map(|m| Message(String::from_utf8_lossy(m.content.as_slice()).to_string())).collect()
         };
 
-        assert_eq!(alice_bob_messages, vec![Message {content: "Hello Bob!".to_owned() }]);
+        assert_eq!(alice_bob_messages, vec![Message("Hello Bob!".to_owned())]);
 
         Ok(())
     }
@@ -309,13 +323,13 @@ mod test {
         let last_msg = db.get_latest_message(&convo_id).await?;
         assert_eq!(last_msg, None);
         
-        let hello = Message { content: "Hello Bob!".to_owned() };
+        let hello = Message("Hello Bob!".to_owned());
         let first_hello_id = db.post_msg(hello, &alice_id, &convo_id).await?;
         
         let last_msg = db.get_latest_message(&convo_id).await?;
         assert_eq!(last_msg, Some(first_hello_id));
         
-        let hello = Message { content: "Hello Alice!".to_owned() };
+        let hello = Message("Hello Alice!".to_owned());
         let second_hello_id = db.post_msg(hello, &bob_id, &convo_id).await?;
         
         let last_msg = db.get_latest_message(&convo_id).await?.unwrap();
