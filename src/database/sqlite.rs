@@ -1,5 +1,5 @@
 use crate::database::Database;
-use sqlx::{pool::PoolConnection, sqlite::SqlitePoolOptions, Pool, Sqlite};
+use sqlx::{migrate::MigrateDatabase, pool::PoolConnection, sqlite::SqlitePoolOptions, Pool, Sqlite};
 
 pub struct SQLiteDB {
     pool: Pool<Sqlite>,
@@ -7,10 +7,9 @@ pub struct SQLiteDB {
 
 impl SQLiteDB {
     pub async fn new(url: &str) -> anyhow::Result<Self> {
-        // let is_new_session = !Sqlite::database_exists(url).await?;
-        // if is_new_session {
-        //     Sqlite::create_database(url).await?;
-        // }
+        if !Sqlite::database_exists(url).await? {
+            Sqlite::create_database(url).await?;
+        }
         let pool = SqlitePoolOptions::new().connect_lazy(url)?;
         let mut db = SQLiteDB { pool };
         db.set_schema().await?;

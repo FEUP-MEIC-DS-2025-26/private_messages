@@ -1,13 +1,23 @@
 use actix_files::Files;
 use actix_web::{App, HttpServer, web};
+use clap::Parser;
 use crate::database::sqlite::SQLiteDB;
 
 mod database;
 mod pages;
 mod rest;
 
+#[derive(clap::Parser)]
+struct Cli {
+    #[arg(short, long, default_value_t = String::from("sqlite:.sqlite3"))]
+    db_url: String,
+    #[arg(short, long, default_value_t = 8080)]
+    port: u16,
+}
+
 async fn run_user_facing_code() -> anyhow::Result<()> {
-    let db = SQLiteDB::new("sqlite:.db").await?;
+    let cli = Cli::parse();
+    let db = SQLiteDB::new(&cli.db_url).await?;
     let wd = web::Data::new(db);
 
     HttpServer::new(move || {
@@ -15,7 +25,7 @@ async fn run_user_facing_code() -> anyhow::Result<()> {
             .app_data(wd.clone())
             .service(Files::new("/", "frontend/out").index_file("index.html"))
     })
-    .bind(("0.0.0.0", 8080))?
+    .bind(("0.0.0.0", cli.port))?
     .run()
     .await?;
 

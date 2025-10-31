@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT sender_id as \"sender_id!\", content as \"content!\", previous_message_id\n            FROM message\n            WHERE id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "sender_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "content!",
+        "ordinal": 1,
+        "type_info": "Blob"
+      },
+      {
+        "name": "previous_message_id",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "0d949ba7c48c028b1cc31b2e2c25199e4a324d9adc9e65f9e910709aa200a02f"
+}
