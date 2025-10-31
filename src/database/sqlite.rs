@@ -1,5 +1,6 @@
 use crate::database::Database;
 use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePoolOptions, Pool, Sqlite};
+use serde;
 
 pub struct SQLiteDB {
     pool: Pool<Sqlite>,
