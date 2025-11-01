@@ -389,6 +389,20 @@ impl Database for SQLiteDB {
             false => Err(DbError::PermissionDenied),
         }
     }
+
+    async fn get_conversation_from_message(
+        &self,
+        msg_id: &Self::MessageId,
+    ) -> Result<Self::ConversationId, Self::Error> {
+        let record = sqlx::query!(
+            r#"
+            SELECT conversation_id as "conversation_id!"
+            FROM message
+            WHERE id = ?
+            "#, msg_id
+        ).fetch_one(&self.pool).await?;
+        Ok(ConversationId(record.conversation_id))
+    }
 }
 
 #[cfg(test)]
