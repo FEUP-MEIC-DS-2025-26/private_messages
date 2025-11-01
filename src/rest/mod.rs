@@ -1,6 +1,7 @@
 use crate::database::{Database, sqlite::*};
 use actix_web::{
-    get, post, web::{Data, Form, Json, Path, Query}, Responder, Result
+    Responder, Result, get, post,
+    web::{Data, Form, Json, Path, Query},
 };
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
@@ -17,7 +18,7 @@ pub fn create_services() -> actix_web::Scope {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct UsrToken {
-    token: i64
+    token: i64,
 }
 
 // FIXME: usr_id needs be usr_token
@@ -36,13 +37,13 @@ async fn get_conversations(
 }
 
 // FIXME: usr_id needs be usr_token
-#[get("/{usr_token}/conversation/{convo_id}/peer")]
+#[get("/conversation/{convo_id}/peer")]
 async fn get_peer(
     data: Data<RwLock<SQLiteDB>>,
-    usr_token: Path<i64>,
+    usr_token: Query<UsrToken>,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_token.clone());
+    let usr_id = UserId(usr_token.token);
     let convo_id = ConversationId(convo_id.clone());
     Ok(data
         .read()
@@ -72,13 +73,13 @@ async fn get_user_profile(
 }
 
 // FIXME: usr_id needs be usr_token
-#[get("/{usr_token}/message/{msg_id}")]
+#[get("/message/{msg_id}")]
 async fn get_message(
     data: Data<RwLock<SQLiteDB>>,
-    usr_token: Path<i64>,
+    usr_token: Query<UsrToken>,
     msg_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_token.clone());
+    let usr_id = UserId(usr_token.token);
     let msg_id = MessageId(msg_id.clone());
     Ok(data.read().await.get_message(&msg_id).await.map(Json)?)
 }
@@ -112,13 +113,13 @@ async fn add_user(
 // }
 
 // FIXME: usr_id needs be usr_token
-#[get("/{usr_token}/conversation/{convo_id}/latest")]
+#[get("/conversation/{convo_id}/latest")]
 async fn get_latest_message(
     data: Data<RwLock<SQLiteDB>>,
-    usr_token: Path<i64>,
+    usr_token: Query<UsrToken>,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_token.clone());
+    let usr_id = UserId(usr_token.token);
     let convo_id = ConversationId(convo_id.clone());
     let db_handle = data.read().await;
     Ok(db_handle.get_latest_message(&convo_id).await.map(Json)?)
