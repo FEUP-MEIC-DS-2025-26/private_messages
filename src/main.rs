@@ -24,14 +24,7 @@ async fn run_user_facing_code() -> anyhow::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(wd.clone())
-            .service(get_conversations)
-            .service(get_peer)
-            .service(get_user_profile)
-            .service(get_message)
-            .service(add_user)
-            // .service(start_conversation)
-            // .service(post_msg)
-            .service(get_latest_message)
+            .service(rest::create_services())
             .service(Files::new("/", "frontend/out").index_file("index.html"))
     })
     .bind(("0.0.0.0", cli.port))?

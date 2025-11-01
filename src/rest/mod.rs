@@ -5,7 +5,17 @@ use actix_web::{
 };
 use tokio::sync::RwLock;
 
-#[get("/api/chat/{usr_id}/conversation")]
+pub fn create_services() -> actix_web::Scope {
+    actix_web::web::scope("/api/chat")
+        .service(get_conversations)
+        .service(get_peer)
+        .service(get_user_profile)
+        .service(get_message)
+        .service(get_latest_message)
+        .service(add_user)
+}
+
+#[get("/{usr_id}/conversation")]
 async fn get_conversations(
     usr_id: Path<i64>,
     data: Data<RwLock<SQLiteDB>>,
@@ -18,7 +28,7 @@ async fn get_conversations(
     }
 }
 
-#[get("/api/chat/{usr_id}/conversation/{convo_id}/peer")]
+#[get("/{usr_id}/conversation/{convo_id}/peer")]
 async fn get_peer(
     data: Data<RwLock<SQLiteDB>>,
     usr_id: Path<i64>,
@@ -33,7 +43,7 @@ async fn get_peer(
     }
 }
 
-#[get("/api/chat/{usr_id}/user")]
+#[get("/{usr_id}/user")]
 async fn get_user_profile(
     data: Data<RwLock<SQLiteDB>>,
     usr_id: Path<i64>,
@@ -46,7 +56,7 @@ async fn get_user_profile(
     }
 }
 
-#[get("/api/chat/{usr_id}/message/{msg_id}")]
+#[get("/{usr_id}/message/{msg_id}")]
 async fn get_message(
     data: Data<RwLock<SQLiteDB>>,
     usr_id: Path<i64>,
@@ -61,7 +71,7 @@ async fn get_message(
     }
 }
 
-#[post("/api/chat/user")]
+#[post("/user")]
 async fn add_user(
     data: Data<RwLock<SQLiteDB>>,
     user_profile: Form<UserProfile>,
@@ -74,7 +84,7 @@ async fn add_user(
     }
 }
 
-// #[post("/api/chat/{usr_id}/conversation")]
+// #[post("/{usr_id}/conversation")]
 // async fn start_conversation(
 //     data: Data<SQLiteDB>,
 //     my_id: Path<i64>,
@@ -83,7 +93,7 @@ async fn add_user(
 //     todo!()
 // }
 
-// #[post("/api/chat/{usr_id}/conversation/{convo_id}/message")]
+// #[post("/{usr_id}/conversation/{convo_id}/message")]
 // async fn post_msg(
 //     data: Data<SQLiteDB>,
 //     my_id: Path<i64>,
@@ -93,7 +103,7 @@ async fn add_user(
 //     todo!()
 // }
 
-#[get("/api/chat/{usr_id}/conversation/{convo_id}/latest")]
+#[get("/{usr_id}/conversation/{convo_id}/latest")]
 async fn get_latest_message(
     data: Data<RwLock<SQLiteDB>>,
     usr_id: Path<i64>,
