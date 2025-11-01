@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT conversation_id as \"conversation_id!\"\n            FROM message\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "conversation_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9ace7f385745046f56158b408615541b2c230563b53ece1a7dcadb536a96455c"
+}

@@ -9,18 +9,13 @@ use tokio::sync::RwLock;
 
 pub fn create_services() -> actix_web::Scope {
     actix_web::web::scope("/api/chat")
+        .service(login)
         .service(get_conversations)
         .service(get_peer)
         .service(get_user_profile)
         .service(get_message)
         .service(get_latest_message)
         .service(get_most_recent_messages)
-        .service(add_user)
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct UsrToken {
-    token: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -70,6 +65,7 @@ async fn get_peer(
         .get_user_id_from_username(&username)
         .await?;
     let convo_id = ConversationId(convo_id.clone());
+    data.read().await.belongs_to_conversation(&usr_id, &convo_id).await?;
     Ok(data
         .read()
         .await
@@ -78,7 +74,7 @@ async fn get_peer(
         .map(Json)?)
 }
 
-#[get("/{username}")]
+#[get("/user/{username}")]
 async fn get_user_profile(
     data: Data<RwLock<SQLiteDB>>,
     username: Path<String>,
@@ -111,36 +107,57 @@ async fn get_message(
         .get_user_id_from_username(&username)
         .await?;
     let msg_id = MessageId(msg_id.clone());
-    Ok(data.read().await.get_message(&msg_id).await.map(Json)?)
+    let msg = data.read().await.get_message(&msg_id).await?;
+    let convo_id = data.read().await.get_conversation_from_message(&msg_id).await?;
+    data.read().await.belongs_to_conversation(&usr_id, &convo_id).await?;
+    Ok(Json(msg))
 }
 
-#[post("/user")]
-async fn add_user(
+// #[post("/user")]
+// async fn add_user(
+//     data: Data<RwLock<SQLiteDB>>,
+//     user_profile: Form<UserProfile>,
+// ) -> Result<impl Responder> {
+//     let user_profile = user_profile.0;
+//     Ok(data.write().await.add_user(&user_profile).await.map(Json)?)
+// }
+
+// FIXME: usr_id needs be usr_token
+#[post("/conversation")]
+async fn start_conversation(
     data: Data<RwLock<SQLiteDB>>,
-    user_profile: Form<UserProfile>,
+    user: Identity,
+    their_id: Form<UserId>,
 ) -> Result<impl Responder> {
-    let user_profile = user_profile.0;
-    Ok(data.write().await.add_user(&user_profile).await.map(Json)?)
+    let username = user.id()?;
+    let usr_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&username)
+        .await?;
+    let their_id = their_id.0;
+    Ok(data.write().await.start_conversation(&usr_id, &their_id).await.map(Json)?)
 }
 
-// #[post("/{usr_id}/conversation")]
-// async fn start_conversation(
-//     data: Data<SQLiteDB>,
-//     my_id: Path<i64>,
-//     their_id: Json<UserId>,
-// ) -> Result<impl Responder> {
-//     todo!()
-// }
-
-// #[post("/{usr_id}/conversation/{convo_id}/message")]
-// async fn post_msg(
-//     data: Data<SQLiteDB>,
-//     my_id: Path<i64>,
-//     conversation: Path<i64>,
-//     msg: Json<String>,
-// ) -> Result<impl Responder> {
-//     todo!()
-// }
+// FIXME: usr_id needs be usr_token
+#[post("/conversation/{convo_id}/message")]
+async fn post_msg(
+    data: Data<RwLock<SQLiteDB>>,
+    user: Identity,
+    conversation: Path<i64>,
+    msg: Form<Message>,
+) -> Result<impl Responder> {
+    let username = user.id()?;
+    let usr_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&username)
+        .await?;
+    let conversation = ConversationId(conversation.into_inner());
+    let msg = msg.0;
+    data.read().await.belongs_to_conversation(&usr_id, &conversation).await?;
+    Ok(data.write().await.post_msg(msg, &usr_id, &conversation).await.map(Json))
+}
 
 // FIXME: usr_id needs be usr_token
 #[get("/conversation/{convo_id}/latest")]
@@ -156,6 +173,7 @@ async fn get_latest_message(
         .get_user_id_from_username(&username)
         .await?;
     let convo_id = ConversationId(convo_id.clone());
+    data.read().await.belongs_to_conversation(&usr_id, &convo_id).await?;
     let db_handle = data.read().await;
     Ok(db_handle.get_latest_message(&convo_id).await.map(Json)?)
 }

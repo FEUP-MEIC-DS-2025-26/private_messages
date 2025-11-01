@@ -66,6 +66,11 @@ pub trait Database {
         id: &Self::UserId,
         conversation: &Self::ConversationId,
     ) -> Result<(), Self::Error>;
+    
+    async fn get_conversation_from_message(
+        &self,
+        msg_id: &Self::MessageId,
+    ) -> Result<Self::ConversationId, Self::Error>;
 }
 
 /// Example implementation: Mock Database
@@ -321,6 +326,16 @@ pub mod mock {
             match self.db.read().await.conversations.get(conversation) {
                 Some((id1, id2, _)) if id1 == id || id2 == id => Ok(()),
                 _ => Err(anyhow!("No such conversation {conversation:?}.")),
+            }
+        }
+
+        async fn get_conversation_from_message(
+            &self,
+            msg_id: &Self::MessageId,
+        ) -> Result<Self::ConversationId, Self::Error> {
+            match self.db.read().await.messages.get(msg_id) {
+                Some((_, convo_id, _, _)) => Ok(*convo_id),
+                None => Err(anyhow!("No such message {msg_id:?}.")),
             }
         }
     }

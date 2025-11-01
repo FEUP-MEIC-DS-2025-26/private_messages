@@ -24,6 +24,14 @@ impl SQLiteDB {
         }
         Ok(db)
     }
+    
+    pub async fn kiosk() -> anyhow::Result<Self> {
+        let pool = SqlitePoolOptions::new().connect_lazy("sqlite::memory:")?;
+        let mut db = SQLiteDB { pool };
+        db.set_schema().await?;
+        sqlx::query_file!("src/database/populate.sql").execute(&db.pool).await?;
+        Ok(db)
+    }
 
     async fn set_schema(&mut self) -> anyhow::Result<()> {
         sqlx::query_file!("src/database/schema.sql")
@@ -425,6 +433,20 @@ impl Database for SQLiteDB {
             true => Ok(()),
             false => Err(DbError::PermissionDenied),
         }
+    }
+
+    async fn get_conversation_from_message(
+        &self,
+        msg_id: &Self::MessageId,
+    ) -> Result<Self::ConversationId, Self::Error> {
+        let record = sqlx::query!(
+            r#"
+            SELECT conversation_id as "conversation_id!"
+            FROM message
+            WHERE id = ?
+            "#, msg_id
+        ).fetch_one(&self.pool).await?;
+        Ok(ConversationId(record.conversation_id))
     }
 }
 
