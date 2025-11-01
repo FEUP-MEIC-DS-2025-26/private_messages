@@ -1,6 +1,7 @@
 use crate::database::{Database, sqlite::*};
+use actix_identity::Identity;
 use actix_web::{
-    Responder, Result, get, post,
+    HttpMessage, HttpRequest, HttpResponse, Responder, Result, get, post,
     web::{Data, Form, Json, Path, Query},
 };
 use serde::{Deserialize, Serialize};
@@ -22,13 +23,31 @@ struct UsrToken {
     token: i64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct Username {
+    username: String,
+}
+
+#[get("/login")]
+async fn login(name: Query<Username>, req: HttpRequest) -> Result<impl Responder> {
+    // TODO,FIXME: Add auth (dies inside)
+
+    let username = name.username.clone();
+    // Attach identity
+    Identity::login(&req.extensions(), username)?;
+
+    Ok(HttpResponse::Found())
+}
+
 // FIXME: usr_id needs be usr_token
 #[get("/conversation")]
-async fn get_conversations(
-    usr_token: Query<UsrToken>,
-    data: Data<RwLock<SQLiteDB>>,
-) -> Result<impl Responder> {
-    let usr_id = UserId(usr_token.into_inner().token);
+async fn get_conversations(user: Identity, data: Data<RwLock<SQLiteDB>>) -> Result<impl Responder> {
+    let username = user.id()?;
+    let usr_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&username)
+        .await?;
     Ok(data
         .read()
         .await
@@ -41,10 +60,15 @@ async fn get_conversations(
 #[get("/conversation/{convo_id}/peer")]
 async fn get_peer(
     data: Data<RwLock<SQLiteDB>>,
-    usr_token: Query<UsrToken>,
+    user: Identity,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_token.token);
+    let username = user.id()?;
+    let usr_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&username)
+        .await?;
     let convo_id = ConversationId(convo_id.clone());
     Ok(data
         .read()
@@ -77,10 +101,15 @@ async fn get_user_profile(
 #[get("/message/{msg_id}")]
 async fn get_message(
     data: Data<RwLock<SQLiteDB>>,
-    usr_token: Query<UsrToken>,
+    user: Identity,
     msg_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_token.token);
+    let username = user.id()?;
+    let usr_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&username)
+        .await?;
     let msg_id = MessageId(msg_id.clone());
     Ok(data.read().await.get_message(&msg_id).await.map(Json)?)
 }
@@ -117,10 +146,15 @@ async fn add_user(
 #[get("/conversation/{convo_id}/latest")]
 async fn get_latest_message(
     data: Data<RwLock<SQLiteDB>>,
-    usr_token: Query<UsrToken>,
+    user: Identity,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_token.token);
+    let username = user.id()?;
+    let usr_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&username)
+        .await?;
     let convo_id = ConversationId(convo_id.clone());
     let db_handle = data.read().await;
     Ok(db_handle.get_latest_message(&convo_id).await.map(Json)?)
