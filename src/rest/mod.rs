@@ -1,8 +1,8 @@
 use crate::database::{Database, sqlite::*};
 use actix_web::{
-    Responder, Result, get, post,
-    web::{Data, Form, Json, Path},
+    get, post, web::{Data, Form, Json, Path, Query}, Responder, Result
 };
+use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 pub fn create_services() -> actix_web::Scope {
@@ -15,13 +15,18 @@ pub fn create_services() -> actix_web::Scope {
         .service(add_user)
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct UsrToken {
+    token: i64
+}
+
 // FIXME: usr_id needs be usr_token
-#[get("/{usr_token}/conversation")]
+#[get("/conversation")]
 async fn get_conversations(
-    usr_token: Path<i64>,
+    usr_token: Query<UsrToken>,
     data: Data<RwLock<SQLiteDB>>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_token.clone());
+    let usr_id = UserId(usr_token.into_inner().token);
     Ok(data
         .read()
         .await
