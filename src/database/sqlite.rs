@@ -1,4 +1,5 @@
 use crate::database::Database;
+use actix_web::{ResponseError, http::StatusCode};
 use serde;
 use sqlx::{Pool, Sqlite, migrate::MigrateDatabase, sqlite::SqlitePoolOptions};
 
@@ -61,8 +62,51 @@ pub struct Message(pub String);
 #[sqlx(transparent)]
 pub struct MessageId(pub i64);
 
+#[derive(Debug, thiserror::Error)]
+pub enum DbError {
+    #[error(transparent)]
+    Db(#[from] sqlx::Error),
+    #[error("Attempted to access something without needed priviledges")]
+    PermissionDenied,
+}
+
+impl ResponseError for DbError {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        match &self {
+            DbError::Db(error) => match error {
+                sqlx::Error::Configuration(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::InvalidArgument(_) => StatusCode::BAD_REQUEST,
+                sqlx::Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::Tls(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::Protocol(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::RowNotFound => StatusCode::NO_CONTENT,
+                sqlx::Error::TypeNotFound { type_name: _ } => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::ColumnIndexOutOfBounds { index: _, len: _ } => {
+                    StatusCode::INTERNAL_SERVER_ERROR
+                }
+                sqlx::Error::ColumnNotFound(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::ColumnDecode {
+                    index: _,
+                    source: _,
+                } => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::Encode(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::Decode(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::AnyDriverError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::PoolTimedOut => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::PoolClosed => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::WorkerCrashed => StatusCode::TOO_MANY_REQUESTS,
+                sqlx::Error::Migrate(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::InvalidSavePointStatement => StatusCode::BAD_REQUEST,
+                sqlx::Error::BeginFailed => StatusCode::INTERNAL_SERVER_ERROR,
+                _ => StatusCode::IM_A_TEAPOT,
+            },
+            DbError::PermissionDenied => StatusCode::FORBIDDEN,
+        }
+    }
+}
 impl Database for SQLiteDB {
-    type Error = sqlx::Error;
+    type Error = DbError;
 
     type UserId = UserId;
 
@@ -131,6 +175,7 @@ impl Database for SQLiteDB {
         )
         .fetch_one(&self.pool)
         .await
+        .map_err(Into::into)
     }
 
     async fn get_message(
@@ -154,7 +199,7 @@ impl Database for SQLiteDB {
                 Message(String::from_utf8_lossy(res.content.as_slice()).to_string()),
                 res.previous_message_id.map(|x| MessageId(x)),
             )),
-            Err(e) => Err(e),
+            Err(e) => Err(e.into()),
         }
     }
 
@@ -193,7 +238,7 @@ impl Database for SQLiteDB {
         .await;
 
         transaction.commit().await?;
-        record.map(|i| UserId(i.id))
+        Ok(record.map(|i| UserId(i.id))?)
     }
 
     async fn start_conversation(
@@ -234,7 +279,7 @@ impl Database for SQLiteDB {
         .await;
 
         transaction.commit().await?;
-        record.map(|i| ConversationId(i.id))
+        Ok(record.map(|i| ConversationId(i.id))?)
     }
 
     async fn post_msg(
@@ -303,7 +348,7 @@ impl Database for SQLiteDB {
         .fetch_one(&self.pool)
         .await;
 
-        record.map(|i| i.last_message_id.map(|i| MessageId(i)))
+        Ok(record.map(|i| i.last_message_id.map(|i| MessageId(i)))?)
     }
 
     async fn get_user_id_from_username(&self, username: &str) -> Result<Self::UserId, Self::Error> {
@@ -318,6 +363,31 @@ impl Database for SQLiteDB {
         .fetch_one(&self.pool)
         .await?;
         Ok(UserId(record.id))
+    }
+
+    async fn belongs_to_conversation(
+        &self,
+        id: &Self::UserId,
+        conversation: &Self::ConversationId,
+    ) -> Result<(), Self::Error> {
+        let record = sqlx::query!(
+            r#"
+            SELECT EXISTS (
+                SELECT conversation.id as "id!"
+                FROM conversation
+                WHERE conversation.id = ? AND (sender_id = ? OR receiver_id = ?)
+            ) as is_there
+          "#,
+            conversation,
+            id,
+            id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        match record.is_there == 1 {
+            true => Ok(()),
+            false => Err(DbError::PermissionDenied),
+        }
     }
 }
 

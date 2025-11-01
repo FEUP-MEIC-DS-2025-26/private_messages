@@ -15,60 +15,67 @@ pub fn create_services() -> actix_web::Scope {
         .service(add_user)
 }
 
-#[get("/{usr_id}/conversation")]
+// FIXME: usr_id needs be usr_token
+#[get("/{usr_token}/conversation")]
 async fn get_conversations(
-    usr_id: Path<i64>,
+    usr_token: Path<i64>,
     data: Data<RwLock<SQLiteDB>>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_id.clone());
-    let records = data.read().await.get_conversations(&usr_id).await;
-    match records {
-        Ok(i) => Ok(Json(i)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+    let usr_id = UserId(usr_token.clone());
+    Ok(data
+        .read()
+        .await
+        .get_conversations(&usr_id)
+        .await
+        .map(Json)?)
 }
 
-#[get("/{usr_id}/conversation/{convo_id}/peer")]
+// FIXME: usr_id needs be usr_token
+#[get("/{usr_token}/conversation/{convo_id}/peer")]
 async fn get_peer(
     data: Data<RwLock<SQLiteDB>>,
-    usr_id: Path<i64>,
+    usr_token: Path<i64>,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_id.clone());
+    let usr_id = UserId(usr_token.clone());
     let convo_id = ConversationId(convo_id.clone());
-    let record = data.read().await.get_peer(&usr_id, &convo_id).await;
-    match record {
-        Ok(peer) => Ok(Json(peer)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+    Ok(data
+        .read()
+        .await
+        .get_peer(&usr_id, &convo_id)
+        .await
+        .map(Json)?)
 }
 
-#[get("/{usr_id}/user")]
+#[get("/{username}")]
 async fn get_user_profile(
     data: Data<RwLock<SQLiteDB>>,
-    usr_id: Path<i64>,
+    username: Path<String>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_id.clone());
-    let record = data.read().await.get_user_profile(&usr_id).await;
-    match record {
-        Ok(profile) => Ok(Json(profile)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+    let usr_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&username)
+        .await
+        .map_err(DbError::from)?;
+    Ok(data
+        .read()
+        .await
+        .get_user_profile(&usr_id)
+        .await
+        .map(Json)?)
 }
 
-#[get("/{usr_id}/message/{msg_id}")]
+// FIXME: usr_id needs be usr_token
+#[get("/{usr_token}/message/{msg_id}")]
 async fn get_message(
     data: Data<RwLock<SQLiteDB>>,
-    usr_id: Path<i64>,
+    usr_token: Path<i64>,
     msg_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_id.clone());
+    let usr_id = UserId(usr_token.clone());
     let msg_id = MessageId(msg_id.clone());
-    let record = data.read().await.get_message(&msg_id).await;
-    match record {
-        Ok(message) => Ok(Json(message)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+    Ok(data.read().await.get_message(&msg_id).await.map(Json)?)
 }
 
 #[post("/user")]
@@ -77,11 +84,7 @@ async fn add_user(
     user_profile: Form<UserProfile>,
 ) -> Result<impl Responder> {
     let user_profile = user_profile.0;
-    let result = data.write().await.add_user(&user_profile).await;
-    match result {
-        Ok(id) => Ok(Json(id)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+    Ok(data.write().await.add_user(&user_profile).await.map(Json)?)
 }
 
 // #[post("/{usr_id}/conversation")]
@@ -103,17 +106,15 @@ async fn add_user(
 //     todo!()
 // }
 
-#[get("/{usr_id}/conversation/{convo_id}/latest")]
+// FIXME: usr_id needs be usr_token
+#[get("/{usr_token}/conversation/{convo_id}/latest")]
 async fn get_latest_message(
     data: Data<RwLock<SQLiteDB>>,
-    usr_id: Path<i64>,
+    usr_token: Path<i64>,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_id.clone());
+    let usr_id = UserId(usr_token.clone());
     let convo_id = ConversationId(convo_id.clone());
-    let record = data.read().await.get_latest_message(&convo_id).await;
-    match record {
-        Ok(message) => Ok(Json(message)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+    let db_handle = data.read().await;
+    Ok(db_handle.get_latest_message(&convo_id).await.map(Json)?)
 }

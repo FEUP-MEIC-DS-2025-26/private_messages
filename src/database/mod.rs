@@ -55,6 +55,12 @@ pub trait Database {
         &self,
         conversation: &Self::ConversationId,
     ) -> Result<Option<Self::MessageId>, Self::Error>;
+
+    async fn belongs_to_conversation(
+        &self,
+        id: &Self::UserId,
+        conversation: &Self::ConversationId,
+    ) -> Result<(), Self::Error>;
 }
 
 /// Example implementation: Mock Database
@@ -291,6 +297,17 @@ pub mod mock {
                 .next()
                 .ok_or(anyhow!("No such user with username '{username}'."))
                 .copied()
+        }
+
+        async fn belongs_to_conversation(
+            &self,
+            id: &Self::UserId,
+            conversation: &Self::ConversationId,
+        ) -> Result<(), Self::Error> {
+            match self.db.read().await.conversations.get(conversation) {
+                Some((id1, id2, _)) if id1 == id || id2 == id => Ok(()),
+                _ => Err(anyhow!("No such conversation {conversation:?}.")),
+            }
         }
     }
 
