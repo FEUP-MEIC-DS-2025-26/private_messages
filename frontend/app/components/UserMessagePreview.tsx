@@ -1,3 +1,6 @@
+import Link from 'next/link';
+
+// components
 import ProfilePicture from './ProfilePicture';
 
 interface UserMessagePreviewProps {
@@ -26,7 +29,7 @@ export default function UserMessagePreview({
   const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
 
   return (
-    <a
+    <Link
       className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors"
       href="/chat"
     >
@@ -43,6 +46,6 @@ export default function UserMessagePreview({
         <span className="text-xs ml-3">{lastMessageDate}</span>
         <p>{lastMessage}</p>
       </div>
-    </a>
+    </Link>
   );
 }
