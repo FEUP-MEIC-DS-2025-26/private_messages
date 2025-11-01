@@ -1,6 +1,6 @@
 use actix_files::Files;
-use actix_web::{App, HttpServer, HttpResponse, Responder, web};
-use clap::Parser;
+use actix_web::{App, HttpServer, web};
+use clap::{Parser, Subcommand};
 use crate::{database::sqlite::SQLiteDB, rest::*};
 
 mod database;
@@ -13,13 +13,34 @@ struct Cli {
     db_url: String,
     #[arg(short, long, default_value_t = 8080)]
     port: u16,
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+impl Cli {
+    fn in_kiosk_mode(&self) -> bool {
+        match &self.command {
+            Some(c) => {
+                match c {
+                    Command::Kiosk => true,
+                }
+            },
+            None => false,
+        }
+    } 
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Populates the database with example entries (see src/database/populate.sql)
+    Kiosk,
 }
 
 const ADDRESS: &'static str = "0.0.0.0";
 
 async fn run_user_facing_code() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let db = SQLiteDB::new(&cli.db_url).await?;
+    let db = SQLiteDB::new(&cli.db_url, cli.in_kiosk_mode()).await?;
     let wd = web::Data::new(db);
 
     println!("Running server on {}:{}", ADDRESS, cli.port);
