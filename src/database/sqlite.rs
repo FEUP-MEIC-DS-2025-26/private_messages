@@ -20,7 +20,8 @@ impl SQLiteDB {
     
     pub async fn kiosk() -> anyhow::Result<Self> {
         let pool = SqlitePoolOptions::new().connect_lazy("sqlite::memory:")?;
-        let db = SQLiteDB { pool };
+        let mut db = SQLiteDB { pool };
+        db.set_schema().await?;
         sqlx::query_file!("src/database/populate.sql").execute(&db.pool).await?;
         Ok(db)
     }

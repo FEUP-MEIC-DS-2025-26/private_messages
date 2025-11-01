@@ -44,9 +44,9 @@ enum Command {
 async fn run_user_facing_code() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let db = if cli.in_kiosk_mode() {
-        SQLiteDB::new(&cli.db_url).await?
-    } else {
         SQLiteDB::kiosk().await?
+    } else {
+        SQLiteDB::new(&cli.db_url).await?
     };
     let wd = web::Data::new(RwLock::new(db));
     let secret_key = Key::generate();
