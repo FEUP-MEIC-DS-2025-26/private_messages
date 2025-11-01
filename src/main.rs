@@ -1,7 +1,8 @@
+use crate::{database::sqlite::SQLiteDB, rest::*};
 use actix_files::Files;
 use actix_web::{App, HttpServer, web};
 use clap::Parser;
-use crate::{database::sqlite::SQLiteDB, rest::*};
+use tokio::sync::RwLock;
 
 mod database;
 mod pages;
@@ -18,7 +19,7 @@ struct Cli {
 async fn run_user_facing_code() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let db = SQLiteDB::new(&cli.db_url).await?;
-    let wd = web::Data::new(db);
+    let wd = web::Data::new(RwLock::new(db));
 
     HttpServer::new(move || {
         App::new()
@@ -27,7 +28,7 @@ async fn run_user_facing_code() -> anyhow::Result<()> {
             .service(get_peer)
             .service(get_user_profile)
             .service(get_message)
-            // .service(add_user)
+            .service(add_user)
             // .service(start_conversation)
             // .service(post_msg)
             .service(get_latest_message)
