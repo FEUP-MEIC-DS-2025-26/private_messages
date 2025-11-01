@@ -4,6 +4,9 @@
 # Nix
 /.direnv
 
+# SQLite
+.sqlite3*
+
 # NextJS
 .next
 

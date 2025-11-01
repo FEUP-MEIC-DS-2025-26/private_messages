@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT last_message_id\n            FROM conversation\n            WHERE id = ?;\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "last_message_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "5c031fb2a73ce07bec0c4bdad56d9287a158430dfedd1adf7e544b8e528df064"
+}

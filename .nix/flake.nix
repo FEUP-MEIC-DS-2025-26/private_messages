@@ -71,6 +71,10 @@
               nodePackages.pnpm
               yarn
               
+              # SQLite
+              sqlite
+              sqlx-cli
+              
               # Deployment
               google-cloud-sdk
               opentofu
@@ -79,6 +83,7 @@
             env = {
               # Required by rust-analyzer
               RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
+              CARGO = "${pkgs.rustToolchain}/bin/cargo";
             };
           };
         }
