@@ -8,13 +8,20 @@ pub struct SQLiteDB {
 }
 
 impl SQLiteDB {
-    pub async fn new(url: &str) -> anyhow::Result<Self> {
+    pub async fn new(url: &str, populate: bool) -> anyhow::Result<Self> {
+        if populate {
+            Sqlite::drop_database(url).await?;
+        }
+        
         if !Sqlite::database_exists(url).await? {
             Sqlite::create_database(url).await?;
         }
         let pool = SqlitePoolOptions::new().connect_lazy(url)?;
         let mut db = SQLiteDB { pool };
         db.set_schema().await?;
+        if populate {
+            sqlx::query_file!("src/database/populate.sql").execute(&db.pool).await?;
+        }
         Ok(db)
     }
 
@@ -422,7 +429,7 @@ mod test {
             name: "Bob Bellows".to_owned(),
         };
 
-        let mut db = SQLiteDB::new("sqlite::memory:").await?;
+        let mut db = SQLiteDB::new("sqlite::memory:", false).await?;
 
         let alice_id = db.add_user(&alice).await?;
         let bob_id = db.add_user(&bob).await?;
@@ -502,7 +509,7 @@ mod test {
             name: "Bob Bellows".to_owned(),
         };
 
-        let mut db = SQLiteDB::new("sqlite::memory:").await?;
+        let mut db = SQLiteDB::new("sqlite::memory:", false).await?;
 
         let alice_id = db.add_user(&alice).await?;
         let bob_id = db.add_user(&bob).await?;
