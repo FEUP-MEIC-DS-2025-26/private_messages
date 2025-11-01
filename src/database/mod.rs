@@ -22,14 +22,16 @@ pub trait Database {
         conversation: &Self::ConversationId,
     ) -> Result<Self::UserId, Self::Error>;
 
+    async fn get_user_id_from_username(&self, username: &str) -> Result<Self::UserId, Self::Error>;
+
     async fn get_user_profile(
         &self,
         their_id: &Self::UserId,
     ) -> Result<Self::UserProfile, Self::Error>;
-    
+
     async fn get_message(
         &self,
-        message: &Self::MessageId
+        message: &Self::MessageId,
     ) -> Result<(Self::UserId, Self::Message, Option<Self::MessageId>), Self::Error>;
 
     async fn get_querier<'a>(&'a self) -> Result<Self::Querier<'a>, Self::Error>;
@@ -48,11 +50,22 @@ pub trait Database {
         my_id: &Self::UserId,
         conversation: &Self::ConversationId,
     ) -> Result<Self::MessageId, Self::Error>;
-    
+
     async fn get_latest_message(
         &self,
-        conversation: &Self::ConversationId
+        conversation: &Self::ConversationId,
     ) -> Result<Option<Self::MessageId>, Self::Error>;
+
+    async fn belongs_to_conversation(
+        &self,
+        id: &Self::UserId,
+        conversation: &Self::ConversationId,
+    ) -> Result<(), Self::Error>;
+    
+    async fn get_conversation_from_message(
+        &self,
+        msg_id: &Self::MessageId,
+    ) -> Result<Self::ConversationId, Self::Error>;
 }
 
 /// Example implementation: Mock Database
@@ -60,19 +73,19 @@ pub mod mock {
     use anyhow::anyhow;
     use std::collections::HashMap;
     use tokio::sync::{RwLock, RwLockReadGuard};
-    
+
     #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub struct ConversationId(u64);
-    
+
     #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub struct UserId(u64);
-    
+
     #[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
     pub struct MessageId(u64);
-    
+
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub struct Message(String);
-    
+
     #[derive(Debug, Clone)]
     pub struct UserProfile {
         username: String,
@@ -187,8 +200,10 @@ pub mod mock {
                 .conversations
                 .get(conversation)
                 .map(|(_, _, prev)| prev)
-                .ok_or(anyhow!("Conversation with ID {conversation:?} was not found."))?;
-            
+                .ok_or(anyhow!(
+                    "Conversation with ID {conversation:?} was not found."
+                ))?;
+
             // Get the highest ID and generate the next one
             let id = querier
                 .messages
@@ -197,18 +212,18 @@ pub mod mock {
                 .map(|x| x.0 + 1)
                 .unwrap_or(0);
             let id = MessageId(id);
-            
+
             // Write message
             querier
                 .messages
                 .insert(id.clone(), (*my_id, *conversation, msg, prev_id));
-            
+
             // Change the last message pointer in the conversation table
             querier
                 .conversations
                 .get_mut(conversation)
-                .map(|(_, _, prev )| *prev = Some(id));
-            
+                .map(|(_, _, prev)| *prev = Some(id));
+
             Ok(id)
         }
 
@@ -253,21 +268,60 @@ pub mod mock {
 
         async fn get_message(
             &self,
-            message: &Self::MessageId
+            message: &Self::MessageId,
         ) -> Result<(Self::UserId, Self::Message, Option<Self::MessageId>), Self::Error> {
             match self.db.read().await.messages.get(message) {
-                Some((usr, _conv , msg, prev)) => Ok((usr.clone(), msg.clone(), prev.clone())),
+                Some((usr, _conv, msg, prev)) => Ok((usr.clone(), msg.clone(), prev.clone())),
                 None => Err(anyhow!("Message with ID {message:?} was not found.")),
             }
         }
 
         async fn get_latest_message(
             &self,
-            conversation: &Self::ConversationId
+            conversation: &Self::ConversationId,
         ) -> Result<Option<MessageId>, Self::Error> {
             match self.db.read().await.conversations.get(conversation) {
                 Some((_, _, prev)) => Ok(*prev),
-                None => Err(anyhow!("Conversation with ID {conversation:?} was not found.")),
+                None => Err(anyhow!(
+                    "Conversation with ID {conversation:?} was not found."
+                )),
+            }
+        }
+
+        async fn get_user_id_from_username(
+            &self,
+            username: &str,
+        ) -> Result<Self::UserId, Self::Error> {
+            self.db
+                .read()
+                .await
+                .users
+                .iter()
+                .filter(|(_, p)| p.username == username)
+                .map(|(id, _)| id)
+                .next()
+                .ok_or(anyhow!("No such user with username '{username}'."))
+                .copied()
+        }
+
+        async fn belongs_to_conversation(
+            &self,
+            id: &Self::UserId,
+            conversation: &Self::ConversationId,
+        ) -> Result<(), Self::Error> {
+            match self.db.read().await.conversations.get(conversation) {
+                Some((id1, id2, _)) if id1 == id || id2 == id => Ok(()),
+                _ => Err(anyhow!("No such conversation {conversation:?}.")),
+            }
+        }
+
+        async fn get_conversation_from_message(
+            &self,
+            msg_id: &Self::MessageId,
+        ) -> Result<Self::ConversationId, Self::Error> {
+            match self.db.read().await.messages.get(msg_id) {
+                Some((_, convo_id, _, _)) => Ok(*convo_id),
+                None => Err(anyhow!("No such message {msg_id:?}.")),
             }
         }
     }
@@ -358,7 +412,7 @@ pub mod mock {
 
             Ok(())
         }
-        
+
         #[tokio::test]
         async fn test_conversation_pointer() -> anyhow::Result<()> {
             // Preparation
@@ -384,23 +438,23 @@ pub mod mock {
             assert_eq!(alice_id, alice_again);
 
             let convo_id = db.start_conversation(&alice_id, &bob_id).await?;
-            
+
             // Test
             let last_msg = db.get_latest_message(&convo_id).await?;
             assert_eq!(last_msg, None);
-            
+
             let hello = Message("Hello Bob!".to_owned());
             let first_hello_id = db.post_msg(hello, &alice_id, &convo_id).await?;
-            
+
             let last_msg = db.get_latest_message(&convo_id).await?;
             assert_eq!(last_msg, Some(first_hello_id));
-            
+
             let hello = Message("Hello Alice!".to_owned());
             let second_hello_id = db.post_msg(hello, &bob_id, &convo_id).await?;
-            
+
             let last_msg = db.get_latest_message(&convo_id).await?.unwrap();
             assert_eq!(last_msg, second_hello_id);
-            
+
             let (_, _, last_msg) = db.get_message(&last_msg).await?;
             assert_eq!(last_msg, Some(first_hello_id));
             Ok(())

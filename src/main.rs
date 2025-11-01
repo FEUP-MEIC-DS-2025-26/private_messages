@@ -1,5 +1,9 @@
 use actix_files::Files;
-use actix_web::{App, HttpServer, web};
+use actix_identity::IdentityMiddleware;
+use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
+use actix_web::{App, HttpServer, middleware, web};
+use cookie::{Key, time::Duration};
+use tokio::sync::RwLock;
 use clap::{Parser, Subcommand};
 use crate::{database::sqlite::SQLiteDB, rest::*};
 
@@ -39,20 +43,26 @@ enum Command {
 async fn run_user_facing_code() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let db = SQLiteDB::new(&cli.db_url, cli.in_kiosk_mode()).await?;
-    let wd = web::Data::new(db);
+    let wd = web::Data::new(RwLock::new(db));
+    let secret_key = Key::generate();
 
     HttpServer::new(move || {
         App::new()
             .app_data(wd.clone())
-            .service(get_conversations)
-            .service(get_peer)
-            .service(get_user_profile)
-            .service(get_message)
-            // .service(add_user)
-            // .service(start_conversation)
-            // .service(post_msg)
-            .service(get_latest_message)
+            .service(rest::create_services())
             .service(Files::new("/", "frontend/out").index_file("index.html"))
+            .wrap(IdentityMiddleware::default())
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
+                    .cookie_name("user_token".to_owned())
+                    .cookie_secure(false)
+                    .session_lifecycle(
+                        PersistentSession::default().session_ttl(Duration::minutes(5)),
+                    )
+                    .build(),
+            )
+            .wrap(middleware::NormalizePath::trim())
+            .wrap(middleware::Logger::default())
     })
     .bind(("0.0.0.0", cli.port))?
     .run()
