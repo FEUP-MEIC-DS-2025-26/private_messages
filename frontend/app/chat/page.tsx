@@ -1,9 +1,12 @@
+"use client";
+
 import Link from 'next/link';
 
 // components
 import ProfilePicture from '../components/ProfilePicture';
 import UserMessage from './components/UserMessage';
 import MessageInput from './components/MessageInput';
+import { useState, useEffect } from 'react';
 
 // icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -15,6 +18,20 @@ const mockUser = {
 };
 
 export default function Chat() {
+    const [messages, setMessages] = useState([{
+        isFromUser: true,
+        content: "Next.js isn't that good"
+    }]);
+    useEffect(() => {
+        const intervalId = setInterval(async () => {
+            console.log("I am making a request");
+            setMessages([...messages, {
+                isFromUser: Math.random() > 0.5,
+                content: Math.floor(Math.random() * 1000000).toString()
+            }]);
+        }, 5000);
+        return () => clearInterval(intervalId);
+    }, [messages]);
   return (
     <>
       <header className="flex items-center gap-5 pl-4 pb-4 border-b">
@@ -34,42 +51,16 @@ export default function Chat() {
 
       {/** Chat */}
       <ul className="grow overflow-scroll flex flex-col gap-3 px-3">
-        <li>
-          <UserMessage
-            isFromUser={false}
-            content="Boa tarde, as laranjas ainda estão à venda?"
-          />
-        </li>
-
-        <li>
-          <UserMessage
-            isFromUser={true}
-            content="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-          />
-        </li>
-
-        <li>
-          <UserMessage
-            isFromUser={true}
-            content="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-          />
-        </li>
-
-        <li>
-          <UserMessage
-            isFromUser={true}
-            content="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-          />
-        </li>
-
-        <li>
-          <UserMessage
-            isFromUser={false}
-            content="Boa tarde, as laranjas ainda estão à venda?"
-          />
-        </li>
-      </ul>
-
+        { messages.map(({ isFromUser, content }, index) => (
+            <li key={`{content}-{index}`}>
+                <UserMessage
+                    isFromUser={isFromUser}
+                    content={content}
+                />
+            </li>
+            ))
+        }
+        </ul>
       {/* Text bar */}
       <MessageInput />
     </>

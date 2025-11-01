@@ -27,7 +27,6 @@ async fn run_user_facing_code() -> anyhow::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(wd.clone())
-            .service(pages::cat)
             .service(get_conversations)
             .service(get_peer)
             .service(get_user_profile)
