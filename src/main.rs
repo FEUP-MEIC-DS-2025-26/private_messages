@@ -5,7 +5,7 @@ use actix_web::{App, HttpServer, middleware, web};
 use cookie::{Key, time::Duration};
 use tokio::sync::RwLock;
 use clap::{Parser, Subcommand};
-use crate::{database::sqlite::SQLiteDB, rest::*};
+use crate::{database::sqlite::SQLiteDB};
 
 mod database;
 mod pages;
@@ -36,13 +36,18 @@ impl Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Populates the database with example entries (see src/database/populate.sql)
+    /// Populates the database with example entries (see src/database/populate.sql).
+    /// In this mode, the database will always be in memory, even if said otherwise by the url argument.
     Kiosk,
 }
 
 async fn run_user_facing_code() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let db = SQLiteDB::new(&cli.db_url, cli.in_kiosk_mode()).await?;
+    let db = if cli.in_kiosk_mode() {
+        SQLiteDB::new(&cli.db_url).await?
+    } else {
+        SQLiteDB::kiosk().await?
+    };
     let wd = web::Data::new(RwLock::new(db));
     let secret_key = Key::generate();
 
