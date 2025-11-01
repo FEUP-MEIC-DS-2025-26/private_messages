@@ -13,6 +13,7 @@ pub fn create_services() -> actix_web::Scope {
         .service(get_user_profile)
         .service(get_message)
         .service(get_latest_message)
+        .service(get_most_recent_messages)
         .service(add_user)
 }
 
@@ -123,4 +124,14 @@ async fn get_latest_message(
     let convo_id = ConversationId(convo_id.clone());
     let db_handle = data.read().await;
     Ok(db_handle.get_latest_message(&convo_id).await.map(Json)?)
+}
+
+#[get("/conversation/{convo_id}/recent")]
+async fn get_most_recent_messages(
+    data: Data<RwLock<SQLiteDB>>,
+    convo_id: Path<i64>
+) -> Result<impl Responder> {
+    let convo_id = ConversationId(convo_id.clone());
+    let db_handle = data.read().await;
+    Ok(db_handle.get_most_recent_messages(&convo_id).await.map(Json)?)
 }

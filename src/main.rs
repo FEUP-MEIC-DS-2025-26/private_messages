@@ -1,13 +1,8 @@
-use crate::{database::sqlite::SQLiteDB, rest::*};
+use crate::{database::sqlite::SQLiteDB};
 use actix_files::Files;
 use actix_web::{App, HttpServer, web};
-<<<<<<< HEAD
-use clap::{Parser, Subcommand};
-use crate::{database::sqlite::SQLiteDB, rest::*};
-=======
-use clap::Parser;
+use clap::{Subcommand, Parser};
 use tokio::sync::RwLock;
->>>>>>> origin/post_api
 
 mod database;
 mod pages;
@@ -46,7 +41,7 @@ const ADDRESS: &'static str = "0.0.0.0";
 
 async fn run_user_facing_code() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let db = SQLiteDB::new(&cli.db_url).await?;
+    let db = SQLiteDB::new(&cli.db_url, true).await?;
     let wd = web::Data::new(RwLock::new(db));
 
     println!("Running server on {}:{}", ADDRESS, cli.port);

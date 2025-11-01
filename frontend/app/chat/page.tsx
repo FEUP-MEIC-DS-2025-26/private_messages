@@ -17,18 +17,36 @@ const mockUser = {
   profilePictureURL: 'https://thispersondoesnotexist.com/',
 };
 
+type Msg = {
+    isFromUser: boolean,
+    content: string
+};
+
 export default function Chat() {
-    const [messages, setMessages] = useState([{
-        isFromUser: true,
-        content: "Next.js isn't that good"
-    }]);
+    const state: Msg[] = [];
+    const [messages, setMessages] = useState(state);
+    const api_url = "http://localhost:8080/api/chat/conversation/1/recent";
+    const user_id: number = 1;
+    let previous_message_id: number | null = null;
+
     useEffect(() => {
         const intervalId = setInterval(async () => {
-            console.log("I am making a request");
-            setMessages([...messages, {
-                isFromUser: Math.random() > 0.5,
-                content: Math.floor(Math.random() * 1000000).toString()
-            }]);
+            if (messages.length == 0) {
+                fetch(api_url).then(res => res.json()).then(data => {
+                    if (data.length != 2) {
+                        console.error(`JSON received has wrong length: ${data.length}`);
+                    } else {
+                        setMessages(data[0].map((record: [uid: number, content: string]) => { return { isFromUser: record[0] === user_id, content: record[1] };}));
+                        previous_message_id = data[1];
+                    }
+                });
+            } else {
+                console.log("I am making a request");
+                setMessages([...messages, {
+                    isFromUser: Math.random() > 0.5,
+                    content: Math.floor(Math.random() * 1000000).toString()
+                }]);
+            }
         }, 5000);
         return () => clearInterval(intervalId);
     }, [messages]);
@@ -52,7 +70,7 @@ export default function Chat() {
       {/** Chat */}
       <ul className="grow overflow-scroll flex flex-col gap-3 px-3">
         { messages.map(({ isFromUser, content }, index) => (
-            <li key={`{content}-{index}`}>
+            <li key={`${content}-${index}`}>
                 <UserMessage
                     isFromUser={isFromUser}
                     content={content}
