@@ -60,7 +60,8 @@ async fn add_user(
     usr_id: Path<i64>,
     user_profile: Json<UserProfile>,
 ) -> Result<impl Responder> {
-    todo!()
+    Ok("TODO")
+    // todo!()
 }
 
 #[post("/api/chat/{usr_id}/conversation")]
@@ -69,7 +70,8 @@ async fn start_conversation(
     my_id: Path<i64>,
     their_id: Json<UserId>,
 ) -> Result<impl Responder> {
-    todo!()
+    Ok("TODO")
+    // todo!()
 }
 
 #[post("/api/chat/{usr_id}/conversation/{convo_id}/message")]
@@ -79,7 +81,8 @@ async fn post_msg(
     conversation: Path<i64>,
     msg: Json<String>,
 ) -> Result<impl Responder> {
-    todo!()
+    Ok("TODO")
+    // todo!()
 }
 
 #[get("/api/chat/{usr_id}/conversation/{convo_id}/latest")]

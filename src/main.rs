@@ -17,10 +17,6 @@ struct Cli {
 
 const ADDRESS: &'static str = "0.0.0.0";
 
-async fn chat() -> impl Responder {
-    HttpResponse::Ok().body("<!DOCTYPE html><html lang=\"en\"><body><h1>This isn't a chat!</h1></body></html>")
-}
-
 async fn run_user_facing_code() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let db = SQLiteDB::new(&cli.db_url).await?;
@@ -30,8 +26,8 @@ async fn run_user_facing_code() -> anyhow::Result<()> {
 
     HttpServer::new(move || {
         App::new()
-            .route("/chat", web::get().to(chat))
             .app_data(wd.clone())
+            .service(pages::cat)
             .service(get_conversations)
             .service(get_peer)
             .service(get_user_profile)
