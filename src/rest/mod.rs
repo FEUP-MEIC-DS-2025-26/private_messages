@@ -54,33 +54,33 @@ async fn get_message(
     }
 }
 
-#[post("/api/chat/{usr_id}/user")]
-async fn add_user(
-    data: Data<SQLiteDB>,
-    usr_id: Path<i64>,
-    user_profile: Json<UserProfile>,
-) -> Result<impl Responder> {
-    todo!()
-}
+// #[post("/api/chat/{usr_id}/user")]
+// async fn add_user(
+//     data: Data<SQLiteDB>,
+//     usr_id: Path<i64>,
+//     user_profile: Json<UserProfile>,
+// ) -> Result<impl Responder> {
+//     todo!()
+// }
 
-#[post("/api/chat/{usr_id}/conversation")]
-async fn start_conversation(
-    data: Data<SQLiteDB>,
-    my_id: Path<i64>,
-    their_id: Json<UserId>,
-) -> Result<impl Responder> {
-    todo!()
-}
+// #[post("/api/chat/{usr_id}/conversation")]
+// async fn start_conversation(
+//     data: Data<SQLiteDB>,
+//     my_id: Path<i64>,
+//     their_id: Json<UserId>,
+// ) -> Result<impl Responder> {
+//     todo!()
+// }
 
-#[post("/api/chat/{usr_id}/conversation/{convo_id}/message")]
-async fn post_msg(
-    data: Data<SQLiteDB>,
-    my_id: Path<i64>,
-    conversation: Path<i64>,
-    msg: Json<String>,
-) -> Result<impl Responder> {
-    todo!()
-}
+// #[post("/api/chat/{usr_id}/conversation/{convo_id}/message")]
+// async fn post_msg(
+//     data: Data<SQLiteDB>,
+//     my_id: Path<i64>,
+//     conversation: Path<i64>,
+//     msg: Json<String>,
+// ) -> Result<impl Responder> {
+//     todo!()
+// }
 
 #[get("/api/chat/{usr_id}/conversation/{convo_id}/latest")]
 async fn get_latest_message(
