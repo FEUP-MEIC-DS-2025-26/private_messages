@@ -1,7 +1,7 @@
 use actix_files::Files;
 use actix_web::{App, HttpServer, HttpResponse, Responder, web};
 use clap::Parser;
-use crate::database::sqlite::SQLiteDB;
+use crate::{database::sqlite::SQLiteDB, rest::*};
 
 mod database;
 mod pages;
@@ -32,6 +32,14 @@ async fn run_user_facing_code() -> anyhow::Result<()> {
         App::new()
             .route("/chat", web::get().to(chat))
             .app_data(wd.clone())
+            .service(get_conversations)
+            .service(get_peer)
+            .service(get_user_profile)
+            .service(get_message)
+            .service(add_user)
+            .service(start_conversation)
+            .service(post_msg)
+            .service(get_latest_message)
             .service(Files::new("/", "frontend/out").index_file("index.html"))
     })
     .bind((ADDRESS, cli.port))?

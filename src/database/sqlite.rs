@@ -23,11 +23,11 @@ impl SQLiteDB {
     }
 }
 
-#[derive(Debug, sqlx::Type, PartialEq, Copy, Clone)]
+#[derive(Debug, sqlx::Type, PartialEq, Copy, Clone, serde::Serialize, serde::Deserialize)]
 #[sqlx(transparent)]
 pub struct UserId(pub i64);
 
-#[derive(Debug, sqlx::Type, PartialEq, Clone)]
+#[derive(Debug, sqlx::Type, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UserProfile {
     username: String,
     name: String,
@@ -51,11 +51,11 @@ impl UserProfile {
 #[sqlx(transparent)]
 pub struct ConversationId(pub i64);
 
-#[derive(Debug, sqlx::Type, PartialEq, Clone)]
+#[derive(Debug, sqlx::Type, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 #[sqlx(transparent)]
 pub struct Message(pub String);
 
-#[derive(Debug, sqlx::Type, PartialEq, Copy, Clone)]
+#[derive(Debug, sqlx::Type, PartialEq, Copy, Clone, serde::Serialize, serde::Deserialize)]
 #[sqlx(transparent)]
 pub struct MessageId(pub i64);
 
