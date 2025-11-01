@@ -1,7 +1,10 @@
-use crate::{database::sqlite::SQLiteDB, rest::*};
+use crate::database::sqlite::SQLiteDB;
 use actix_files::Files;
-use actix_web::{App, HttpServer, web};
+use actix_identity::IdentityMiddleware;
+use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
+use actix_web::{App, HttpServer, middleware, web};
 use clap::Parser;
+use cookie::{Key, time::Duration};
 use tokio::sync::RwLock;
 
 mod database;
@@ -20,12 +23,25 @@ async fn run_user_facing_code() -> anyhow::Result<()> {
     let cli = Cli::parse();
     let db = SQLiteDB::new(&cli.db_url).await?;
     let wd = web::Data::new(RwLock::new(db));
+    let secret_key = Key::generate();
 
     HttpServer::new(move || {
         App::new()
             .app_data(wd.clone())
             .service(rest::create_services())
             .service(Files::new("/", "frontend/out").index_file("index.html"))
+            .wrap(IdentityMiddleware::default())
+            .wrap(
+                SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())
+                    .cookie_name("user_token".to_owned())
+                    .cookie_secure(false)
+                    .session_lifecycle(
+                        PersistentSession::default().session_ttl(Duration::minutes(5)),
+                    )
+                    .build(),
+            )
+            .wrap(middleware::NormalizePath::trim())
+            .wrap(middleware::Logger::default())
     })
     .bind(("0.0.0.0", cli.port))?
     .run()
