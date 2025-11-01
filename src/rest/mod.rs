@@ -1,69 +1,99 @@
 use crate::database::{Database, sqlite::*};
 use actix_web::{
     Responder, Result, get, post,
-    web::{Data, Json, Path},
+    web::{Data, Form, Json, Path, Query},
 };
+use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
 
-#[get("/api/chat/{usr_id}/conversation")]
-async fn get_conversations(usr_id: Path<i64>, data: Data<SQLiteDB>) -> Result<impl Responder> {
-    let usr_id = UserId(usr_id.clone());
-    let records = data.get_conversations(&usr_id).await;
-    match records {
-        Ok(i) => Ok(Json(i)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+pub fn create_services() -> actix_web::Scope {
+    actix_web::web::scope("/api/chat")
+        .service(get_conversations)
+        .service(get_peer)
+        .service(get_user_profile)
+        .service(get_message)
+        .service(get_latest_message)
+        .service(add_user)
 }
 
-#[get("/api/chat/{usr_id}/conversation/{convo_id}/peer")]
+#[derive(Debug, Serialize, Deserialize)]
+struct UsrToken {
+    token: i64,
+}
+
+// FIXME: usr_id needs be usr_token
+#[get("/conversation")]
+async fn get_conversations(
+    usr_token: Query<UsrToken>,
+    data: Data<RwLock<SQLiteDB>>,
+) -> Result<impl Responder> {
+    let usr_id = UserId(usr_token.into_inner().token);
+    Ok(data
+        .read()
+        .await
+        .get_conversations(&usr_id)
+        .await
+        .map(Json)?)
+}
+
+// FIXME: usr_id needs be usr_token
+#[get("/conversation/{convo_id}/peer")]
 async fn get_peer(
-    data: Data<SQLiteDB>,
-    usr_id: Path<i64>,
+    data: Data<RwLock<SQLiteDB>>,
+    usr_token: Query<UsrToken>,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_id.clone());
+    let usr_id = UserId(usr_token.token);
     let convo_id = ConversationId(convo_id.clone());
-    let record = data.get_peer(&usr_id, &convo_id).await;
-    match record {
-        Ok(peer) => Ok(Json(peer)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+    Ok(data
+        .read()
+        .await
+        .get_peer(&usr_id, &convo_id)
+        .await
+        .map(Json)?)
 }
 
-#[get("/api/chat/{usr_id}/user")]
-async fn get_user_profile(data: Data<SQLiteDB>, usr_id: Path<i64>) -> Result<impl Responder> {
-    let usr_id = UserId(usr_id.clone());
-    let record = data.get_user_profile(&usr_id).await;
-    match record {
-        Ok(profile) => Ok(Json(profile)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+#[get("/{username}")]
+async fn get_user_profile(
+    data: Data<RwLock<SQLiteDB>>,
+    username: Path<String>,
+) -> Result<impl Responder> {
+    let usr_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&username)
+        .await
+        .map_err(DbError::from)?;
+    Ok(data
+        .read()
+        .await
+        .get_user_profile(&usr_id)
+        .await
+        .map(Json)?)
 }
 
-#[get("/api/chat/{usr_id}/message/{msg_id}")]
+// FIXME: usr_id needs be usr_token
+#[get("/message/{msg_id}")]
 async fn get_message(
-    data: Data<SQLiteDB>,
-    usr_id: Path<i64>,
+    data: Data<RwLock<SQLiteDB>>,
+    usr_token: Query<UsrToken>,
     msg_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_id.clone());
+    let usr_id = UserId(usr_token.token);
     let msg_id = MessageId(msg_id.clone());
-    let record = data.get_message(&msg_id).await;
-    match record {
-        Ok(message) => Ok(Json(message)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+    Ok(data.read().await.get_message(&msg_id).await.map(Json)?)
 }
 
-// #[post("/api/chat/{usr_id}/user")]
-// async fn add_user(
-//     data: Data<SQLiteDB>,
-//     usr_id: Path<i64>,
-//     user_profile: Json<UserProfile>,
-// ) -> Result<impl Responder> {
-//     todo!()
-// }
+#[post("/user")]
+async fn add_user(
+    data: Data<RwLock<SQLiteDB>>,
+    user_profile: Form<UserProfile>,
+) -> Result<impl Responder> {
+    let user_profile = user_profile.0;
+    Ok(data.write().await.add_user(&user_profile).await.map(Json)?)
+}
 
-// #[post("/api/chat/{usr_id}/conversation")]
+// #[post("/{usr_id}/conversation")]
 // async fn start_conversation(
 //     data: Data<SQLiteDB>,
 //     my_id: Path<i64>,
@@ -72,7 +102,7 @@ async fn get_message(
 //     todo!()
 // }
 
-// #[post("/api/chat/{usr_id}/conversation/{convo_id}/message")]
+// #[post("/{usr_id}/conversation/{convo_id}/message")]
 // async fn post_msg(
 //     data: Data<SQLiteDB>,
 //     my_id: Path<i64>,
@@ -82,17 +112,15 @@ async fn get_message(
 //     todo!()
 // }
 
-#[get("/api/chat/{usr_id}/conversation/{convo_id}/latest")]
+// FIXME: usr_id needs be usr_token
+#[get("/conversation/{convo_id}/latest")]
 async fn get_latest_message(
-    data: Data<SQLiteDB>,
-    usr_id: Path<i64>,
+    data: Data<RwLock<SQLiteDB>>,
+    usr_token: Query<UsrToken>,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let usr_id = UserId(usr_id.clone());
+    let usr_id = UserId(usr_token.token);
     let convo_id = ConversationId(convo_id.clone());
-    let record = data.get_latest_message(&convo_id).await;
-    match record {
-        Ok(message) => Ok(Json(message)),
-        Err(e) => Err(actix_web::error::ErrorInternalServerError(e)),
-    }
+    let db_handle = data.read().await;
+    Ok(db_handle.get_latest_message(&convo_id).await.map(Json)?)
 }

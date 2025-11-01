@@ -688,7 +688,9 @@ dependencies = [
  "clap",
  "gcloud-pubsub",
  "serde",
+ "serde_json",
  "sqlx",
+ "thiserror",
  "tokio",
 ]
 

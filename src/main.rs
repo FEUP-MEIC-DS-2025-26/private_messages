@@ -1,7 +1,13 @@
+use crate::{database::sqlite::SQLiteDB, rest::*};
 use actix_files::Files;
 use actix_web::{App, HttpServer, web};
+<<<<<<< HEAD
 use clap::{Parser, Subcommand};
 use crate::{database::sqlite::SQLiteDB, rest::*};
+=======
+use clap::Parser;
+use tokio::sync::RwLock;
+>>>>>>> origin/post_api
 
 mod database;
 mod pages;
@@ -40,22 +46,15 @@ const ADDRESS: &'static str = "0.0.0.0";
 
 async fn run_user_facing_code() -> anyhow::Result<()> {
     let cli = Cli::parse();
-    let db = SQLiteDB::new(&cli.db_url, cli.in_kiosk_mode()).await?;
-    let wd = web::Data::new(db);
+    let db = SQLiteDB::new(&cli.db_url).await?;
+    let wd = web::Data::new(RwLock::new(db));
 
     println!("Running server on {}:{}", ADDRESS, cli.port);
 
     HttpServer::new(move || {
         App::new()
             .app_data(wd.clone())
-            .service(get_conversations)
-            .service(get_peer)
-            .service(get_user_profile)
-            .service(get_message)
-            // .service(add_user)
-            // .service(start_conversation)
-            // .service(post_msg)
-            .service(get_latest_message)
+            .service(rest::create_services())
             .service(Files::new("/", "frontend/out").index_file("index.html"))
     })
     .bind((ADDRESS, cli.port))?
