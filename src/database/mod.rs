@@ -35,6 +35,7 @@ pub trait Database {
         message: &Self::MessageId,
     ) -> Result<(Self::UserId, Self::Message, Option<Self::MessageId>), Self::Error>;
 
+    #[allow(dead_code)]
     async fn get_querier<'a>(&'a self) -> Result<Self::Querier<'a>, Self::Error>;
 
     async fn add_user(&mut self, profile: &Self::UserProfile) -> Result<Self::UserId, Self::Error>;
@@ -70,6 +71,7 @@ pub trait Database {
 }
 
 /// Example implementation: Mock Database
+#[allow(dead_code)]
 pub mod mock {
     use anyhow::anyhow;
     use std::collections::HashMap;
