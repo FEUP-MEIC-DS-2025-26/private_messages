@@ -13,7 +13,11 @@ const USERNAME = 'john';
  * The user's inbox.
  */
 export default function Page() {
-  const [chatID, setChatID] = useState(null);
+  const [chatID, setChatID] = useState<number | null>(null);
 
-  return chatID ? <Chat id={chatID} /> : <Inbox />;
+  return chatID ? (
+    <Chat id={chatID} />
+  ) : (
+    <Inbox username={USERNAME} setChat={(id) => setChatID(id)} />
+  );
 }

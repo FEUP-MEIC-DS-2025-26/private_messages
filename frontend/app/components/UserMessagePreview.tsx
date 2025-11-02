@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 // components
 import ProfilePicture from './ProfilePicture';
 
@@ -22,7 +20,6 @@ export interface ChatPreviewProps {
  * A preview of the chat with a given user.
  */
 export default function ChatPreview({
-  id,
   name,
   username,
   profilePictureURL,
@@ -32,10 +29,7 @@ export default function ChatPreview({
   const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
 
   return (
-    <Link
-      className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors"
-      href={`/chat/${id}`}
-    >
+    <div className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors">
       <div className="relative">
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
         {unreadMessages > 0 && (
@@ -51,6 +45,6 @@ export default function ChatPreview({
         </span>
         <p>{lastMessage}</p>
       </div>
-    </Link>
+    </div>
   );
 }

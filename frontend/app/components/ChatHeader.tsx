@@ -18,18 +18,16 @@ const fetcher = (URL: string) => fetch(URL).then((res) => res.json());
 
 /**
  * Fetches information regarding the peer.
- * @param {string} id - the chat ID
+ * @param {number} id - the chat ID
  */
-const getPeer = async (id: string) => {
+const getPeer = async (id: number) => {
   const API_URL = '/api/chat';
 
   // fetch the peer's username
   const username: string = await fetcher(`${API_URL}/conversation/${id}/peer`);
 
-  // fetch the peer's display name
-  const name: string = await fetcher(`${API_URL}/user/${username}`);
-
-  return { name, username };
+  // fetch the peer's information
+  return await fetcher(`${API_URL}/user/${username}`);
 };
 
 /**
@@ -38,7 +36,7 @@ const getPeer = async (id: string) => {
 export default function ChatHeader({ id }: { id: number }) {
   const { data: peer, isLoading } = useSWR(
     `/api/chat/conversation/${id}/peer`,
-    fetcher,
+    () => getPeer(id),
   );
 
   return (
@@ -49,13 +47,13 @@ export default function ChatHeader({ id }: { id: number }) {
       >
         <FontAwesomeIcon icon={faArrowLeft} />
       </Link>
-      {isLoading ? (
+      {isLoading || !peer ? (
         <div>Loading...</div>
       ) : (
         <>
           <ProfilePicture
             name={peer.name}
-            URL={peer.profilePictureURL}
+            URL="https://thispersondoesnotexist.com/"
             size={56}
           />
           <strong className="text-xl">{peer.name}</strong>

@@ -3,8 +3,10 @@
 import useSWR from 'swr';
 import ChatPreview, { ChatPreviewProps } from './UserMessagePreview';
 
-// hard-coded user (only for the prototype)
-const USERNAME = 'john';
+interface InboxProps {
+  username: string;
+  setChat: (id: number) => void;
+}
 
 /**
  * A function for fetching the user's conversations from the server.
@@ -63,9 +65,9 @@ const getChats = async (username: string) => {
 /**
  * The user's inbox.
  */
-export default function Inbox() {
+export default function Inbox({ username, setChat }: InboxProps) {
   const { data: chats, isLoading } = useSWR('/api/chat/conversation', () =>
-    getChats(USERNAME),
+    getChats(username),
   );
 
   if (isLoading || !chats) {
@@ -76,7 +78,9 @@ export default function Inbox() {
     <ul className="flex flex-col *:not-last:border-b">
       {chats.map((chat: ChatPreviewProps) => (
         <li key={`chat-${chat.id}`}>
-          <ChatPreview {...chat} />
+          <button onClick={() => setChat(chat.id)}>
+            <ChatPreview {...chat} />
+          </button>
         </li>
       ))}
     </ul>

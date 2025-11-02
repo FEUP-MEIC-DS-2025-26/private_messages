@@ -1,7 +1,6 @@
 'use client';
 
 import useSWR from 'swr';
-import { useParams, useSearchParams } from 'next/navigation';
 
 // components
 import ChatHeader from './ChatHeader';
