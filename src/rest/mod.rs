@@ -8,7 +8,7 @@ use actix_web::{
     HttpMessage, HttpRequest, HttpResponse, Responder, Result, get, post,
     web::{Data, Form, Json, Path, Query},
 };
-use log::{warn, info};
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
@@ -46,10 +46,22 @@ struct Username {
 }
 
 #[get("/login")]
-async fn login(name: Query<Username>, req: HttpRequest) -> Result<impl Responder> {
+async fn login(
+    data: Data<RwLock<SQLiteDB>>,
+    name: Query<Username>,
+    req: HttpRequest,
+) -> Result<impl Responder> {
     // TODO,FIXME: Add auth (dies inside)
 
     let username = name.username.clone();
+
+    // FIXME: This forbids new users from login, basically.
+    data.read()
+        .await
+        .get_user_id_from_username(&username)
+        .await
+        .log(|e| warn!("Error: '{e}'; Possibly this user is unregistered?"))?;
+
     // Attach identity
     Identity::login(&req.extensions(), username)?;
 
