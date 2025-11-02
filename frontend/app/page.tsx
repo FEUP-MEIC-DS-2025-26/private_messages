@@ -16,7 +16,7 @@ export default function Home() {
             fetch(`${api_url}/conversation/${convoId}/peer`).then(res => res.json())
             .then(username => fetch(`${api_url}/user/${username}`)).then(res => res.json()).then(({ name }) => name),
               fetch(`${api_url}/conversation/${convoId}/latest`).then(res => res.json())
-            .then(msgId => fetch(`${api_url}/message/${msgId}`)).then(res => res.json()).then(({ content }) => content.One.msg)
+            .then(msgId => fetch(`${api_url}/message/${msgId}`)).then(res => res.json()).then(({ content }) => content.msg)
           ]))
         )).then(conversationsData => {
           setConversations([...conversations, ...conversationsData.map(([ name, msg ]) => { return { name: name, latestMessage: msg }; })]);
