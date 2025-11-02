@@ -1,3 +1,4 @@
+pub mod crypto;
 pub mod sqlite;
 
 pub trait Database {
@@ -66,7 +67,7 @@ pub trait Database {
         id: &Self::UserId,
         conversation: &Self::ConversationId,
     ) -> Result<(), Self::Error>;
-    
+
     async fn get_conversation_from_message(
         &self,
         msg_id: &Self::MessageId,

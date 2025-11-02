@@ -1,4 +1,8 @@
-use crate::database::{Database, sqlite::*};
+use crate::database::{
+    Database,
+    crypto::{CryptData, CryptoSuite},
+    sqlite::*,
+};
 use actix_identity::Identity;
 use actix_web::{
     HttpMessage, HttpRequest, HttpResponse, Responder, Result, get, post,
@@ -65,7 +69,10 @@ async fn get_peer(
         .get_user_id_from_username(&username)
         .await?;
     let convo_id = ConversationId(convo_id.clone());
-    data.read().await.belongs_to_conversation(&usr_id, &convo_id).await?;
+    data.read()
+        .await
+        .belongs_to_conversation(&usr_id, &convo_id)
+        .await?;
     Ok(data
         .read()
         .await
@@ -108,8 +115,15 @@ async fn get_message(
         .await?;
     let msg_id = MessageId(msg_id.clone());
     let msg = data.read().await.get_message(&msg_id).await?;
-    let convo_id = data.read().await.get_conversation_from_message(&msg_id).await?;
-    data.read().await.belongs_to_conversation(&usr_id, &convo_id).await?;
+    let convo_id = data
+        .read()
+        .await
+        .get_conversation_from_message(&msg_id)
+        .await?;
+    data.read()
+        .await
+        .belongs_to_conversation(&usr_id, &convo_id)
+        .await?;
     Ok(Json(msg))
 }
 
@@ -136,13 +150,19 @@ async fn start_conversation(
         .get_user_id_from_username(&username)
         .await?;
     let their_id = their_id.0;
-    Ok(data.write().await.start_conversation(&usr_id, &their_id).await.map(Json)?)
+    Ok(data
+        .write()
+        .await
+        .start_conversation(&usr_id, &their_id)
+        .await
+        .map(Json)?)
 }
 
 // FIXME: usr_id needs be usr_token
 #[post("/conversation/{convo_id}/message")]
 async fn post_msg(
     data: Data<RwLock<SQLiteDB>>,
+    suite: Data<CryptoSuite>,
     user: Identity,
     conversation: Path<i64>,
     msg: Form<Message>,
@@ -155,8 +175,17 @@ async fn post_msg(
         .await?;
     let conversation = ConversationId(conversation.into_inner());
     let msg = msg.0;
-    data.read().await.belongs_to_conversation(&usr_id, &conversation).await?;
-    Ok(data.write().await.post_msg(msg, &usr_id, &conversation).await.map(Json))
+    let msg = CryptData::encrypt(msg, &suite)?;
+    data.read()
+        .await
+        .belongs_to_conversation(&usr_id, &conversation)
+        .await?;
+    Ok(data
+        .write()
+        .await
+        .post_msg(msg, &usr_id, &conversation)
+        .await
+        .map(Json))
 }
 
 // FIXME: usr_id needs be usr_token
@@ -173,7 +202,10 @@ async fn get_latest_message(
         .get_user_id_from_username(&username)
         .await?;
     let convo_id = ConversationId(convo_id.clone());
-    data.read().await.belongs_to_conversation(&usr_id, &convo_id).await?;
+    data.read()
+        .await
+        .belongs_to_conversation(&usr_id, &convo_id)
+        .await?;
     let db_handle = data.read().await;
     Ok(db_handle.get_latest_message(&convo_id).await.map(Json)?)
 }
