@@ -1,7 +1,5 @@
 use crate::database::{
-    Database,
-    crypto::{CryptData, CryptoSuite},
-    sqlite::*,
+    crypto::{CryptData, CryptError, CryptoSuite}, sqlite::*, Database
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -97,10 +95,18 @@ async fn get_user_profile(
         .map(Json)?)
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct MessageInfo {
+    sender_id: UserId,
+    content: Message,
+    previous_msg: Option<MessageId>,
+}
+
 // FIXME: usr_id needs be usr_token
 #[get("/message/{msg_id}")]
 async fn get_message(
     data: Data<RwLock<SQLiteDB>>,
+    suite: Data<CryptoSuite>,
     user: Identity,
     msg_id: Path<i64>,
 ) -> Result<impl Responder> {
@@ -111,7 +117,6 @@ async fn get_message(
         .get_user_id_from_username(&username)
         .await?;
     let msg_id = MessageId(msg_id.clone());
-    let msg = data.read().await.get_message(&msg_id).await?;
     let convo_id = data
         .read()
         .await
@@ -121,7 +126,9 @@ async fn get_message(
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await?;
-    Ok(Json(msg))
+    let (sender_id, encrypted_msg, previous_msg) = data.read().await.get_message(&msg_id).await?;
+    let content = encrypted_msg.decrypt(&suite)?;
+    Ok(Json(MessageInfo{sender_id, content, previous_msg}))
 }
 
 // #[post("/user")]
@@ -214,13 +221,28 @@ async fn get_latest_message(
 #[get("/conversation/{convo_id}/recent")]
 async fn get_most_recent_messages(
     data: Data<RwLock<SQLiteDB>>,
+    suite: Data<CryptoSuite>,
     user: Identity,
-    convo_id: Path<i64>
+    convo_id: Path<i64>,
 ) -> Result<impl Responder> {
     let username = user.id()?;
-    let usr_id = data.read().await.get_user_id_from_username(&username).await?;
+    let usr_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&username)
+        .await?;
     let convo_id = ConversationId(convo_id.clone());
-    data.read().await.belongs_to_conversation(&usr_id, &convo_id).await?;
+    data.read()
+        .await
+        .belongs_to_conversation(&usr_id, &convo_id)
+        .await?;
     let db_handle = data.read().await;
-    Ok(db_handle.get_most_recent_messages(&convo_id).await.map(Json)?)
+    let (messages, prev_id) = db_handle
+        .get_most_recent_messages(&convo_id)
+        .await?;
+    let messages = messages.into_iter().map(|(id, encrypted)| {
+        let msg = encrypted.decrypt(&suite)?;
+        Ok((id, msg))
+    }).collect::<Result<Vec<_>, CryptError>>()?;
+    Ok(Json((messages, prev_id)))
 }
