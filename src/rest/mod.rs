@@ -72,11 +72,7 @@ async fn get_peer(
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await?;
-    let peer_id = data
-        .read()
-        .await
-        .get_peer(&usr_id, &convo_id)
-        .await?;
+    let peer_id = data.read().await.get_peer(&usr_id, &convo_id).await?;
     let username = data.read().await.get_user_profile(&peer_id).await?;
     Ok(Json(username.username()))
 }
@@ -141,7 +137,7 @@ async fn get_message(
 async fn start_conversation(
     data: Data<RwLock<SQLiteDB>>,
     user: Identity,
-    their_id: Form<UserId>,
+    their_username: Form<String>,
 ) -> Result<impl Responder> {
     let username = user.id()?;
     let usr_id = data
@@ -149,7 +145,11 @@ async fn start_conversation(
         .await
         .get_user_id_from_username(&username)
         .await?;
-    let their_id = their_id.0;
+    let their_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&their_username)
+        .await?;
     Ok(data
         .write()
         .await
