@@ -1,7 +1,9 @@
 'use client';
 
 import useSWR from 'swr';
-import UserMessagePreview from './components/UserMessagePreview';
+import ConversationPreview, {
+  ConversationPreviewProps,
+} from './components/UserMessagePreview';
 
 // hard-coded user (only for the prototype)
 const USERNAME = 'john';
@@ -55,6 +57,8 @@ const getConversations = async (username: string) => {
     username: usernames[index],
     name: fullNames[index],
     lastMessage: lastMessages[index],
+    profilePictureURL: 'https://thispersondoesnotexist.com/',
+    unreadMessages: Math.floor(Math.random() * 10),
   }));
 };
 
@@ -73,14 +77,9 @@ export default function Inbox() {
 
   return (
     <ul className="flex flex-col *:not-last:border-b">
-      {conversations.map((conversation: any) => (
+      {conversations.map((conversation: ConversationPreviewProps) => (
         <li key={`conversation-${conversation.id}`}>
-          <UserMessagePreview
-            {...conversation}
-            profilePictureURL="https://thispersondoesnotexist.com/"
-            unreadMessages={2}
-            lastMessageDate="21/05/2026"
-          />
+          <ConversationPreview {...conversation} />
         </li>
       ))}
     </ul>
