@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use crate::database::{crypto::CryptoSuite, sqlite::SQLiteDB};
 use actix_files::Files;
 use actix_identity::IdentityMiddleware;
@@ -20,6 +21,18 @@ struct Cli {
 
     #[command(subcommand)]
     command: Option<Commands>,
+}
+
+impl Display for Cli {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mode = match self.command() {
+            Commands::Kiosk => "Kiosk",
+            Commands::Run { password: _, salt: _, db_url: _ } => "Production",
+        };
+        let port = self.port;
+        writeln!(f, "Running {mode} mode...")?;
+        writeln!(f, "Web interface: http://localhost:{port}")
+    }
 }
 
 impl Cli {
@@ -47,6 +60,7 @@ enum Commands {
 }
 
 async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
+    println!("{cli}");
     let (db, suite) = match cli.command() {
         Commands::Kiosk => {
             let suite = CryptoSuite::new("demonstration_password", "demonstration_salt")
