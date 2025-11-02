@@ -287,7 +287,7 @@ pub mod mock {
         // FIXME: implement this for the mock
         async fn get_most_recent_messages(
             &self,
-            conversation_id: &Self::ConversationId,
+            _conversation_id: &Self::ConversationId,
         ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error>
         {
             unimplemented!()

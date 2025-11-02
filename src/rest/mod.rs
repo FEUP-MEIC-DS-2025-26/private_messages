@@ -1,5 +1,7 @@
 use crate::database::{
-    crypto::{CryptData, CryptError, CryptoSuite}, sqlite::*, Database
+    Database,
+    crypto::{CryptData, CryptError, CryptoSuite},
+    sqlite::*,
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -96,13 +98,45 @@ async fn get_user_profile(
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct MessageInfo {
+struct MessageContent {
     sender_id: UserId,
-    content: Message,
+    msg: Message,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+enum RequestContents {
+    One(MessageContent),
+    Many(Vec<MessageContent>),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct MessageFormat {
+    content: RequestContents,
     previous_msg: Option<MessageId>,
 }
 
-// FIXME: usr_id needs be usr_token
+impl MessageContent {
+    fn new(sender_id: UserId, msg: Message) -> Self {
+        Self { sender_id, msg }
+    }
+}
+
+impl MessageFormat {
+    fn one(msg: MessageContent, prev_id: Option<MessageId>) -> Self {
+        Self {
+            content: RequestContents::One(msg),
+            previous_msg: prev_id,
+        }
+    }
+
+    fn many(msgs: Vec<MessageContent>, prev_id: Option<MessageId>) -> Self {
+        Self {
+            content: RequestContents::Many(msgs),
+            previous_msg: prev_id,
+        }
+    }
+}
+
 #[get("/message/{msg_id}")]
 async fn get_message(
     data: Data<RwLock<SQLiteDB>>,
@@ -126,9 +160,10 @@ async fn get_message(
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await?;
-    let (sender_id, encrypted_msg, previous_msg) = data.read().await.get_message(&msg_id).await?;
-    let content = encrypted_msg.decrypt(&suite)?;
-    Ok(Json(MessageInfo{sender_id, content, previous_msg}))
+    let (sender_id, encrypted_msg, prev_id) = data.read().await.get_message(&msg_id).await?;
+    let msg = encrypted_msg.decrypt(&suite)?;
+    let msg = MessageContent::new(sender_id, msg);
+    Ok(Json(MessageFormat::one(msg, prev_id)))
 }
 
 // #[post("/user")]
@@ -140,7 +175,6 @@ async fn get_message(
 //     Ok(data.write().await.add_user(&user_profile).await.map(Json)?)
 // }
 
-// FIXME: usr_id needs be usr_token
 #[post("/conversation")]
 async fn start_conversation(
     data: Data<RwLock<SQLiteDB>>,
@@ -166,7 +200,6 @@ async fn start_conversation(
         .map(Json)?)
 }
 
-// FIXME: usr_id needs be usr_token
 #[post("/conversation/{convo_id}/message")]
 async fn post_msg(
     data: Data<RwLock<SQLiteDB>>,
@@ -182,8 +215,7 @@ async fn post_msg(
         .get_user_id_from_username(&username)
         .await?;
     let conversation = ConversationId(conversation.into_inner());
-    let msg = msg.0;
-    let msg = CryptData::encrypt(msg, &suite)?;
+    let msg = CryptData::encrypt(msg.0, &suite)?;
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &conversation)
@@ -196,7 +228,6 @@ async fn post_msg(
         .map(Json))
 }
 
-// FIXME: usr_id needs be usr_token
 #[get("/conversation/{convo_id}/latest")]
 async fn get_latest_message(
     data: Data<RwLock<SQLiteDB>>,
@@ -237,12 +268,13 @@ async fn get_most_recent_messages(
         .belongs_to_conversation(&usr_id, &convo_id)
         .await?;
     let db_handle = data.read().await;
-    let (messages, prev_id) = db_handle
-        .get_most_recent_messages(&convo_id)
-        .await?;
-    let messages = messages.into_iter().map(|(id, encrypted)| {
-        let msg = encrypted.decrypt(&suite)?;
-        Ok((id, msg))
-    }).collect::<Result<Vec<_>, CryptError>>()?;
-    Ok(Json((messages, prev_id)))
+    let (messages, prev_id) = db_handle.get_most_recent_messages(&convo_id).await?;
+    let msgs = messages
+        .into_iter()
+        .map(|(sender_id, encrypted)| {
+            let msg = encrypted.decrypt(&suite)?;
+            Ok(MessageContent { sender_id, msg })
+        })
+        .collect::<Result<Vec<_>, CryptError>>()?;
+    Ok(Json(MessageFormat::many(msgs, prev_id)))
 }

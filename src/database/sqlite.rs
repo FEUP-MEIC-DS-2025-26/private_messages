@@ -120,6 +120,7 @@ pub struct UserProfile {
 }
 
 impl UserProfile {
+    #[allow(dead_code)]
     pub fn new(username: String, name: String) -> Self {
         Self { username, name }
     }
@@ -135,6 +136,7 @@ impl UserProfile {
         self.username.clone()
     }
 
+    #[allow(dead_code)]
     pub fn name(&self) -> String {
         self.name.clone()
     }
@@ -295,7 +297,7 @@ impl Database for SQLiteDB {
 
     async fn get_most_recent_messages(
         &self,
-        conversation_id: &Self::ConversationId
+        conversation_id: &Self::ConversationId,
     ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error> {
         let result = sqlx::query!(r#"
             WITH id_asc as (
@@ -312,16 +314,23 @@ impl Database for SQLiteDB {
         .await;
 
         match result {
-            Ok(res) => Ok((res
-                .iter()
-                .map(|record| (UserId(record.sender_id), CryptData::from(record.content.clone())))
-                .collect(),
-                res.first().unwrap().previous_message_id.map(|x| MessageId(x))
+            Ok(res) => Ok((
+                res.iter()
+                    .map(|record| {
+                        (
+                            UserId(record.sender_id),
+                            CryptData::from(record.content.clone()),
+                        )
+                    })
+                    .collect(),
+                res.first()
+                    .unwrap()
+                    .previous_message_id
+                    .map(|x| MessageId(x)),
             )),
-            Err(e) => Err(e.into())
+            Err(e) => Err(e.into()),
         }
     }
-        
 
     async fn get_querier<'a>(&'a self) -> Result<Self::Querier<'a>, Self::Error> {
         Ok(&self.pool)
