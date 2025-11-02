@@ -6,6 +6,7 @@ use actix_web::{App, HttpServer, middleware, web};
 use anyhow::anyhow;
 use clap::Parser;
 use cookie::{Key, time::Duration};
+use log::{info};
 use std::path::PathBuf;
 use tokio::sync::RwLock;
 
@@ -33,7 +34,7 @@ impl Cli {
             } => "Production",
         };
         let port = self.port;
-        println!("Starting in {mode} mode on localhost:{port}...");
+        info!("Starting in {mode} mode on 'http://localhost:{port}'...");
     }
 }
 
@@ -110,6 +111,7 @@ async fn run_backend_code(_cli: Cli) -> anyhow::Result<()> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    env_logger::builder().parse_default_env().init();
     let cli = Cli::parse();
     cli.startup_log();
     let cli1 = cli.clone();
