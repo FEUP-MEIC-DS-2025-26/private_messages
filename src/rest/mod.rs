@@ -107,7 +107,9 @@ struct MessageContent {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum RequestContents {
+    #[serde(untagged)] 
     One(MessageContent),
+    #[serde(untagged)] 
     Many(Vec<MessageContent>),
 }
 

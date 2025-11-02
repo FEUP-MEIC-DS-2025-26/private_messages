@@ -12,7 +12,7 @@ tags:
 paths:
   /login:
     get:
-      tags: 
+      tags:
         - user
       summary: Generate a 5 minute cookie from username
       parameters:
@@ -40,9 +40,8 @@ paths:
                 type: array
                 items:
                   type: integer
-              example: 
-                [1, 2]
-        '401':
+              example: [1, 2]
+        "401":
           description: No cookie was found.
     post:
       summary: Start a new conversation
@@ -63,9 +62,8 @@ paths:
             application/json:
               schema:
                 type: integer
-              example:
-                1
-        '401':
+              example: 1
+        "401":
           description: No cookie was found.
   /conversation/{convo_id}/peer:
     get:
@@ -87,9 +85,9 @@ paths:
             application/json:
               schema:
                 type: string
-        '401':
+        "401":
           description: No cookie was found.
-        '403':
+        "403":
           description: User does not belong to that conversation.
   /user/{username}:
     get:
@@ -137,19 +135,18 @@ paths:
               schema:
                 type: object
                 properties:
-                    sender_id:
-                      type: integer
-                    content:
-                      type: string
-                    previous_msg:
-                      type: integer
-              example:
-                sender_id: 1
-                content: "A message"
-                previous_msg: 1
-        '401':
+                  content:
+                    type: object
+                    properties:
+                      sender_id:
+                        type: integer
+                      msg:
+                        type: string
+                  previous_msg:
+                    type: integer
+        "401":
           description: No cookie was found.
-        '403':
+        "403":
           description: User does not have access to that message.
   /conversation/{convo_id}/message:
     post:
@@ -180,11 +177,10 @@ paths:
             application/json:
               schema:
                 type: integer
-              example:
-                1
-        '401':
+              example: 1
+        "401":
           description: No cookie was found.
-        '403':
+        "403":
           description: User does not belong to that conversation.
   /conversation/{convo_id}/latest:
     get:
@@ -206,11 +202,10 @@ paths:
             application/json:
               schema:
                 type: number
-              example:
-                1
-        '401':
+              example: 1
+        "401":
           description: No cookie was found.
-        '403':
+        "403":
           description: User does not belong to that conversation.
   /conversation/{convo_id}/recent:
     get:
@@ -232,13 +227,24 @@ paths:
             application/json:
               schema:
                 type: object
-        '401':
+                properties:
+                  content:
+                    type: array
+                    items:
+                      properties:
+                        sender_id:
+                          type: integer
+                        msg:
+                          type: string
+                  previous_msg:
+                    type: integer
+        "401":
           description: No cookie was found.
-        '403':
+        "403":
           description: User does not belong to that conversation.
 components:
   securitySchemes:
     cookieAuth:
       type: apiKey
       in: cookie
-      name: actix-auth-session
+      name: user_token
