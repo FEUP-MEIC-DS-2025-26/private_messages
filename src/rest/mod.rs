@@ -50,7 +50,6 @@ async fn login(name: Query<Username>, req: HttpRequest) -> Result<impl Responder
     // TODO,FIXME: Add auth (dies inside)
 
     let username = name.username.clone();
-    info!("Login: '{username}' is now logged in.");
     // Attach identity
     Identity::login(&req.extensions(), username)?;
 
@@ -74,7 +73,6 @@ async fn get_conversations(user: Identity, data: Data<RwLock<SQLiteDB>>) -> Resu
         .await
         .map(Json)
         .log(|e| error!("{e}"))?;
-    info!("Successfully got conversations for '{username}'!");
     Ok(res)
 }
 
@@ -98,10 +96,6 @@ async fn get_peer(
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
         .log(|e| error!("{e}"))?;
-    info!(
-        "Successfully got peer for conversation {} for '{username}'.",
-        convo_id.0
-    );
     let peer_id = data.read().await.get_peer(&usr_id, &convo_id).await?;
     let username = data.read().await.get_user_profile(&peer_id).await?;
     Ok(Json(username.username()))
@@ -126,7 +120,6 @@ async fn get_user_profile(
         .await
         .map(Json)
         .log(|e| error!("{e}"))?;
-    info!("Successfully got user profile for '{username}'");
     Ok(res)
 }
 
@@ -138,9 +131,9 @@ struct MessageContent {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum RequestContents {
-    #[serde(untagged)] 
+    #[serde(untagged)]
     One(MessageContent),
-    #[serde(untagged)] 
+    #[serde(untagged)]
     Many(Vec<MessageContent>),
 }
 
@@ -205,7 +198,6 @@ async fn get_message(
         .await
         .log(|e| error!("{e}"))?;
     let msg = encrypted_msg.decrypt(&suite).log(|e| error!("{e}"))?;
-    info!("Successfully got message {msg_id}.", msg_id = msg_id.0);
     let msg = MessageContent::new(sender_id, msg);
     Ok(Json(MessageFormat::one(msg, prev_id)))
 }
@@ -251,10 +243,6 @@ async fn start_conversation(
         .await
         .map(Json)
         .log(|e| error!("{e}"))?;
-    info!(
-        "Successfully started conversation between users '{username}' and '{}'.",
-        &form.their_username
-    );
     Ok(res)
 }
 
@@ -293,10 +281,6 @@ async fn post_msg(
         .await
         .map(Json)
         .log(|e| error!("{e}"))?;
-    info!(
-        "Successfully sent message from '{username}' to conversation {}.",
-        conversation.0
-    );
     Ok(res)
 }
 
@@ -325,10 +309,6 @@ async fn get_latest_message(
         .await
         .map(Json)
         .log(|e| error!("{e}"))?;
-    info!(
-        "Successfully got latest msg for conversation {}.",
-        convo_id.0
-    );
     Ok(res)
 }
 
@@ -365,6 +345,5 @@ async fn get_most_recent_messages(
         })
         .collect::<Result<Vec<_>, CryptError>>()
         .log(|e| error!("{e}"))?;
-    info!("Got the most recent messages.");
     Ok(Json(MessageFormat::many(msgs, prev_id)))
 }
