@@ -8,10 +8,12 @@ use actix_web::{
     HttpMessage, HttpRequest, HttpResponse, Responder, Result, get, post,
     web::{Data, Form, Json, Path, Query},
 };
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 pub fn create_services() -> actix_web::Scope {
+    info!("Installing REST API services...");
     actix_web::web::scope("/api/chat")
         .service(login)
         .service(get_conversations)
@@ -24,16 +26,42 @@ pub fn create_services() -> actix_web::Scope {
         .service(post_msg)
 }
 
+trait EasyLog<E> {
+    fn log<F: FnOnce(&E)>(self, f: F) -> Self;
+}
+
+impl<T, E> EasyLog<E> for Result<T, E> {
+    fn log<F: FnOnce(&E)>(self, f: F) -> Self {
+        match &self {
+            Ok(_) => {}
+            Err(e) => f(e),
+        }
+        self
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Username {
     username: String,
 }
 
 #[get("/login")]
-async fn login(name: Query<Username>, req: HttpRequest) -> Result<impl Responder> {
+async fn login(
+    data: Data<RwLock<SQLiteDB>>,
+    name: Query<Username>,
+    req: HttpRequest,
+) -> Result<impl Responder> {
     // TODO,FIXME: Add auth (dies inside)
 
     let username = name.username.clone();
+
+    // FIXME: This forbids new users from login, basically.
+    data.read()
+        .await
+        .get_user_id_from_username(&username)
+        .await
+        .log(|e| warn!("Error: '{e}'; Possibly this user is unregistered?"))?;
+
     // Attach identity
     Identity::login(&req.extensions(), username)?;
 
@@ -48,13 +76,16 @@ async fn get_conversations(user: Identity, data: Data<RwLock<SQLiteDB>>) -> Resu
         .read()
         .await
         .get_user_id_from_username(&username)
-        .await?;
-    Ok(data
+        .await
+        .log(|e| warn!("{e}"))?;
+    let res = data
         .read()
         .await
         .get_conversations(&usr_id)
         .await
-        .map(Json)?)
+        .map(Json)
+        .log(|e| warn!("{e}"))?;
+    Ok(res)
 }
 
 // FIXME: usr_id needs be usr_token
@@ -69,12 +100,14 @@ async fn get_peer(
         .read()
         .await
         .get_user_id_from_username(&username)
-        .await?;
+        .await
+        .log(|e| warn!("{e}"))?;
     let convo_id = ConversationId(convo_id.clone());
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
-        .await?;
+        .await
+        .log(|e| warn!("{e}"))?;
     let peer_id = data.read().await.get_peer(&usr_id, &convo_id).await?;
     let username = data.read().await.get_user_profile(&peer_id).await?;
     Ok(Json(username.username()))
@@ -90,13 +123,16 @@ async fn get_user_profile(
         .await
         .get_user_id_from_username(&username)
         .await
-        .map_err(DbError::from)?;
-    Ok(data
+        .map_err(DbError::from)
+        .log(|e| warn!("{e}"))?;
+    let res = data
         .read()
         .await
         .get_user_profile(&usr_id)
         .await
-        .map(Json)?)
+        .map(Json)
+        .log(|e| warn!("{e}"))?;
+    Ok(res)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -107,7 +143,9 @@ struct MessageContent {
 
 #[derive(Debug, Serialize, Deserialize)]
 enum RequestContents {
+    #[serde(untagged)]
     One(MessageContent),
+    #[serde(untagged)]
     Many(Vec<MessageContent>),
 }
 
@@ -151,19 +189,27 @@ async fn get_message(
         .read()
         .await
         .get_user_id_from_username(&username)
-        .await?;
+        .await
+        .log(|e| warn!("{e}"))?;
     let msg_id = MessageId(msg_id.clone());
     let convo_id = data
         .read()
         .await
         .get_conversation_from_message(&msg_id)
-        .await?;
+        .await
+        .log(|e| warn!("{e}"))?;
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
-        .await?;
-    let (sender_id, encrypted_msg, prev_id) = data.read().await.get_message(&msg_id).await?;
-    let msg = encrypted_msg.decrypt(&suite)?;
+        .await
+        .log(|e| warn!("{e}"))?;
+    let (sender_id, encrypted_msg, prev_id) = data
+        .read()
+        .await
+        .get_message(&msg_id)
+        .await
+        .log(|e| warn!("{e}"))?;
+    let msg = encrypted_msg.decrypt(&suite).log(|e| warn!("{e}"))?;
     let msg = MessageContent::new(sender_id, msg);
     Ok(Json(MessageFormat::one(msg, prev_id)))
 }
@@ -180,7 +226,7 @@ async fn get_message(
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 struct ConversationForm {
-    their_username: String
+    their_username: String,
 }
 
 #[post("/conversation")]
@@ -194,24 +240,28 @@ async fn start_conversation(
         .read()
         .await
         .get_user_id_from_username(&username)
-        .await?;
+        .await
+        .log(|e| warn!("{e}"))?;
     let their_id = data
         .read()
         .await
         .get_user_id_from_username(&form.their_username)
-        .await?;
-    Ok(data
+        .await
+        .log(|e| warn!("{e}"))?;
+    let res = data
         .write()
         .await
         .start_conversation(&usr_id, &their_id)
         .await
-        .map(Json)?)
+        .map(Json)
+        .log(|e| warn!("{e}"))?;
+    Ok(res)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[allow(dead_code)]
 struct MessageForm {
-    message: String
+    message: String,
 }
 
 #[post("/conversation/{convo_id}/message")]
@@ -227,19 +277,23 @@ async fn post_msg(
         .read()
         .await
         .get_user_id_from_username(&username)
-        .await?;
+        .await
+        .log(|e| warn!("{e}"))?;
     let conversation = ConversationId(conversation.into_inner());
-    let msg = CryptData::encrypt(Message(form.message.clone()), &suite)?;
+    let msg = CryptData::encrypt(Message(form.message.clone()), &suite).log(|e| warn!("{e}"))?;
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &conversation)
-        .await?;
-    Ok(data
+        .await
+        .log(|e| warn!("{e}"))?;
+    let res = data
         .write()
         .await
         .post_msg(msg, &usr_id, &conversation)
         .await
-        .map(Json))
+        .map(Json)
+        .log(|e| warn!("{e}"))?;
+    Ok(res)
 }
 
 #[get("/conversation/{convo_id}/latest")]
@@ -253,14 +307,21 @@ async fn get_latest_message(
         .read()
         .await
         .get_user_id_from_username(&username)
-        .await?;
+        .await
+        .log(|e| warn!("{e}"))?;
     let convo_id = ConversationId(convo_id.clone());
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
-        .await?;
+        .await
+        .log(|e| warn!("{e}"))?;
     let db_handle = data.read().await;
-    Ok(db_handle.get_latest_message(&convo_id).await.map(Json)?)
+    let res = db_handle
+        .get_latest_message(&convo_id)
+        .await
+        .map(Json)
+        .log(|e| warn!("{e}"))?;
+    Ok(res)
 }
 
 #[get("/conversation/{convo_id}/recent")]
@@ -275,20 +336,26 @@ async fn get_most_recent_messages(
         .read()
         .await
         .get_user_id_from_username(&username)
-        .await?;
+        .await
+        .log(|e| warn!("{e}"))?;
     let convo_id = ConversationId(convo_id.clone());
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
-        .await?;
+        .await
+        .log(|e| warn!("{e}"))?;
     let db_handle = data.read().await;
-    let (messages, prev_id) = db_handle.get_most_recent_messages(&convo_id).await?;
+    let (messages, prev_id) = db_handle
+        .get_most_recent_messages(&convo_id)
+        .await
+        .log(|e| warn!("{e}"))?;
     let msgs = messages
         .into_iter()
         .map(|(sender_id, encrypted)| {
             let msg = encrypted.decrypt(&suite)?;
             Ok(MessageContent { sender_id, msg })
         })
-        .collect::<Result<Vec<_>, CryptError>>()?;
+        .collect::<Result<Vec<_>, CryptError>>()
+        .log(|e| warn!("{e}"))?;
     Ok(Json(MessageFormat::many(msgs, prev_id)))
 }
