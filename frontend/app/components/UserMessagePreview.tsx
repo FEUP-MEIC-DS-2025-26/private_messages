@@ -3,7 +3,7 @@ import Link from 'next/link';
 // components
 import ProfilePicture from './ProfilePicture';
 
-export interface ConversationPreviewProps {
+export interface ChatPreviewProps {
   /** The unique identifier of the conversation. */
   id: number;
   /** The display name of the user. */
@@ -19,21 +19,22 @@ export interface ConversationPreviewProps {
 }
 
 /**
- * A preview of the messages chat with a given user.
+ * A preview of the chat with a given user.
  */
-export default function ConversationPreview({
+export default function ChatPreview({
+  id,
   name,
   username,
   profilePictureURL,
   unreadMessages,
   lastMessage,
-}: ConversationPreviewProps) {
+}: ChatPreviewProps) {
   const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
 
   return (
     <Link
       className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors"
-      href="/chat"
+      href={`/chat/${id}`}
     >
       <div className="relative">
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
