@@ -35,6 +35,11 @@ pub trait Database {
         message: &Self::MessageId,
     ) -> Result<(Self::UserId, Self::Message, Option<Self::MessageId>), Self::Error>;
 
+    async fn get_most_recent_messages(
+        &self,
+        conversation_id: &Self::ConversationId
+    ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error>;
+
     #[allow(dead_code)]
     async fn get_querier<'a>(&'a self) -> Result<Self::Querier<'a>, Self::Error>;
 
@@ -279,6 +284,14 @@ pub mod mock {
             }
         }
 
+        async fn get_most_recent_messages(
+            &self,
+            conversation_id: &Self::ConversationId
+        ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error> {
+            todo!()
+        }
+
+
         async fn get_latest_message(
             &self,
             conversation: &Self::ConversationId,
@@ -290,6 +303,7 @@ pub mod mock {
                 )),
             }
         }
+
 
         async fn get_user_id_from_username(
             &self,

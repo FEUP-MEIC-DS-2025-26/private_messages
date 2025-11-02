@@ -293,6 +293,36 @@ impl Database for SQLiteDB {
         }
     }
 
+    async fn get_most_recent_messages(
+        &self,
+        conversation_id: &Self::ConversationId
+    ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error> {
+        let result = sqlx::query!(r#"
+            WITH id_asc as (
+                SELECT id, sender_id, content, previous_message_id
+                FROM message
+                WHERE conversation_id = ?
+                ORDER BY id desc
+                LIMIT 32
+            )
+            SELECT sender_id as "sender_id!", content as "content!", previous_message_id FROM id_asc ORDER BY id
+        "#,
+            conversation_id
+        ).fetch_all(&self.pool)
+        .await;
+
+        match result {
+            Ok(res) => Ok((res
+                .iter()
+                .map(|record| (UserId(record.sender_id), CryptData::from(record.content.clone())))
+                .collect(),
+                res.first().unwrap().previous_message_id.map(|x| MessageId(x))
+            )),
+            Err(e) => Err(e.into())
+        }
+    }
+        
+
     async fn get_querier<'a>(&'a self) -> Result<Self::Querier<'a>, Self::Error> {
         Ok(&self.pool)
     }

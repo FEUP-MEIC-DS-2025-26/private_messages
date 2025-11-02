@@ -1,6 +1,24 @@
+"use client";
+
 import UserMessagePreview from './components/UserMessagePreview';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
+    const [conversations, setConversations] = useState([]);
+    useEffect(() => {
+        const api_url = "http://localhost:8080/api/chat/conversation";
+        setTimeout(async () => {
+            fetch(api_url).then(res => res.json()).then(data => {
+                // TODO
+            });
+        }, 1);
+
+        const intervalId = setInterval(async () => {
+            // TODO
+        }, 5000);
+
+        return () => clearInterval(intervalId);
+    }, [conversations]);
   return (
     <ul className="flex flex-col *:not-last:border-b">
       <li>

@@ -65,6 +65,7 @@ async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
             (db, suite)
         }
     };
+  
     let wd = web::Data::new(RwLock::new(db));
     let pd = web::Data::new(suite);
 
