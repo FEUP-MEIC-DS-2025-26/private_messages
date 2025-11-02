@@ -8,7 +8,7 @@ use actix_web::{
     HttpMessage, HttpRequest, HttpResponse, Responder, Result, get, post,
     web::{Data, Form, Json, Path, Query},
 };
-use log::{error, info};
+use log::{warn, info};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
@@ -65,14 +65,14 @@ async fn get_conversations(user: Identity, data: Data<RwLock<SQLiteDB>>) -> Resu
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let res = data
         .read()
         .await
         .get_conversations(&usr_id)
         .await
         .map(Json)
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     Ok(res)
 }
 
@@ -89,13 +89,13 @@ async fn get_peer(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let convo_id = ConversationId(convo_id.clone());
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let peer_id = data.read().await.get_peer(&usr_id, &convo_id).await?;
     let username = data.read().await.get_user_profile(&peer_id).await?;
     Ok(Json(username.username()))
@@ -112,14 +112,14 @@ async fn get_user_profile(
         .get_user_id_from_username(&username)
         .await
         .map_err(DbError::from)
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let res = data
         .read()
         .await
         .get_user_profile(&usr_id)
         .await
         .map(Json)
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     Ok(res)
 }
 
@@ -178,26 +178,26 @@ async fn get_message(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let msg_id = MessageId(msg_id.clone());
     let convo_id = data
         .read()
         .await
         .get_conversation_from_message(&msg_id)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let (sender_id, encrypted_msg, prev_id) = data
         .read()
         .await
         .get_message(&msg_id)
         .await
-        .log(|e| error!("{e}"))?;
-    let msg = encrypted_msg.decrypt(&suite).log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
+    let msg = encrypted_msg.decrypt(&suite).log(|e| warn!("{e}"))?;
     let msg = MessageContent::new(sender_id, msg);
     Ok(Json(MessageFormat::one(msg, prev_id)))
 }
@@ -229,20 +229,20 @@ async fn start_conversation(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let their_id = data
         .read()
         .await
         .get_user_id_from_username(&form.their_username)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let res = data
         .write()
         .await
         .start_conversation(&usr_id, &their_id)
         .await
         .map(Json)
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     Ok(res)
 }
 
@@ -266,21 +266,21 @@ async fn post_msg(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let conversation = ConversationId(conversation.into_inner());
-    let msg = CryptData::encrypt(Message(form.message.clone()), &suite).log(|e| error!("{e}"))?;
+    let msg = CryptData::encrypt(Message(form.message.clone()), &suite).log(|e| warn!("{e}"))?;
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &conversation)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let res = data
         .write()
         .await
         .post_msg(msg, &usr_id, &conversation)
         .await
         .map(Json)
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     Ok(res)
 }
 
@@ -296,19 +296,19 @@ async fn get_latest_message(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let convo_id = ConversationId(convo_id.clone());
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let db_handle = data.read().await;
     let res = db_handle
         .get_latest_message(&convo_id)
         .await
         .map(Json)
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     Ok(res)
 }
 
@@ -325,18 +325,18 @@ async fn get_most_recent_messages(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let convo_id = ConversationId(convo_id.clone());
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let db_handle = data.read().await;
     let (messages, prev_id) = db_handle
         .get_most_recent_messages(&convo_id)
         .await
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     let msgs = messages
         .into_iter()
         .map(|(sender_id, encrypted)| {
@@ -344,6 +344,6 @@ async fn get_most_recent_messages(
             Ok(MessageContent { sender_id, msg })
         })
         .collect::<Result<Vec<_>, CryptError>>()
-        .log(|e| error!("{e}"))?;
+        .log(|e| warn!("{e}"))?;
     Ok(Json(MessageFormat::many(msgs, prev_id)))
 }

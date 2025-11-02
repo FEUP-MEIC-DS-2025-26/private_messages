@@ -6,7 +6,7 @@ use actix_web::{App, HttpServer, middleware, web};
 use anyhow::anyhow;
 use clap::Parser;
 use cookie::{Key, time::Duration};
-use log::info;
+use log::{info};
 use std::path::PathBuf;
 use tokio::sync::RwLock;
 
