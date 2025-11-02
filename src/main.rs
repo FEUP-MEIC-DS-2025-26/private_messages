@@ -1,5 +1,3 @@
-use std::{env, path::{Path, PathBuf}, str::FromStr};
-
 use crate::database::{crypto::CryptoSuite, sqlite::SQLiteDB};
 use actix_files::Files;
 use actix_identity::IdentityMiddleware;
@@ -8,6 +6,7 @@ use actix_web::{App, HttpServer, middleware, web};
 use anyhow::anyhow;
 use clap::Parser;
 use cookie::{Key, time::Duration};
+use std::path::PathBuf;
 use tokio::sync::RwLock;
 
 mod database;
@@ -100,7 +99,7 @@ async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn run_backend_code(cli: Cli) -> anyhow::Result<()> {
+async fn run_backend_code(_cli: Cli) -> anyhow::Result<()> {
     Ok(())
 }
 
