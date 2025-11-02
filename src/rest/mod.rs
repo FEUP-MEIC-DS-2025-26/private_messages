@@ -20,6 +20,8 @@ pub fn create_services() -> actix_web::Scope {
         .service(get_message)
         .service(get_latest_message)
         .service(get_most_recent_messages)
+        .service(start_conversation)
+        .service(post_msg)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -175,11 +177,17 @@ async fn get_message(
 //     Ok(data.write().await.add_user(&user_profile).await.map(Json)?)
 // }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
+struct ConversationForm {
+    their_username: String
+}
+
 #[post("/conversation")]
 async fn start_conversation(
     data: Data<RwLock<SQLiteDB>>,
     user: Identity,
-    their_username: Form<String>,
+    form: Form<ConversationForm>,
 ) -> Result<impl Responder> {
     let username = user.id()?;
     let usr_id = data
@@ -190,7 +198,7 @@ async fn start_conversation(
     let their_id = data
         .read()
         .await
-        .get_user_id_from_username(&their_username)
+        .get_user_id_from_username(&form.their_username)
         .await?;
     Ok(data
         .write()
@@ -200,13 +208,19 @@ async fn start_conversation(
         .map(Json)?)
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
+struct MessageForm {
+    message: String
+}
+
 #[post("/conversation/{convo_id}/message")]
 async fn post_msg(
     data: Data<RwLock<SQLiteDB>>,
     suite: Data<CryptoSuite>,
     user: Identity,
     conversation: Path<i64>,
-    msg: Form<Message>,
+    form: Form<MessageForm>,
 ) -> Result<impl Responder> {
     let username = user.id()?;
     let usr_id = data
@@ -215,7 +229,7 @@ async fn post_msg(
         .get_user_id_from_username(&username)
         .await?;
     let conversation = ConversationId(conversation.into_inner());
-    let msg = CryptData::encrypt(msg.0, &suite)?;
+    let msg = CryptData::encrypt(Message(form.message.clone()), &suite)?;
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &conversation)
