@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use crate::database::{crypto::CryptoSuite, sqlite::SQLiteDB};
 use actix_files::Files;
 use actix_identity::IdentityMiddleware;
@@ -20,24 +19,21 @@ struct Cli {
     port: u16,
 
     #[command(subcommand)]
-    command: Option<Commands>,
-}
-
-impl Display for Cli {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mode = match self.command() {
-            Commands::Kiosk => "Kiosk",
-            Commands::Run { password: _, salt: _, db_url: _ } => "Production",
-        };
-        let port = self.port;
-        writeln!(f, "Running {mode} mode...")?;
-        writeln!(f, "Web interface: http://localhost:{port}")
-    }
+    command: Commands,
 }
 
 impl Cli {
-    fn command(&self) -> Commands {
-        self.command.clone().unwrap_or(Commands::Kiosk)
+    fn startup_log(&self) {
+        let mode = match self.command {
+            Commands::Kiosk => "Demonstration",
+            Commands::Run {
+                password: _,
+                salt: _,
+                db_url: _,
+            } => "Production",
+        };
+        let port = self.port;
+        println!("Starting in {mode} mode on localhost:{port}...");
     }
 }
 
@@ -48,10 +44,8 @@ enum Commands {
     /// Run in production mode
     Run {
         /// File containing the password
-        #[arg(short, long, default_value = PathBuf::new().join("credentials").join("password.txt").into_os_string())]
         password: PathBuf,
         /// File containing the hash
-        #[arg(short, long, default_value = PathBuf::new().join("credentials").join("salt.txt").into_os_string())]
         salt: PathBuf,
         /// Path to sqlite db
         #[arg(short, long, default_value_t = String::from("sqlite:.sqlite3"))]
@@ -60,8 +54,7 @@ enum Commands {
 }
 
 async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
-    println!("{cli}");
-    let (db, suite) = match cli.command() {
+    let (db, suite) = match cli.command {
         Commands::Kiosk => {
             let suite = CryptoSuite::new("demonstration_password", "demonstration_salt")
                 .map_err(|e| anyhow!("Error: {e}"))?;
@@ -79,7 +72,7 @@ async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
             (db, suite)
         }
     };
-  
+
     let wd = web::Data::new(RwLock::new(db));
     let pd = web::Data::new(suite);
 
@@ -118,6 +111,7 @@ async fn run_backend_code(_cli: Cli) -> anyhow::Result<()> {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    cli.startup_log();
     let cli1 = cli.clone();
     let local = tokio::task::LocalSet::new();
     let ufc = local.run_until(async {
