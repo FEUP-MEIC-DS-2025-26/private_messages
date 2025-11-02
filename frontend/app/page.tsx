@@ -5,8 +5,7 @@ import ConversationPreview, {
   ConversationPreviewProps,
 } from './components/UserMessagePreview';
 
-// hard-coded user (only for the prototype)
-const USERNAME = 'john';
+const USERNAME: string = "john";
 
 /**
  * A function for fetching the user's conversations from the server.

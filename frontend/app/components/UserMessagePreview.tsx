@@ -28,7 +28,7 @@ export default function ConversationPreview({
   unreadMessages,
   lastMessage,
 }: ConversationPreviewProps) {
-  const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
+  const notificationText = unreadMessages > 9 ? '9+' : unreadMessages.toString();
 
   return (
     <Link

@@ -13,7 +13,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 const mockUser = {
-  name: 'John Doe',
   profilePictureURL: 'https://thispersondoesnotexist.com/',
 };
 
@@ -28,7 +27,6 @@ export default function Chat() {
     const [previousMessageId, setPreviousMessageId] = useState(null);
     const ul: Ref<HTMLUListElement> | undefined = useRef(null);
     const api_url = "http://localhost:8080/api/chat/conversation";
-    const user_id: number = 1;
 
     useEffect(() => {
 
@@ -49,16 +47,17 @@ export default function Chat() {
             "I don't want to sound rude, but what even is a sprint backlog? Do people actually run with logs on their back?",
             "If there are no rules without exceptions, then there must be a rule without exceptions, since this would be an exception of the no-exceptions rule. This leads to the fact that this rule enforces exceptions on almost every rule except on itself. Reminds me of someone",
             "Why does Moodle still lack a dark mode?",
-            "I'm going to start enforcing developers to use smoke signals to communicate with each other. One of the life hacks I learned recently",
+            "I'm going to start forcing developers to use smoke signals to communicate with each other. One of the life hacks I learned recently",
             "My grandma does not use the Internet",
             "Take a deep breath and repeat this mantra: this only ends in June of 2027, hopefully",
             "Maria Albertina, como foste nessa, de chamar Vanessa, à tua menina?",
-            "I miss Software Engineering :( ... but my aim is getting better!",
+            "I still miss Software Engineering :( ... but my aim is getting better!",
             "I smell cheese",
             "ChatGPT, summarize my students' projects for me",
             "What is algebra? Is it those things with three sides?",
             "Mom, I'm in an university presentation!",
-            "AÇORES"
+            "I <3 AÇORES",
+            "Farioli, traz a invicta"
         ];
 
         async function hello() {
@@ -68,7 +67,7 @@ export default function Chat() {
                     .then(({ content, previous_msg }) => {
                         setMessages(content.map((record: { sender_id: number, msg: string }) => {
                             return {
-                                isFromUser: record.sender_id === user_id,
+                                isFromUser: record.sender_id === 1,
                                 content: record.msg
                             };
                         }));
@@ -80,7 +79,7 @@ export default function Chat() {
         hello();
 
         const intervalId = setInterval(async () => {
-            if (Math.random() < 0.25) {
+            if (Math.random() < 0.125) {
                 setMessages([...messages, {
                     isFromUser: Math.random() > 0.5,
                     content: quotes[Math.floor(Math.random() * quotes.length)]
@@ -105,11 +104,11 @@ export default function Chat() {
           <FontAwesomeIcon icon={faArrowLeft} />
         </Link>
         <ProfilePicture
-          name={mockUser.name}
+          name="Juan"
           URL={mockUser.profilePictureURL}
           size={56}
         />
-        <strong className="text-xl">{mockUser.name}</strong>
+        <strong className="text-xl">Juan</strong>
       </header>
 
       {/** Chat */}
