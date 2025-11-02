@@ -55,7 +55,7 @@ impl SQLiteDB {
     }
 
     fn kiosk_conversations() -> Vec<(UserId, UserId)> {
-        vec![(UserId(1), UserId(2)), (UserId(2), UserId(3))]
+        vec![(UserId(1), UserId(2)), (UserId(1), UserId(3))]
     }
 
     fn kiosk_messages(
