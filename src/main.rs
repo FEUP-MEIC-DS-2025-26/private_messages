@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{env, path::{Path, PathBuf}, str::FromStr};
 
 use crate::database::{crypto::CryptoSuite, sqlite::SQLiteDB};
 use actix_files::Files;
@@ -14,24 +14,32 @@ mod database;
 mod pages;
 mod rest;
 
-#[derive(clap::Parser, Clone)]
+#[derive(clap::Parser, Clone, Debug)]
 struct Cli {
     #[arg(short, long, default_value_t = 8080)]
     port: u16,
 
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
 }
 
-#[derive(clap::Subcommand, Clone)]
+impl Cli {
+    fn command(&self) -> Commands {
+        self.command.clone().unwrap_or(Commands::Kiosk)
+    }
+}
+
+#[derive(clap::Subcommand, Clone, Debug)]
 enum Commands {
-    /// Run in demonstration mode
+    /// Run in demonstration mode (default mode for development)
     Kiosk,
     /// Run in production mode
     Run {
-        /// File containting the password
+        /// File containing the password
+        #[arg(short, long, default_value = PathBuf::new().join("credentials").join("password.txt").into_os_string())]
         password: PathBuf,
         /// File containing the hash
+        #[arg(short, long, default_value = PathBuf::new().join("credentials").join("salt.txt").into_os_string())]
         salt: PathBuf,
         /// Path to sqlite db
         #[arg(short, long, default_value_t = String::from("sqlite:.sqlite3"))]
@@ -40,7 +48,7 @@ enum Commands {
 }
 
 async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
-    let (db, suite) = match cli.command {
+    let (db, suite) = match cli.command() {
         Commands::Kiosk => {
             let suite = CryptoSuite::new("demonstration_password", "demonstration_salt")
                 .map_err(|e| anyhow!("Error: {e}"))?;
