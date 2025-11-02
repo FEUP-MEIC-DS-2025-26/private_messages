@@ -71,8 +71,6 @@ async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
 
     let secret_key = Key::generate();
 
-    println!("Running server on {}:{}", ADDRESS, cli.port);
-
     HttpServer::new(move || {
         App::new()
             .app_data(wd.clone())
@@ -92,7 +90,7 @@ async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
             .wrap(middleware::NormalizePath::trim())
             .wrap(middleware::Logger::default())
     })
-    .bind((ADDRESS, cli.port))?
+    .bind(("0.0.0.0", cli.port))?
     .run()
     .await?;
 

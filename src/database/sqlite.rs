@@ -17,20 +17,13 @@ impl From<Pool<Sqlite>> for SQLiteDB {
 }
 
 impl SQLiteDB {
-    pub async fn new(url: &str, populate: bool) -> anyhow::Result<Self> {
-        if populate {
-            Sqlite::drop_database(url).await?;
-        }
-        
+    pub async fn new(url: &str) -> anyhow::Result<Self> {
         if !Sqlite::database_exists(url).await? {
             Sqlite::create_database(url).await?;
         }
         let pool = SqlitePoolOptions::new().connect_lazy(url)?;
         let mut db = SQLiteDB { pool };
         db.set_schema().await?;
-        if populate {
-            sqlx::query_file!("src/database/populate.sql").execute(&db.pool).await?;
-        }
         Ok(db)
     }
 
@@ -321,7 +314,7 @@ impl Database for SQLiteDB {
         match result {
             Ok(res) => Ok((res
                 .iter()
-                .map(|record| (UserId(record.sender_id), Message(String::from_utf8_lossy(record.content.as_slice()).to_string())))
+                .map(|record| (UserId(record.sender_id), CryptData::from(record.content.clone())))
                 .collect(),
                 res.first().unwrap().previous_message_id.map(|x| MessageId(x))
             )),
@@ -645,7 +638,7 @@ mod test {
         let salt = "even_more_$ecure_$alt";
         let suite = CryptoSuite::new(password, salt).map_err(|e| anyhow!("Error: {e}"))?;
 
-        let mut db = SQLiteDB::new("sqlite::memory:", false).await?;
+        let mut db = SQLiteDB::new("sqlite::memory:").await?;
 
         let alice_id = db.add_user(&alice).await?;
         let bob_id = db.add_user(&bob).await?;
