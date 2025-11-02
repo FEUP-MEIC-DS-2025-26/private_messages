@@ -34,7 +34,7 @@ async fn login(name: Query<Username>, req: HttpRequest) -> Result<impl Responder
     // Attach identity
     Identity::login(&req.extensions(), username)?;
 
-    Ok(HttpResponse::Found())
+    Ok(HttpResponse::Ok())
 }
 
 // FIXME: usr_id needs be usr_token
@@ -72,12 +72,13 @@ async fn get_peer(
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await?;
-    Ok(data
+    let peer_id = data
         .read()
         .await
         .get_peer(&usr_id, &convo_id)
-        .await
-        .map(Json)?)
+        .await?;
+    let username = data.read().await.get_user_profile(&peer_id).await?;
+    Ok(Json(username.username()))
 }
 
 #[get("/user/{username}")]
