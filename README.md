@@ -74,5 +74,5 @@ npm run build
 
 - Run the backend server
 ```bash
-cargo run -r
+RUST_LOG=info cargo run -r -- kiosk
 ```
