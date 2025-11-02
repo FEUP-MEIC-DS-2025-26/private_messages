@@ -27,58 +27,70 @@ export default function Chat() {
     const [messages, setMessages] = useState(state);
     const [previousMessageId, setPreviousMessageId] = useState(null);
     const ul: Ref<HTMLUListElement> | undefined = useRef(null);
-    const api_url = "http://localhost:8080/api/chat/conversation/1/recent";
+    const api_url = "http://localhost:8080/api/chat/conversation";
     const user_id: number = 1;
 
     useEffect(() => {
 
         const quotes: string[] = [
             "My name is ChatGPT, but you can call me <Uncaught SyntaxError: JSON.parse: unexpected character at line 1 column 1 of the JSON data>",
-            "Yeah? yeah yeah? yeah? Yeah? Agile of something. Yeah? yeah yeah yeah yeah yeah yeah yeah yeah?",
+            "Yeah? yeah yeah? yeah? Yeah? Agile or something. Yeah? yeah yeah yeah yeah yeah yeah yeah yeah?",
             "I live in the shadows. For Scrum!",
-            "a",
             "Scrum Master sounds like a dirty title and nobody will ever change my mind",
-            "Weeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "Weeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
             "My favorite sleeping position is the party escort submission position",
-            "UwU",
-            "Cake and grief counseling will be available at the conclusion of the test",
+            "Cake and grief counseling will be available at the conclusion of the presentation",
             "I'm a potato",
-            "*sniff* *sniff*",
-            "*woof* *woof",
             "Haha Haha Haha Haha Haha Haha",
+            "Do you perhaps have some oranges? I like 'em big, I like 'em chunky",
+            "Rust isn't that good, to be honest. It leaves things with a strange color",
+            "I don't know what I'm doing, and neither do you",
+            "Fire the copilot, emerge the seek, unfrench the claude, obliterate the gemini, keep the fish's stock",
+            "I don't want to sound rude, but what even is a sprint backlog? Do people actually run with logs on their back?",
+            "If there are no rules without exceptions, then there must be a rule without exceptions, since this would be an exception of the no-exceptions rule. This leads to the fact that this rule enforces exceptions on almost every rule except on itself. Reminds me of someone",
+            "Why does Moodle still lack a dark mode?",
+            "I'm going to start enforcing developers to use smoke signals to communicate with each other. One of the life hacks I learned recently",
+            "My grandma does not use the Internet",
+            "Take a deep breath and repeat this mantra: this only ends in June of 2027, hopefully",
+            "Maria Albertina, como foste nessa, de chamar Vanessa, à tua menina?",
+            "I miss Software Engineering :( ... but my aim is getting better!",
+            "I smell cheese",
+            "ChatGPT, summarize my students' projects for me",
+            "What is algebra? Is it those things with three sides?",
+            "Mom, I'm in an university presentation!",
+            "AÇORES"
         ];
 
-        setTimeout(async () => {
+        async function hello() {
             if (messages.length == 0) {
-                fetch(api_url)
+                fetch(`${api_url}/1/recent`)
                     .then(res => res.json())
-                    .then(data => {
-                        if (data.length != 2) {
-                            console.error(`JSON received has wrong length: ${data.length}`);
-                        } else {
-                            setMessages(data[0].map((record: [uid: number, content: string]) => {
-                                return {
-                                    isFromUser: record[0] === user_id,
-                                    content: record[1]
-                                };
-                            }));
-                            setPreviousMessageId(data[1]);
-                        }
+                    .then(({ content, previous_msg }) => {
+                        setMessages(content.map((record: { sender_id: number, msg: string }) => {
+                            return {
+                                isFromUser: record.sender_id === user_id,
+                                content: record.msg
+                            };
+                        }));
+                        setPreviousMessageId(previous_msg);
                     }
                 );
             }
-        }, 1); 
+        }
+        hello();
 
         const intervalId = setInterval(async () => {
-            if (Math.random() < 0.15) {
+            if (Math.random() < 0.25) {
                 setMessages([...messages, {
                     isFromUser: Math.random() > 0.5,
                     content: quotes[Math.floor(Math.random() * quotes.length)]
                 }]);
             }
+
             if (ul.current != null && ul.current.lastElementChild != null) {
                 ul.current.lastElementChild.scrollIntoView({ behavior: "smooth" });
             }
+
         }, 500);
 
         return () => clearInterval(intervalId);
