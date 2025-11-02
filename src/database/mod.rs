@@ -1,3 +1,4 @@
+pub mod crypto;
 pub mod sqlite;
 
 pub trait Database {
@@ -39,6 +40,7 @@ pub trait Database {
         conversation_id: &Self::ConversationId
     ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error>;
 
+    #[allow(dead_code)]
     async fn get_querier<'a>(&'a self) -> Result<Self::Querier<'a>, Self::Error>;
 
     async fn add_user(&mut self, profile: &Self::UserProfile) -> Result<Self::UserId, Self::Error>;
@@ -66,7 +68,7 @@ pub trait Database {
         id: &Self::UserId,
         conversation: &Self::ConversationId,
     ) -> Result<(), Self::Error>;
-    
+
     async fn get_conversation_from_message(
         &self,
         msg_id: &Self::MessageId,
@@ -74,6 +76,7 @@ pub trait Database {
 }
 
 /// Example implementation: Mock Database
+#[allow(dead_code)]
 pub mod mock {
     use anyhow::anyhow;
     use std::collections::HashMap;
