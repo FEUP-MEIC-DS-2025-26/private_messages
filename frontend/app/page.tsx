@@ -1,18 +1,28 @@
+'use client';
+
 import useSWR from 'swr';
 import UserMessagePreview from './components/UserMessagePreview';
+
+// hard-coded user (only for the prototype)
+const USERNAME = 'john';
 
 /**
  * A function for fetching the user's conversations from the server.
  * @returns the user's conversations
  */
-const getConversations = async (URL: string) => {
+const getConversations = async (username: string) => {
+  // login
+  await fetch(`/api/chat/login?username=${username}`);
+
   // fetch the conversations
-  const conversationIDs: number[] = await fetch(URL).then((res) => res.json());
+  const conversationIDs: number[] = await fetch('/api/chat/conversation').then(
+    (res) => res.json(),
+  );
 
   // fetch the usernames of the users with whom we are conversing
   const usernames: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetch(`${URL}/${id}/peer`).then((res) => res.json()),
+      fetch(`/api/chat/conversation/${id}/peer`).then((res) => res.json()),
     ),
   );
 
@@ -26,7 +36,7 @@ const getConversations = async (URL: string) => {
   // fetch the last message from each conversation
   const lastMessage: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetch(`${URL}/${id}/latest`).then((res) => res.json()),
+      fetch(`/api/chat/conversation/${id}/latest`).then((res) => res.json()),
     ),
   );
 
@@ -51,7 +61,7 @@ const getConversations = async (URL: string) => {
 export default function Inbox() {
   const { data: conversations, isLoading } = useSWR(
     '/api/chat/conversation',
-    (url) => getConversations(url),
+    () => getConversations(USERNAME),
   );
 
   if (isLoading || !conversations) {
@@ -61,12 +71,11 @@ export default function Inbox() {
   return (
     <ul className="flex flex-col *:not-last:border-b">
       {conversations.map((conversation: any) => (
-        <li>
+        <li key={`conversation-${conversation.id}`}>
           <UserMessagePreview
-            name="John Doe"
+            {...conversation}
             profilePictureURL="https://thispersondoesnotexist.com/"
             unreadMessages={2}
-            lastMessage="Boa tarde, as laranjas ainda estão à venda?"
             lastMessageDate="21/05/2026"
           />
         </li>
