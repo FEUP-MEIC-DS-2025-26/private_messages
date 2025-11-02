@@ -37,7 +37,7 @@ pub trait Database {
 
     async fn get_most_recent_messages(
         &self,
-        conversation_id: &Self::ConversationId
+        conversation_id: &Self::ConversationId,
     ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error>;
 
     #[allow(dead_code)]
@@ -284,13 +284,14 @@ pub mod mock {
             }
         }
 
+        // FIXME: implement this for the mock
         async fn get_most_recent_messages(
             &self,
-            conversation_id: &Self::ConversationId
-        ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error> {
-            todo!()
+            _conversation_id: &Self::ConversationId,
+        ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error>
+        {
+            unimplemented!()
         }
-
 
         async fn get_latest_message(
             &self,
@@ -303,7 +304,6 @@ pub mod mock {
                 )),
             }
         }
-
 
         async fn get_user_id_from_username(
             &self,
