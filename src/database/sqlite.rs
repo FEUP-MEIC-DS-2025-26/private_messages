@@ -1,10 +1,19 @@
-use crate::database::Database;
+use crate::database::{
+    Database,
+    crypto::{CryptData, CryptoSuite},
+};
 use actix_web::{ResponseError, http::StatusCode};
 use serde;
 use sqlx::{Pool, Sqlite, migrate::MigrateDatabase, sqlite::SqlitePoolOptions};
 
 pub struct SQLiteDB {
     pool: Pool<Sqlite>,
+}
+
+impl From<Pool<Sqlite>> for SQLiteDB {
+    fn from(pool: Pool<Sqlite>) -> Self {
+        Self { pool }
+    }
 }
 
 impl SQLiteDB {
@@ -17,13 +26,79 @@ impl SQLiteDB {
         db.set_schema().await?;
         Ok(db)
     }
-    
-    pub async fn kiosk() -> anyhow::Result<Self> {
+
+    pub async fn kiosk(suite: &CryptoSuite) -> anyhow::Result<Self> {
         let pool = SqlitePoolOptions::new().connect_lazy("sqlite::memory:")?;
-        let mut db = SQLiteDB { pool };
+        let mut db = SQLiteDB::from(pool);
         db.set_schema().await?;
-        sqlx::query_file!("src/database/populate.sql").execute(&db.pool).await?;
+        // sqlx::query_file!("src/database/populate.sql")
+        //     .execute(&db.pool)
+        //     .await?;
+        for user in Self::kiosk_users() {
+            db.add_user(&user).await?;
+        }
+        for (my_id, their_id) in Self::kiosk_conversations() {
+            db.start_conversation(&my_id, &their_id).await?;
+        }
+        for (msg, sender, convo) in Self::kiosk_messages(suite)? {
+            db.post_msg(msg, &sender, &convo).await?;
+        }
         Ok(db)
+    }
+
+    fn kiosk_users() -> Vec<UserProfile> {
+        vec![
+            UserProfile::new_clone("john", "John Doe"),
+            UserProfile::new_clone("jane", "Jane Doe"),
+            UserProfile::new_clone("fred", "Fred Nerk"),
+        ]
+    }
+
+    fn kiosk_conversations() -> Vec<(UserId, UserId)> {
+        vec![(UserId(1), UserId(2)), (UserId(2), UserId(3))]
+    }
+
+    fn kiosk_messages(
+        suite: &CryptoSuite,
+    ) -> anyhow::Result<Vec<(CryptData<Message>, UserId, ConversationId)>> {
+        vec![
+            (
+                "Hi Jane! I would like to buy a few oranges, are they fresh?",
+                UserId(1),
+                ConversationId(1),
+            ),
+            (
+                "Yes John! I just collected them this morning!",
+                UserId(2),
+                ConversationId(1),
+            ),
+            (
+                "Thank you for the clarification!",
+                UserId(1),
+                ConversationId(1),
+            ),
+            (
+                "Hi John! Is your orange cake made from fresh oranges?",
+                UserId(3),
+                ConversationId(2),
+            ),
+            (
+                "Yes Fred! I bought them today from Jane!",
+                UserId(1),
+                ConversationId(2),
+            ),
+            (
+                "Amazing! That makes me relieved, thank you!",
+                UserId(3),
+                ConversationId(2),
+            ),
+        ]
+        .into_iter()
+        .map(|(m, a, b)| {
+            let m = CryptData::encrypt(Message(m.to_owned()), suite)?;
+            Ok((m, a, b))
+        })
+        .collect()
     }
 
     async fn set_schema(&mut self) -> anyhow::Result<()> {
@@ -47,6 +122,13 @@ pub struct UserProfile {
 impl UserProfile {
     pub fn new(username: String, name: String) -> Self {
         Self { username, name }
+    }
+
+    pub fn new_clone(username: &str, name: &str) -> Self {
+        Self {
+            username: username.to_owned(),
+            name: name.to_owned(),
+        }
     }
 
     pub fn username(&self) -> String {
@@ -124,7 +206,7 @@ impl Database for SQLiteDB {
 
     type MessageId = MessageId;
 
-    type Message = Message;
+    type Message = CryptData<Message>;
 
     type Querier<'a> = &'a Pool<Sqlite>;
 
@@ -204,7 +286,7 @@ impl Database for SQLiteDB {
         match result {
             Ok(res) => Ok((
                 UserId(res.sender_id),
-                Message(String::from_utf8_lossy(res.content.as_slice()).to_string()),
+                res.content.into(),
                 res.previous_message_id.map(|x| MessageId(x)),
             )),
             Err(e) => Err(e.into()),
@@ -310,6 +392,7 @@ impl Database for SQLiteDB {
         .await?
         .last_message_id;
 
+        let msg: Vec<u8> = msg.into();
         let msg_id = sqlx::query!(
             r#"
             INSERT INTO message (content, sender_id, conversation_id, previous_message_id)
@@ -407,15 +490,21 @@ impl Database for SQLiteDB {
             SELECT conversation_id as "conversation_id!"
             FROM message
             WHERE id = ?
-            "#, msg_id
-        ).fetch_one(&self.pool).await?;
+            "#,
+            msg_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
         Ok(ConversationId(record.conversation_id))
     }
 }
 
 #[cfg(test)]
 mod test {
+    use anyhow::anyhow;
+
     use crate::database::Database;
+    use crate::database::crypto::{CryptError, CryptoSuite};
     use crate::database::sqlite::*;
 
     #[tokio::test]
@@ -429,6 +518,10 @@ mod test {
             username: "bobert22".to_owned(),
             name: "Bob Bellows".to_owned(),
         };
+
+        let password = "very_$ecure_and_$trong_P4$$w0rd_in_2025";
+        let salt = "even_more_$ecure_$alt";
+        let suite = CryptoSuite::new(password, salt).map_err(|e| anyhow!("Error: {e}"))?;
 
         let mut db = SQLiteDB::new("sqlite::memory:").await?;
 
@@ -445,10 +538,11 @@ mod test {
         assert_eq!(convo_id, same_id);
 
         let hello = Message("Hello Bob!".to_owned());
+        let hello = CryptData::encrypt(hello, &suite)?;
         let hello_id = db.post_msg(hello, &alice_id, &convo_id).await?;
 
         // Example queries
-        let alice_bob_messages: Vec<Message> = {
+        let alice_bob_messages: Result<Vec<Message>, CryptError> = {
             let querier = db.get_querier().await?;
             // Count all messages between Alice and Bob
             let msg_count = sqlx::query_scalar!(
@@ -487,12 +581,13 @@ mod test {
             .fetch_all(querier)
             .await?;
             messages
-                .iter()
-                .map(|m| Message(String::from_utf8_lossy(m.content.as_slice()).to_string()))
+                .into_iter()
+                .map(|m| CryptData::from(m.content))
+                .map(|m| m.decrypt(&suite))
                 .collect()
         };
 
-        assert_eq!(alice_bob_messages, vec![Message("Hello Bob!".to_owned())]);
+        assert_eq!(alice_bob_messages?, vec![Message("Hello Bob!".to_owned())]);
 
         Ok(())
     }
@@ -509,6 +604,9 @@ mod test {
             username: "bobert22".to_owned(),
             name: "Bob Bellows".to_owned(),
         };
+        let password = "very_$ecure_and_$trong_P4$$w0rd_in_2025";
+        let salt = "even_more_$ecure_$alt";
+        let suite = CryptoSuite::new(password, salt).map_err(|e| anyhow!("Error: {e}"))?;
 
         let mut db = SQLiteDB::new("sqlite::memory:").await?;
 
@@ -526,12 +624,14 @@ mod test {
         assert_eq!(last_msg, None);
 
         let hello = Message("Hello Bob!".to_owned());
+        let hello = CryptData::encrypt(hello, &suite)?;
         let first_hello_id = db.post_msg(hello, &alice_id, &convo_id).await?;
 
         let last_msg = db.get_latest_message(&convo_id).await?;
         assert_eq!(last_msg, Some(first_hello_id));
 
         let hello = Message("Hello Alice!".to_owned());
+        let hello = CryptData::encrypt(hello, &suite)?;
         let second_hello_id = db.post_msg(hello, &bob_id, &convo_id).await?;
 
         let last_msg = db.get_latest_message(&convo_id).await?.unwrap();
