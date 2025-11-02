@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS conversation (
     sender_id INTEGER NOT NULL,
     receiver_id INTEGER NOT NULL,
     last_message_id INTEGER,
+    unread_for_sender INTEGER,
+    unread_for_receiver INTEGER,
     FOREIGN KEY(sender_id) REFERENCES user(id),
     FOREIGN KEY(receiver_id) REFERENCES user(id),
     FOREIGN KEY(last_message_id) REFERENCES message(id)

@@ -1,0 +1,244 @@
+openapi: 3.0.3
+info:
+  title: Private Messages Chat API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/chat
+    description: Development server
+tags:
+  - name: user
+  - name: conversation
+  - name: message
+paths:
+  /login:
+    get:
+      tags: 
+        - user
+      summary: Generate a 5 minute cookie from username
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: New cookie called `user_token` has been sent.
+  /conversation:
+    get:
+      tags:
+        - conversation
+      summary: Get conversations for the logged-in user
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of conversations. If none, the array is empty.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+              example: 
+                [1, 2]
+        '401':
+          description: No cookie was found.
+    post:
+      summary: Start a new conversation
+      tags:
+        - conversation
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: string
+      responses:
+        "200":
+          description: Conversation started
+          content:
+            application/json:
+              schema:
+                type: integer
+              example:
+                1
+        '401':
+          description: No cookie was found.
+  /conversation/{convo_id}/peer:
+    get:
+      summary: Get peer username for a conversation
+      tags:
+        - conversation
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: convo_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Peer username
+          content:
+            application/json:
+              schema:
+                type: string
+        '401':
+          description: No cookie was found.
+        '403':
+          description: User does not belong to that conversation.
+  /user/{username}:
+    get:
+      summary: Get user profile
+      tags:
+        - user
+      parameters:
+        - name: username
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                  name:
+                    type: string
+        "204":
+          description: User does not exist
+  /message/{msg_id}:
+    get:
+      summary: Get message by ID
+      tags:
+        - message
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: msg_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Message object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                    sender_id:
+                      type: integer
+                    content:
+                      type: string
+                    previous_msg:
+                      type: integer
+              example:
+                sender_id: 1
+                content: "A message"
+                previous_msg: 1
+        '401':
+          description: No cookie was found.
+        '403':
+          description: User does not have access to that message.
+  /conversation/{convo_id}/message:
+    post:
+      tags:
+        - conversation
+      summary: Post a message to a conversation
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: convo_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
+      responses:
+        "200":
+          description: Message posted
+          content:
+            application/json:
+              schema:
+                type: integer
+              example:
+                1
+        '401':
+          description: No cookie was found.
+        '403':
+          description: User does not belong to that conversation.
+  /conversation/{convo_id}/latest:
+    get:
+      summary: Get latest message in a conversation
+      tags:
+        - conversation
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: convo_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest message
+          content:
+            application/json:
+              schema:
+                type: number
+              example:
+                1
+        '401':
+          description: No cookie was found.
+        '403':
+          description: User does not belong to that conversation.
+  /conversation/{convo_id}/recent:
+    get:
+      summary: Get most recent messages in a conversation
+      tags:
+        - conversation
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: convo_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recent messages
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: No cookie was found.
+        '403':
+          description: User does not belong to that conversation.
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: actix-auth-session
