@@ -30,12 +30,14 @@ interface ChatProps {
   id: number;
   /** The user's username. */
   username: string;
+  /** A function for navigating to the inbox. */
+  goToInbox: () => void;
 }
 
 /**
  * A private conversation between two users.
  */
-export default function Chat({ id, username }: ChatProps) {
+export default function Chat({ id, username, goToInbox }: ChatProps) {
   const { data: messages } = useSWR(
     `/api/chat/conversation/${id}/recent`,
     (URL) => getMessages(URL, username),
@@ -44,7 +46,7 @@ export default function Chat({ id, username }: ChatProps) {
   return (
     <>
       {/** Header */}
-      <ChatHeader id={id} />
+      <ChatHeader id={id} goToInbox={goToInbox} />
 
       {/** Chat */}
       {messages ? (

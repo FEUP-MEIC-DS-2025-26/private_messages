@@ -3,11 +3,6 @@
 import useSWR from 'swr';
 import ChatPreview, { ChatPreviewProps } from './UserMessagePreview';
 
-interface InboxProps {
-  username: string;
-  setChat: (id: number) => void;
-}
-
 /**
  * A function for fetching the user's conversations from the server.
  * @param {string} username - the user's username
@@ -62,10 +57,20 @@ const getChats = async (username: string) => {
   }));
 };
 
+interface InboxProps {
+  /** The user's username. */
+  username: string;
+  /**
+   * A function for navigating to a chat.
+   * @param {number} id - the unique chat identifier
+   */
+  goToChat: (id: number) => void;
+}
+
 /**
  * The user's inbox.
  */
-export default function Inbox({ username, setChat }: InboxProps) {
+export default function Inbox({ username, goToChat }: InboxProps) {
   const { data: chats, isLoading } = useSWR('/api/chat/conversation', () =>
     getChats(username),
   );
@@ -78,7 +83,7 @@ export default function Inbox({ username, setChat }: InboxProps) {
     <ul className="flex flex-col *:not-last:border-b">
       {chats.map((chat: ChatPreviewProps) => (
         <li key={`chat-${chat.id}`}>
-          <button onClick={() => setChat(chat.id)}>
+          <button onClick={() => goToChat(chat.id)}>
             <ChatPreview {...chat} />
           </button>
         </li>

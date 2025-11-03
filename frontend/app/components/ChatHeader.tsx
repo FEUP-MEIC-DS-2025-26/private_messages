@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import useSWR from 'swr';
 
 // icons
@@ -30,26 +29,30 @@ const getPeer = async (id: number) => {
   return await fetcher(`${API_URL}/user/${username}`);
 };
 
+interface ChatHeaderProps {
+  /** The unique chat identifier. */
+  id: number;
+  /** A function for navigating to the inbox. */
+  goToInbox: () => void;
+}
+
 /**
  * The header of the chat, which displays information about the peer.
  */
-export default function ChatHeader({ id }: { id: number }) {
-  const { data: peer, isLoading } = useSWR(
-    `/api/chat/conversation/${id}/peer`,
-    () => getPeer(id),
+export default function ChatHeader({ id, goToInbox }: ChatHeaderProps) {
+  const { data: peer } = useSWR(`/api/chat/conversation/${id}/peer`, () =>
+    getPeer(id),
   );
 
   return (
     <header className="flex items-center gap-5 pl-4 pb-4 border-b">
-      <Link
+      <button
         className="inline-flex items-center justify-center w-8 h-8 hover:bg-gray-600 hover:rounded-full transition-all"
-        href="/chat"
+        onClick={goToInbox}
       >
         <FontAwesomeIcon icon={faArrowLeft} />
-      </Link>
-      {isLoading || !peer ? (
-        <div>Loading...</div>
-      ) : (
+      </button>
+      {peer ? (
         <>
           <ProfilePicture
             name={peer.name}
@@ -59,6 +62,8 @@ export default function ChatHeader({ id }: { id: number }) {
           <strong className="text-xl">{peer.name}</strong>
           <p className="text-xs italic before:content-['@']">{peer.username}</p>
         </>
+      ) : (
+        <div>Loading...</div>
       )}
     </header>
   );
