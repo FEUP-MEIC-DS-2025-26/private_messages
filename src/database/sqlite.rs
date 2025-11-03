@@ -238,7 +238,7 @@ impl Database for SQLiteDB {
     ) -> Result<Self::UserId, Self::Error> {
         let record = sqlx::query!(
             r#"
-            SELECT id as "id!"
+            SELECT sender_id as "sender_id!", receiver_id as "receiver_id!"
             FROM conversation
             WHERE id = ? AND (sender_id = ? OR receiver_id = ?)
         "#,
@@ -249,7 +249,13 @@ impl Database for SQLiteDB {
         .fetch_one(&self.pool)
         .await?;
 
-        Ok(UserId(record.id))
+        if record.sender_id == my_id.0 {
+            Ok(UserId(record.receiver_id))
+        } else if record.receiver_id == my_id.0 {
+            Ok(UserId(record.sender_id))
+        } else {
+            Err(DbError::PermissionDenied)
+        }
     }
 
     async fn get_user_profile(
