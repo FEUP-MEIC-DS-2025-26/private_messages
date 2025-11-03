@@ -34,9 +34,9 @@ impl<T> From<Vec<u8>> for CryptData<T> {
     }
 }
 
-impl<T> Into<Vec<u8>> for CryptData<T> {
-    fn into(self) -> Vec<u8> {
-        self.data
+impl<T> From<CryptData<T>> for Vec<u8> {
+    fn from(val: CryptData<T>) -> Self {
+        val.data
     }
 }
 

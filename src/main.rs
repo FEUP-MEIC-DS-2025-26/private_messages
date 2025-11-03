@@ -69,8 +69,8 @@ async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
             let p = std::fs::read_to_string(password)?;
             let s = std::fs::read_to_string(salt)?;
             let suite = CryptoKey::new(p.trim(), s.trim()).map_err(|e| anyhow!("Error: {e}"))?;
-            let db = SQLiteDB::new(&db_url, suite).await?;
-            db
+            
+            SQLiteDB::new(&db_url, suite).await?
         }
     };
 

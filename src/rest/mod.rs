@@ -98,7 +98,7 @@ async fn get_peer(
         .get_user_id_from_username(&username)
         .await
         .log(|e| warn!("{e}"))?;
-    let convo_id = ConversationId(convo_id.clone());
+    let convo_id = ConversationId(*convo_id);
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
@@ -118,9 +118,7 @@ async fn get_user_profile(
         .read()
         .await
         .get_user_id_from_username(&username)
-        .await
-        .map_err(DbError::from)
-        .log(|e| warn!("{e}"))?;
+        .await.log(|e| warn!("{e}"))?;
     let res = data
         .read()
         .await
@@ -189,7 +187,7 @@ async fn get_message(
         .get_user_id_from_username(&username)
         .await
         .log(|e| warn!("{e}"))?;
-    let msg_id = MessageId(msg_id.clone());
+    let msg_id = MessageId(*msg_id);
     let convo_id = data
         .read()
         .await
@@ -312,7 +310,7 @@ async fn get_latest_message(
         .get_user_id_from_username(&username)
         .await
         .log(|e| warn!("{e}"))?;
-    let convo_id = ConversationId(convo_id.clone());
+    let convo_id = ConversationId(*convo_id);
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
@@ -340,7 +338,7 @@ async fn get_most_recent_messages(
         .get_user_id_from_username(&username)
         .await
         .log(|e| warn!("{e}"))?;
-    let convo_id = ConversationId(convo_id.clone());
+    let convo_id = ConversationId(*convo_id);
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)

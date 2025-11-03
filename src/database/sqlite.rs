@@ -302,7 +302,7 @@ impl Database for SQLiteDB {
                     &self.suite,
                     &res.salt.try_into().map_err(|_| DbError::SaltWrongSize)?,
                 )?,
-                res.previous_message_id.map(|x| MessageId(x)),
+                res.previous_message_id.map(MessageId),
             )),
             Err(e) => Err(e.into()),
         }
@@ -346,7 +346,7 @@ impl Database for SQLiteDB {
                 res.first()
                     .unwrap()
                     .previous_message_id
-                    .map(|x| MessageId(x)),
+                    .map(MessageId),
             )),
             Err(e) => Err(e.into()),
         }
@@ -505,7 +505,7 @@ impl Database for SQLiteDB {
         .fetch_one(&self.pool)
         .await;
 
-        Ok(record.map(|i| i.last_message_id.map(|i| MessageId(i)))?)
+        Ok(record.map(|i| i.last_message_id.map(MessageId))?)
     }
 
     async fn get_user_id_from_username(&self, username: &str) -> Result<Self::UserId, Self::Error> {

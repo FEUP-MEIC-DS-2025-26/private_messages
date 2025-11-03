@@ -101,6 +101,7 @@ pub mod mock {
         age: u8,
     }
 
+    #[derive(Default)]
     pub struct MockDbInternal {
         users: HashMap<UserId, UserProfile>,
         /// (sender, receiver, last_message)
@@ -109,6 +110,7 @@ pub mod mock {
         messages: HashMap<MessageId, (UserId, ConversationId, Message, Option<MessageId>)>,
     }
 
+    #[derive(Default)]
     pub struct MockDb {
         db: RwLock<MockDbInternal>,
     }
@@ -191,7 +193,7 @@ pub mod mock {
             let id = ConversationId(id);
             querier
                 .conversations
-                .insert(id.clone(), (*my_id, *their_id, None));
+                .insert(id, (*my_id, *their_id, None));
             Ok(id)
         }
 
@@ -224,7 +226,7 @@ pub mod mock {
             // Write message
             querier
                 .messages
-                .insert(id.clone(), (*my_id, *conversation, msg, prev_id));
+                .insert(id, (*my_id, *conversation, msg, prev_id));
 
             // Change the last message pointer in the conversation table
             querier
@@ -261,7 +263,7 @@ pub mod mock {
                 .map(|x| x.0 + 1)
                 .unwrap_or(0);
             let id = UserId(id);
-            querier.users.insert(id.clone(), profile.clone());
+            querier.users.insert(id, profile.clone());
             Ok(id)
         }
 
@@ -279,7 +281,7 @@ pub mod mock {
             message: &Self::MessageId,
         ) -> Result<(Self::UserId, Self::Message, Option<Self::MessageId>), Self::Error> {
             match self.db.read().await.messages.get(message) {
-                Some((usr, _conv, msg, prev)) => Ok((usr.clone(), msg.clone(), prev.clone())),
+                Some((usr, _conv, msg, prev)) => Ok((*usr, msg.clone(), *prev)),
                 None => Err(anyhow!("Message with ID {message:?} was not found.")),
             }
         }
@@ -343,23 +345,9 @@ pub mod mock {
         }
     }
 
-    impl Default for MockDbInternal {
-        fn default() -> Self {
-            Self {
-                users: Default::default(),
-                conversations: Default::default(),
-                messages: Default::default(),
-            }
-        }
-    }
+    
 
-    impl Default for MockDb {
-        fn default() -> Self {
-            Self {
-                db: Default::default(),
-            }
-        }
-    }
+    
 
     #[cfg(test)]
     mod test {
