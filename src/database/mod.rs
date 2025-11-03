@@ -191,9 +191,7 @@ pub mod mock {
                 .map(|x| x.0 + 1)
                 .unwrap_or(0);
             let id = ConversationId(id);
-            querier
-                .conversations
-                .insert(id, (*my_id, *their_id, None));
+            querier.conversations.insert(id, (*my_id, *their_id, None));
             Ok(id)
         }
 
@@ -229,10 +227,9 @@ pub mod mock {
                 .insert(id, (*my_id, *conversation, msg, prev_id));
 
             // Change the last message pointer in the conversation table
-            querier
-                .conversations
-                .get_mut(conversation)
-                .map(|(_, _, prev)| *prev = Some(id));
+            if let Some((_, _, prev)) = querier.conversations.get_mut(conversation) {
+                *prev = Some(id);
+            }
 
             Ok(id)
         }
@@ -344,10 +341,6 @@ pub mod mock {
             }
         }
     }
-
-    
-
-    
 
     #[cfg(test)]
     mod test {
