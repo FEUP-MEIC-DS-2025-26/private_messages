@@ -59,8 +59,12 @@ export default function ChatHeader({ id, goToInbox }: ChatHeaderProps) {
             URL="https://thispersondoesnotexist.com/"
             size={56}
           />
-          <strong className="text-xl">{peer.name}</strong>
-          <p className="text-xs italic before:content-['@']">{peer.username}</p>
+          <div>
+            <strong className="text-xl">{peer.name}</strong>
+            <p className="text-xs italic before:content-['@']">
+              {peer.username}
+            </p>
+          </div>
         </>
       ) : (
         <div>Loading...</div>
