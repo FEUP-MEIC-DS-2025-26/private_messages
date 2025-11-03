@@ -1,35 +1,34 @@
 use crate::database::{
     Database,
-    crypto::{CryptData, CryptoSuite},
+    crypto::{CryptData, CryptError, CryptoKey},
 };
 use actix_web::{ResponseError, http::StatusCode};
+use rand::{SeedableRng, rngs::StdRng};
 use serde;
 use sqlx::{Pool, Sqlite, migrate::MigrateDatabase, sqlite::SqlitePoolOptions};
 
 pub struct SQLiteDB {
     pool: Pool<Sqlite>,
-}
-
-impl From<Pool<Sqlite>> for SQLiteDB {
-    fn from(pool: Pool<Sqlite>) -> Self {
-        Self { pool }
-    }
+    suite: CryptoKey,
+    rng: StdRng,
 }
 
 impl SQLiteDB {
-    pub async fn new(url: &str) -> anyhow::Result<Self> {
+    pub async fn new(url: &str, suite: CryptoKey) -> anyhow::Result<Self> {
         if !Sqlite::database_exists(url).await? {
             Sqlite::create_database(url).await?;
         }
+        let rng = StdRng::from_os_rng();
         let pool = SqlitePoolOptions::new().connect_lazy(url)?;
-        let mut db = SQLiteDB { pool };
+        let mut db = Self { pool, suite, rng };
         db.set_schema().await?;
         Ok(db)
     }
 
-    pub async fn kiosk(suite: &CryptoSuite) -> anyhow::Result<Self> {
+    pub async fn kiosk(suite: CryptoKey) -> anyhow::Result<Self> {
         let pool = SqlitePoolOptions::new().connect_lazy("sqlite::memory:")?;
-        let mut db = SQLiteDB::from(pool);
+        let rng = StdRng::from_os_rng();
+        let mut db = Self { pool, suite, rng };
         db.set_schema().await?;
         // sqlx::query_file!("src/database/populate.sql")
         //     .execute(&db.pool)
@@ -40,7 +39,7 @@ impl SQLiteDB {
         for (my_id, their_id) in Self::kiosk_conversations() {
             db.start_conversation(&my_id, &their_id).await?;
         }
-        for (msg, sender, convo) in Self::kiosk_messages(suite)? {
+        for (msg, sender, convo) in Self::kiosk_messages() {
             db.post_msg(msg, &sender, &convo).await?;
         }
         Ok(db)
@@ -58,47 +57,39 @@ impl SQLiteDB {
         vec![(UserId(1), UserId(2)), (UserId(1), UserId(3))]
     }
 
-    fn kiosk_messages(
-        suite: &CryptoSuite,
-    ) -> anyhow::Result<Vec<(CryptData<Message>, UserId, ConversationId)>> {
+    fn kiosk_messages() -> Vec<(Message, UserId, ConversationId)> {
         vec![
             (
-                "Hi Jane! I would like to buy a few oranges, are they fresh?",
+                Message("Hi Jane! I would like to buy a few oranges, are they fresh?".to_string()),
                 UserId(1),
                 ConversationId(1),
             ),
             (
-                "Yes John! I just collected them this morning!",
+                Message("Yes John! I just collected them this morning!".to_string()),
                 UserId(2),
                 ConversationId(1),
             ),
             (
-                "Thank you for the clarification!",
+                Message("Thank you for the clarification!".to_string()),
                 UserId(1),
                 ConversationId(1),
             ),
             (
-                "Hi John! Is your orange cake made from fresh oranges?",
+                Message("Hi John! Is your orange cake made from fresh oranges?".to_string()),
                 UserId(3),
                 ConversationId(2),
             ),
             (
-                "Yes Fred! I bought them today from Jane!",
+                Message("Yes Fred! I bought them today from Jane!".to_string()),
                 UserId(1),
                 ConversationId(2),
             ),
             (
-                "Amazing! That makes me relieved, thank you!",
+                Message("Amazing! That makes me relieved, thank you!".to_string()),
                 UserId(3),
                 ConversationId(2),
             ),
         ]
-        .into_iter()
-        .map(|(m, a, b)| {
-            let m = CryptData::encrypt(Message(m.to_owned()), suite)?;
-            Ok((m, a, b))
-        })
-        .collect()
     }
 
     async fn set_schema(&mut self) -> anyhow::Result<()> {
@@ -160,6 +151,17 @@ pub enum DbError {
     Db(#[from] sqlx::Error),
     #[error("Attempted to access something without needed priviledges")]
     PermissionDenied,
+    #[error("Wrong Salt Size. Must be exactly 12 bytes.")]
+    SaltWrongSize,
+    #[error(transparent)]
+    Crypto(#[from] CryptError),
+}
+
+#[allow(dead_code)]
+pub struct Querier<'a> {
+    q: &'a Pool<Sqlite>,
+    key: &'a CryptoKey,
+    rng: &'a StdRng,
 }
 
 impl ResponseError for DbError {
@@ -194,6 +196,8 @@ impl ResponseError for DbError {
                 _ => StatusCode::IM_A_TEAPOT,
             },
             DbError::PermissionDenied => StatusCode::FORBIDDEN,
+            DbError::SaltWrongSize => StatusCode::INTERNAL_SERVER_ERROR,
+            DbError::Crypto(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -208,9 +212,9 @@ impl Database for SQLiteDB {
 
     type MessageId = MessageId;
 
-    type Message = CryptData<Message>;
+    type Message = Message;
 
-    type Querier<'a> = &'a Pool<Sqlite>;
+    type Querier<'a> = Querier<'a>;
 
     async fn get_conversations(
         &self,
@@ -282,7 +286,7 @@ impl Database for SQLiteDB {
     ) -> Result<(Self::UserId, Self::Message, Option<Self::MessageId>), Self::Error> {
         let result = sqlx::query!(
             r#"
-            SELECT sender_id as "sender_id!", content as "content!", previous_message_id
+            SELECT sender_id as "sender_id!", content as "content!", salt as "salt!", previous_message_id
             FROM message
             WHERE id = ?
         "#,
@@ -294,7 +298,10 @@ impl Database for SQLiteDB {
         match result {
             Ok(res) => Ok((
                 UserId(res.sender_id),
-                res.content.into(),
+                CryptData::from(res.content).decrypt(
+                    &self.suite,
+                    &res.salt.try_into().map_err(|_| DbError::SaltWrongSize)?,
+                )?,
                 res.previous_message_id.map(|x| MessageId(x)),
             )),
             Err(e) => Err(e.into()),
@@ -307,13 +314,13 @@ impl Database for SQLiteDB {
     ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error> {
         let result = sqlx::query!(r#"
             WITH id_asc as (
-                SELECT id, sender_id, content, previous_message_id
+                SELECT id, sender_id, content, salt, previous_message_id
                 FROM message
                 WHERE conversation_id = ?
                 ORDER BY id desc
                 LIMIT 32
             )
-            SELECT sender_id as "sender_id!", content as "content!", previous_message_id FROM id_asc ORDER BY id
+            SELECT sender_id as "sender_id!", content as "content!", salt as "salt!", previous_message_id FROM id_asc ORDER BY id
         "#,
             conversation_id
         ).fetch_all(&self.pool)
@@ -322,13 +329,20 @@ impl Database for SQLiteDB {
         match result {
             Ok(res) => Ok((
                 res.iter()
-                    .map(|record| {
-                        (
+                    .map(|record| -> Result<(Self::UserId, Self::Message), DbError> {
+                        Ok((
                             UserId(record.sender_id),
-                            CryptData::from(record.content.clone()),
-                        )
+                            CryptData::from(record.content.clone()).decrypt(
+                                &self.suite,
+                                &record
+                                    .salt
+                                    .clone()
+                                    .try_into()
+                                    .map_err(|_| DbError::SaltWrongSize)?,
+                            )?,
+                        ))
                     })
-                    .collect(),
+                    .collect::<Result<Vec<_>, DbError>>()?,
                 res.first()
                     .unwrap()
                     .previous_message_id
@@ -339,7 +353,11 @@ impl Database for SQLiteDB {
     }
 
     async fn get_querier<'a>(&'a self) -> Result<Self::Querier<'a>, Self::Error> {
-        Ok(&self.pool)
+        Ok(Querier {
+            q: &self.pool,
+            key: &self.suite,
+            rng: &self.rng,
+        })
     }
 
     async fn add_user(&mut self, profile: &Self::UserProfile) -> Result<Self::UserId, Self::Error> {
@@ -437,14 +455,17 @@ impl Database for SQLiteDB {
         .await?
         .last_message_id;
 
-        let msg: Vec<u8> = msg.into();
+        let (contents, salt) = CryptData::encrypt(msg, &self.suite, &mut self.rng)?;
+        let salt = salt.to_vec();
+
         let msg_id = sqlx::query!(
             r#"
-            INSERT INTO message (content, sender_id, conversation_id, previous_message_id)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO message (content, salt, sender_id, conversation_id, previous_message_id)
+            VALUES (?, ?, ?, ?, ?)
             RETURNING id as "id!"
         "#,
-            msg,
+            contents,
+            salt,
             my_id,
             conversation,
             prev_id
@@ -549,7 +570,7 @@ mod test {
     use anyhow::anyhow;
 
     use crate::database::Database;
-    use crate::database::crypto::{CryptError, CryptoSuite};
+    use crate::database::crypto::CryptoKey;
     use crate::database::sqlite::*;
 
     #[tokio::test]
@@ -566,9 +587,9 @@ mod test {
 
         let password = "very_$ecure_and_$trong_P4$$w0rd_in_2025";
         let salt = "even_more_$ecure_$alt";
-        let suite = CryptoSuite::new(password, salt).map_err(|e| anyhow!("Error: {e}"))?;
+        let suite = CryptoKey::new(password, salt).map_err(|e| anyhow!("Error: {e}"))?;
 
-        let mut db = SQLiteDB::new("sqlite::memory:").await?;
+        let mut db = SQLiteDB::new("sqlite::memory:", suite).await?;
 
         let alice_id = db.add_user(&alice).await?;
         let bob_id = db.add_user(&bob).await?;
@@ -583,11 +604,10 @@ mod test {
         assert_eq!(convo_id, same_id);
 
         let hello = Message("Hello Bob!".to_owned());
-        let hello = CryptData::encrypt(hello, &suite)?;
         let hello_id = db.post_msg(hello, &alice_id, &convo_id).await?;
 
         // Example queries
-        let alice_bob_messages: Result<Vec<Message>, CryptError> = {
+        let alice_bob_messages: Result<Vec<Message>, _> = {
             let querier = db.get_querier().await?;
             // Count all messages between Alice and Bob
             let msg_count = sqlx::query_scalar!(
@@ -598,7 +618,7 @@ mod test {
             "#,
                 convo_id
             )
-            .fetch_one(querier)
+            .fetch_one(querier.q)
             .await?;
             let msg_count: i64 = msg_count.into();
             assert_eq!(msg_count, 1);
@@ -611,24 +631,32 @@ mod test {
             "#,
                 convo_id
             )
-            .fetch_one(querier)
+            .fetch_one(querier.q)
             .await?;
             assert!(MessageId(msg_id.id) == hello_id);
             // Retrieve all messages between Alice and Bob
             let messages = sqlx::query!(
                 r#"
-                SELECT content as "content!"
+                SELECT content as "content!", salt as "salt!"
                 FROM message
                 WHERE conversation_id = ?;
             "#,
                 convo_id
             )
-            .fetch_all(querier)
+            .fetch_all(querier.q)
             .await?;
             messages
                 .into_iter()
-                .map(|m| CryptData::from(m.content))
-                .map(|m| m.decrypt(&suite))
+                .map(|m| -> Result<(CryptData<Message>, [u8; 12]), DbError> {
+                    Ok((
+                        CryptData::from(m.content),
+                        m.salt.try_into().map_err(|_| DbError::SaltWrongSize)?,
+                    ))
+                })
+                .map(|m| -> Result<Message, DbError> {
+                    let (m, s) = m?;
+                    Ok(m.decrypt(&querier.key, &s)?)
+                })
                 .collect()
         };
 
@@ -651,9 +679,9 @@ mod test {
         };
         let password = "very_$ecure_and_$trong_P4$$w0rd_in_2025";
         let salt = "even_more_$ecure_$alt";
-        let suite = CryptoSuite::new(password, salt).map_err(|e| anyhow!("Error: {e}"))?;
+        let suite = CryptoKey::new(password, salt).map_err(|e| anyhow!("Error: {e}"))?;
 
-        let mut db = SQLiteDB::new("sqlite::memory:").await?;
+        let mut db = SQLiteDB::new("sqlite::memory:", suite).await?;
 
         let alice_id = db.add_user(&alice).await?;
         let bob_id = db.add_user(&bob).await?;
@@ -669,14 +697,12 @@ mod test {
         assert_eq!(last_msg, None);
 
         let hello = Message("Hello Bob!".to_owned());
-        let hello = CryptData::encrypt(hello, &suite)?;
         let first_hello_id = db.post_msg(hello, &alice_id, &convo_id).await?;
 
         let last_msg = db.get_latest_message(&convo_id).await?;
         assert_eq!(last_msg, Some(first_hello_id));
 
         let hello = Message("Hello Alice!".to_owned());
-        let hello = CryptData::encrypt(hello, &suite)?;
         let second_hello_id = db.post_msg(hello, &bob_id, &convo_id).await?;
 
         let last_msg = db.get_latest_message(&convo_id).await?.unwrap();

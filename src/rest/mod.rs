@@ -1,8 +1,4 @@
-use crate::database::{
-    Database,
-    crypto::{CryptData, CryptError, CryptoSuite},
-    sqlite::*,
-};
+use crate::database::{Database, sqlite::*};
 use actix_identity::Identity;
 use actix_web::{
     HttpMessage, HttpRequest, HttpResponse, Responder, Result, get, post,
@@ -157,7 +153,10 @@ struct MessageFormat {
 
 impl MessageContent {
     fn new(sender_username: String, msg: Message) -> Self {
-        Self { sender_username, msg }
+        Self {
+            sender_username,
+            msg,
+        }
     }
 }
 
@@ -180,7 +179,6 @@ impl MessageFormat {
 #[get("/message/{msg_id}")]
 async fn get_message(
     data: Data<RwLock<SQLiteDB>>,
-    suite: Data<CryptoSuite>,
     user: Identity,
     msg_id: Path<i64>,
 ) -> Result<impl Responder> {
@@ -203,14 +201,19 @@ async fn get_message(
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
         .log(|e| warn!("{e}"))?;
-    let (sender_id, encrypted_msg, prev_id) = data
+    let (sender_id, msg, prev_id) = data
         .read()
         .await
         .get_message(&msg_id)
         .await
         .log(|e| warn!("{e}"))?;
-    let msg = encrypted_msg.decrypt(&suite).log(|e| warn!("{e}"))?;
-    let sender_username = data.read().await.get_user_profile(&sender_id).await.log(|e| warn!("{e}"))?.username();
+    let sender_username = data
+        .read()
+        .await
+        .get_user_profile(&sender_id)
+        .await
+        .log(|e| warn!("{e}"))?
+        .username();
     let msg = MessageContent::new(sender_username, msg);
     Ok(Json(MessageFormat::one(msg, prev_id)))
 }
@@ -268,7 +271,6 @@ struct MessageForm {
 #[post("/conversation/{convo_id}/message")]
 async fn post_msg(
     data: Data<RwLock<SQLiteDB>>,
-    suite: Data<CryptoSuite>,
     user: Identity,
     conversation: Path<i64>,
     form: Form<MessageForm>,
@@ -281,7 +283,7 @@ async fn post_msg(
         .await
         .log(|e| warn!("{e}"))?;
     let conversation = ConversationId(conversation.into_inner());
-    let msg = CryptData::encrypt(Message(form.message.clone()), &suite).log(|e| warn!("{e}"))?;
+    let msg = Message(form.into_inner().message);
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &conversation)
@@ -328,7 +330,6 @@ async fn get_latest_message(
 #[get("/conversation/{convo_id}/recent")]
 async fn get_most_recent_messages(
     data: Data<RwLock<SQLiteDB>>,
-    suite: Data<CryptoSuite>,
     user: Identity,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
@@ -351,10 +352,18 @@ async fn get_most_recent_messages(
         .await
         .log(|e| warn!("{e}"))?;
     let mut msgs = Vec::new();
-    for (sender_id, encrypted) in messages {
-        let msg = encrypted.decrypt(&suite).log(|e| warn!("{e}"))?;
-        let sender_username = data.read().await.get_user_profile(&sender_id).await.log(|e| warn!("{e}"))?.username();
-        msgs.push(MessageContent { sender_username, msg })
+    for (sender_id, msg) in messages {
+        let sender_username = data
+            .read()
+            .await
+            .get_user_profile(&sender_id)
+            .await
+            .log(|e| warn!("{e}"))?
+            .username();
+        msgs.push(MessageContent {
+            sender_username,
+            msg,
+        })
     }
     Ok(Json(MessageFormat::many(msgs, prev_id)))
 }
