@@ -138,8 +138,8 @@ paths:
                   content:
                     type: object
                     properties:
-                      sender_id:
-                        type: integer
+                      sender_username:
+                        type: string
                       msg:
                         type: string
                   previous_msg:
@@ -232,8 +232,8 @@ paths:
                     type: array
                     items:
                       properties:
-                        sender_id:
-                          type: integer
+                        sender_username:
+                          type: string
                         msg:
                           type: string
                   previous_msg:
