@@ -1,4 +1,4 @@
-interface UserMessageProps {
+export interface UserMessageProps {
   /** Indicates if the user sent the message. */
   isFromUser: boolean;
   /** The content of the message. */
@@ -15,7 +15,7 @@ export default function UserMessage({ isFromUser, content }: UserMessageProps) {
 
   return (
     <div
-      className={`w-fit max-w-3/4 p-3 rounded-3xl text-justify ${extraStyles}`}
+      className={`w-fit max-w-4/5 p-3 rounded-3xl text-justify wrap-break-word ${extraStyles}`}
     >
       {content}
     </div>

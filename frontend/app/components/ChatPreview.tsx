@@ -1,38 +1,35 @@
-import Link from 'next/link';
-
 // components
 import ProfilePicture from './ProfilePicture';
 
-interface UserMessagePreviewProps {
+export interface ChatPreviewProps {
+  /** The unique identifier of the conversation. */
+  id: number;
   /** The display name of the user. */
   name: string;
+  /** The user's username. */
+  username: string;
   /** The URL of the user's profile picture. */
   profilePictureURL: string;
   /** The number of unread messages from the user. */
   unreadMessages: number;
   /** The last message sent by the user */
   lastMessage: string;
-  /** The date when the last message was sent. */
-  lastMessageDate: string;
 }
 
 /**
- * A preview of the messages chat with a given user.
+ * A preview of the chat with a given user.
  */
-export default function UserMessagePreview({
+export default function ChatPreview({
   name,
+  username,
   profilePictureURL,
   unreadMessages,
   lastMessage,
-  lastMessageDate,
-}: UserMessagePreviewProps) {
+}: ChatPreviewProps) {
   const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
 
   return (
-    <Link
-      className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors"
-      href="/chat"
-    >
+    <div className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors">
       <div className="relative">
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
         {unreadMessages > 0 && (
@@ -43,9 +40,11 @@ export default function UserMessagePreview({
       </div>
       <div>
         <strong>{name}</strong>
-        <span className="text-xs ml-3">{lastMessageDate}</span>
+        <span className="text-xs ml-2 italic before:content-['@']">
+          {username}
+        </span>
         <p>{lastMessage}</p>
       </div>
-    </Link>
+    </div>
   );
 }

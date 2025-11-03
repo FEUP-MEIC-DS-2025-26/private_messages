@@ -1,16 +1,42 @@
 'use client';
 
-import Form from 'next/form';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import { useRef, useState } from 'react';
+import { useSWRConfig } from 'swr';
 
 // icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane, faSmile } from '@fortawesome/free-solid-svg-icons';
 
-export default function MessageInput() {
+/**
+ * The input field for sending messages
+ */
+export default function MessageInput({ id }: { id: number }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEmojis, setShowEmojis] = useState(false);
+
+  // to force SWR to refetch the messages
+  const { mutate } = useSWRConfig();
+
+  /**
+   * A function for sending messages.
+   * @param {FormData} data - the form data containing the message
+   */
+  const sendMessage = async (data: FormData) => {
+    const message = data.get('message') as string;
+
+    // if a message exists, send it
+    if (message) {
+      await fetch(`/api/chat/conversation/${id}/message`, {
+        method: 'POST',
+        body: new URLSearchParams({ message }),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+
+      // refetch the messages
+      mutate(`/api/chat/conversation/${id}`);
+    }
+  };
 
   // a function for handling emoji clicks
   const handleEmojiClick = (emojiData: EmojiClickData) => {
@@ -27,8 +53,8 @@ export default function MessageInput() {
 
   return (
     <div className="relative">
-      <Form
-        action=""
+      <form
+        action={sendMessage}
         className="sticky flex items-center gap-2 px-6 py-1 rounded-full border-2 focus-within:border-biloba-flower-500 transition-all"
       >
         {/** Input area */}
@@ -51,10 +77,13 @@ export default function MessageInput() {
         </button>
 
         {/** Send button */}
-        <button className="w-6 h-6 cursor-pointer hover:text-biloba-flower-500 transition-color">
+        <button
+          className="w-6 h-6 cursor-pointer hover:text-biloba-flower-500 transition-color"
+          type="submit"
+        >
           <FontAwesomeIcon icon={faPaperPlane} />
         </button>
-      </Form>
+      </form>
 
       {/* Emoji picker */}
       <div className="absolute right-0 bottom-10 z-10" hidden={!showEmojis}>

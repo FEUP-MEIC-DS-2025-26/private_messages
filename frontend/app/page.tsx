@@ -1,55 +1,23 @@
-"use client";
+'use client';
 
-import UserMessagePreview from './components/UserMessagePreview';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
-export default function Home() {
-    const [conversations, setConversations] = useState([]);
-    useEffect(() => {
-        const api_url = "http://localhost:8080/api/chat/conversation";
-        setTimeout(async () => {
-            fetch(api_url).then(res => res.json()).then(data => {
-                // TODO
-            });
-        }, 1);
+// components
+import Inbox from './components/Inbox';
+import Chat from './components/Chat';
 
-        const intervalId = setInterval(async () => {
-            // TODO
-        }, 5000);
+// hard-coded user (only for the prototype)
+const USERNAME = 'john';
 
-        return () => clearInterval(intervalId);
-    }, [conversations]);
-  return (
-    <ul className="flex flex-col *:not-last:border-b">
-      <li>
-        <UserMessagePreview
-          name="John Doe"
-          profilePictureURL="https://thispersondoesnotexist.com/"
-          unreadMessages={2}
-          lastMessage="Boa tarde, as laranjas ainda estão à venda?"
-          lastMessageDate="21/05/2026"
-        />
-      </li>
+/**
+ * The user's inbox.
+ */
+export default function Page() {
+  const [chatID, setChatID] = useState<number | null>(null);
 
-      <li>
-        <UserMessagePreview
-          name="John Doe"
-          profilePictureURL="https://thispersondoesnotexist.com/"
-          unreadMessages={0}
-          lastMessage="Boa tarde, as laranjas ainda estão à venda?"
-          lastMessageDate="21/05/2026"
-        />
-      </li>
-
-      <li>
-        <UserMessagePreview
-          name="John Doe"
-          profilePictureURL="https://thispersondoesnotexist.com/"
-          unreadMessages={12}
-          lastMessage="Boa tarde, as laranjas ainda estão à venda?"
-          lastMessageDate="21/05/2026"
-        />
-      </li>
-    </ul>
+  return chatID ? (
+    <Chat username={USERNAME} id={chatID} goToInbox={() => setChatID(null)} />
+  ) : (
+    <Inbox username={USERNAME} goToChat={(id) => setChatID(id)} />
   );
 }
