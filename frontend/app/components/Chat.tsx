@@ -50,12 +50,12 @@ export default function Chat({ id, username, goToInbox }: ChatProps) {
   // automatically scroll the last message into view
   useLayoutEffect(() => {
     const messageList = messageListRef.current;
-    const lastMessage = messageList?.lastElementChild;
 
-    if (lastMessage) {
+    if (messageList) {
       setTimeout(
         () =>
-          lastMessage.scrollIntoView({
+          messageList.scrollTo({
+            top: messageList.scrollHeight,
             behavior: 'smooth',
           }),
         100,
