@@ -84,7 +84,7 @@ export default function Inbox({ username, goToChat }: InboxProps) {
       {chats.map((chat: ChatPreviewProps) => (
         <li key={`chat-${chat.id}`}>
           <button
-            className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors"
+            className="p-0 m-0 w-full text-start"
             onClick={() => goToChat(chat.id)}
           >
             <ChatPreview {...chat} />

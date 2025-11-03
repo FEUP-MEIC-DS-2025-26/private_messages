@@ -29,7 +29,7 @@ export default function ChatPreview({
   const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
 
   return (
-    <>
+    <div className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors">
       <div className="relative">
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
         {unreadMessages > 0 && (
@@ -45,6 +45,6 @@ export default function ChatPreview({
         </span>
         <p>{lastMessage}</p>
       </div>
-    </>
+    </div>
   );
 }
