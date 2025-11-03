@@ -16,7 +16,7 @@ export default function Page() {
   const [chatID, setChatID] = useState<number | null>(null);
 
   return chatID ? (
-    <Chat id={chatID} />
+    <Chat username={USERNAME} id={chatID} />
   ) : (
     <Inbox username={USERNAME} setChat={(id) => setChatID(id)} />
   );

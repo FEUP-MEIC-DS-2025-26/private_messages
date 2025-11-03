@@ -1,4 +1,4 @@
-interface UserMessageProps {
+export interface UserMessageProps {
   /** Indicates if the user sent the message. */
   isFromUser: boolean;
   /** The content of the message. */

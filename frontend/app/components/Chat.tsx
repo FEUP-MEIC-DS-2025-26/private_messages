@@ -4,7 +4,7 @@ import useSWR from 'swr';
 
 // components
 import ChatHeader from './ChatHeader';
-import UserMessage from './UserMessage';
+import UserMessage, { UserMessageProps } from './UserMessage';
 import MessageInput from './MessageInput';
 
 /**
@@ -14,12 +14,31 @@ import MessageInput from './MessageInput';
 const fetcher = (URL: string) => fetch(URL).then((res) => res.json());
 
 /**
+ * Fetches the chat messages from the backend.
+ * @param {string} URL - the URL
+ */
+const getMessages = async (URL: string, username: string) => {
+  const messages: any[] = await fetcher(URL).then((message) => message.content);
+  return messages.map((message) => ({
+    isFromUser: message.sender_username === username,
+    content: message.msg,
+  }));
+};
+
+interface ChatProps {
+  /** The unique chat identifier. */
+  id: number;
+  /** The user's username. */
+  username: string;
+}
+
+/**
  * A private conversation between two users.
  */
-export default function Chat({ id }: { id: number }) {
+export default function Chat({ id, username }: ChatProps) {
   const { data: messages } = useSWR(
     `/api/chat/conversation/${id}/recent`,
-    fetcher,
+    (URL) => getMessages(URL, username),
   );
 
   return (
@@ -28,13 +47,17 @@ export default function Chat({ id }: { id: number }) {
       <ChatHeader id={id} />
 
       {/** Chat */}
-      {/* <ul className="grow overflow-scroll flex flex-col gap-3 px-3" ref={ul}>
-        {messages.map(({ isFromUser, content }, index) => (
-          <li key={`${content}-${index}`}>
-            <UserMessage isFromUser={isFromUser} content={content} />
-          </li>
-        ))}
-      </ul> */}
+      {messages ? (
+        <ul className="grow overflow-scroll flex flex-col gap-3 px-3">
+          {messages.map((message: UserMessageProps, index: number) => (
+            <li key={`message-${index}`}>
+              <UserMessage {...message} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div>Loading...</div>
+      )}
 
       {/* Text bar */}
       <MessageInput />
