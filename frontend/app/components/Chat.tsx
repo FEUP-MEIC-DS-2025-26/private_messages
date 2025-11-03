@@ -1,6 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
+import { Ref, useLayoutEffect, useRef } from 'react';
 
 // components
 import ChatHeader from './ChatHeader';
@@ -44,6 +45,23 @@ export default function Chat({ id, username, goToInbox }: ChatProps) {
   const { data: messages } = useSWR(`/api/chat/conversation/${id}`, (URL) =>
     getMessages(URL, username),
   );
+  const messageListRef: Ref<HTMLUListElement> = useRef(null);
+
+  // automatically scroll the last message into view
+  useLayoutEffect(() => {
+    const messageList = messageListRef.current;
+    const lastMessage = messageList?.lastElementChild;
+
+    if (lastMessage) {
+      setTimeout(
+        () =>
+          lastMessage.scrollIntoView({
+            behavior: 'smooth',
+          }),
+        100,
+      );
+    }
+  }, [messages]);
 
   return (
     <>
@@ -52,7 +70,10 @@ export default function Chat({ id, username, goToInbox }: ChatProps) {
 
       {/** Chat */}
       {messages ? (
-        <ul className="grow overflow-scroll flex flex-col gap-3 px-3">
+        <ul
+          className="grow overflow-scroll flex flex-col gap-3 px-3"
+          ref={messageListRef}
+        >
           {messages.map((message: UserMessageProps, index: number) => (
             <li key={`message-${index}`}>
               <UserMessage {...message} />
