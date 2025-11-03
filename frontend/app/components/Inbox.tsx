@@ -80,7 +80,7 @@ export default function Inbox({ username, goToChat }: InboxProps) {
   }
 
   return (
-    <ul className="flex flex-col *:not-last:border-b">
+    <ul className="flex flex-col overflow-scroll *:not-last:border-b">
       {chats.map((chat: ChatPreviewProps) => (
         <li key={`chat-${chat.id}`}>
           <button
