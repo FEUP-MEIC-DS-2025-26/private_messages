@@ -62,7 +62,7 @@ export default function Chat({ id, username, goToInbox }: ChatProps) {
       )}
 
       {/* Text bar */}
-      <MessageInput />
+      <MessageInput id={id} />
     </>
   );
 }

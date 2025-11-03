@@ -1,7 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
-import ChatPreview, { ChatPreviewProps } from './UserMessagePreview';
+import ChatPreview, { ChatPreviewProps } from './ChatPreview';
 
 /**
  * A function for fetching the user's conversations from the server.
@@ -83,7 +83,10 @@ export default function Inbox({ username, goToChat }: InboxProps) {
     <ul className="flex flex-col *:not-last:border-b">
       {chats.map((chat: ChatPreviewProps) => (
         <li key={`chat-${chat.id}`}>
-          <button onClick={() => goToChat(chat.id)}>
+          <button
+            className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors"
+            onClick={() => goToChat(chat.id)}
+          >
             <ChatPreview {...chat} />
           </button>
         </li>
