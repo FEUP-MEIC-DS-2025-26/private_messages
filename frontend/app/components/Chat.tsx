@@ -16,9 +16,12 @@ const fetcher = (URL: string) => fetch(URL).then((res) => res.json());
 /**
  * Fetches the chat messages from the backend.
  * @param {string} URL - the URL
+ * @param {string} username - the user's username
  */
 const getMessages = async (URL: string, username: string) => {
-  const messages: any[] = await fetcher(URL).then((message) => message.content);
+  const messages: any[] = await fetcher(`${URL}/recent`).then(
+    (message) => message.content,
+  );
   return messages.map((message) => ({
     isFromUser: message.sender_username === username,
     content: message.msg,
@@ -38,9 +41,8 @@ interface ChatProps {
  * A private conversation between two users.
  */
 export default function Chat({ id, username, goToInbox }: ChatProps) {
-  const { data: messages } = useSWR(
-    `/api/chat/conversation/${id}/recent`,
-    (URL) => getMessages(URL, username),
+  const { data: messages } = useSWR(`/api/chat/conversation/${id}`, (URL) =>
+    getMessages(URL, username),
   );
 
   return (

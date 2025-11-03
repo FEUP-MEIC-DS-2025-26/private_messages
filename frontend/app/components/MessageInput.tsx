@@ -1,7 +1,8 @@
 'use client';
 
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
-import { useRef, useState, FormEvent } from 'react';
+import { useRef, useState } from 'react';
+import { useSWRConfig } from 'swr';
 
 // icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -14,7 +15,13 @@ export default function MessageInput({ id }: { id: number }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEmojis, setShowEmojis] = useState(false);
 
-  // a function for sending messages
+  // to force SWR to refetch the messages
+  const { mutate } = useSWRConfig();
+
+  /**
+   * A function for sending messages.
+   * @param {FormData} data - the form data containing the message
+   */
   const sendMessage = async (data: FormData) => {
     const message = data.get('message') as string;
 
@@ -25,6 +32,9 @@ export default function MessageInput({ id }: { id: number }) {
         body: new URLSearchParams({ message }),
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
+
+      // refetch the messages
+      mutate(`/api/chat/conversation/${id}`);
     }
   };
 
