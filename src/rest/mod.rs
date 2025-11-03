@@ -137,7 +137,7 @@ async fn get_user_profile(
 
 #[derive(Debug, Serialize, Deserialize)]
 struct MessageContent {
-    sender_id: UserId,
+    sender_username: String,
     msg: Message,
 }
 
@@ -156,8 +156,8 @@ struct MessageFormat {
 }
 
 impl MessageContent {
-    fn new(sender_id: UserId, msg: Message) -> Self {
-        Self { sender_id, msg }
+    fn new(sender_username: String, msg: Message) -> Self {
+        Self { sender_username, msg }
     }
 }
 
@@ -210,7 +210,8 @@ async fn get_message(
         .await
         .log(|e| warn!("{e}"))?;
     let msg = encrypted_msg.decrypt(&suite).log(|e| warn!("{e}"))?;
-    let msg = MessageContent::new(sender_id, msg);
+    let sender_username = data.read().await.get_user_profile(&sender_id).await.log(|e| warn!("{e}"))?.username();
+    let msg = MessageContent::new(sender_username, msg);
     Ok(Json(MessageFormat::one(msg, prev_id)))
 }
 
@@ -349,13 +350,11 @@ async fn get_most_recent_messages(
         .get_most_recent_messages(&convo_id)
         .await
         .log(|e| warn!("{e}"))?;
-    let msgs = messages
-        .into_iter()
-        .map(|(sender_id, encrypted)| {
-            let msg = encrypted.decrypt(&suite)?;
-            Ok(MessageContent { sender_id, msg })
-        })
-        .collect::<Result<Vec<_>, CryptError>>()
-        .log(|e| warn!("{e}"))?;
+    let mut msgs = Vec::new();
+    for (sender_id, encrypted) in messages {
+        let msg = encrypted.decrypt(&suite).log(|e| warn!("{e}"))?;
+        let sender_username = data.read().await.get_user_profile(&sender_id).await.log(|e| warn!("{e}"))?.username();
+        msgs.push(MessageContent { sender_username, msg })
+    }
     Ok(Json(MessageFormat::many(msgs, prev_id)))
 }

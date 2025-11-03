@@ -16,6 +16,7 @@ provider "google" {
 resource "google_cloud_run_v2_service" "default" {
   name     = "ds-2025-g51-private-messages"
   location = "europe-southwest1"
+  deletion_protection = false
 
   template {
     containers {
