@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT content as \"content!\", salt as \"salt!\"\n                FROM message\n                WHERE conversation_id = ?;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "content!",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "salt!",
+        "ordinal": 1,
+        "type_info": "Blob"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "b3192acdba0cc245be95cce785a6ea027b3080c79ed2442dc146086bee29b3d3"
+}
