@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use crate::database::{
     Database,
     crypto::{CryptData, CryptError, CryptoKey},
@@ -162,6 +164,14 @@ pub struct Querier<'a> {
     q: &'a Pool<Sqlite>,
     key: &'a CryptoKey,
     rng: &'a StdRng,
+}
+
+impl<'a> Deref for Querier<'a> {
+    type Target = Pool<Sqlite>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.q
+    }
 }
 
 impl ResponseError for DbError {
@@ -343,10 +353,7 @@ impl Database for SQLiteDB {
                         ))
                     })
                     .collect::<Result<Vec<_>, DbError>>()?,
-                res.first()
-                    .unwrap()
-                    .previous_message_id
-                    .map(MessageId),
+                res.first().unwrap().previous_message_id.map(MessageId),
             )),
             Err(e) => Err(e.into()),
         }
