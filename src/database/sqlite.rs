@@ -32,9 +32,6 @@ impl SQLiteDB {
         let rng = StdRng::from_os_rng();
         let mut db = Self { pool, suite, rng };
         db.set_schema().await?;
-        // sqlx::query_file!("src/database/populate.sql")
-        //     .execute(&db.pool)
-        //     .await?;
         for user in Self::kiosk_users() {
             db.add_user(&user).await?;
         }
