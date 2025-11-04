@@ -3,7 +3,7 @@ use std::{io::Cursor, marker::PhantomData, ops::Deref};
 use actix_web::{ResponseError, http::StatusCode};
 use argon2::Argon2;
 use chacha20poly1305::{ChaCha20Poly1305, ChaChaPoly1305, KeyInit, aead::Aead};
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use sqlx::{Decode, Encode, Sqlite};
 
 pub struct CryptoKey {
@@ -19,7 +19,7 @@ impl CryptoKey {
     }
 }
 
-#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CryptData<T> {
     data: Vec<u8>,
     _pd: PhantomData<T>,
@@ -65,7 +65,7 @@ impl From<chacha20poly1305::Error> for CryptError {
 impl<T: Serialize + DeserializeOwned> CryptData<T> {
     pub fn encrypt<RNG: rand::CryptoRng>(
         data: T,
-        suite: &CryptoKey,
+        key: &CryptoKey,
         rng: &mut RNG,
     ) -> Result<(Self, [u8; 12]), CryptError> {
         let mut buf = Vec::new();
@@ -73,7 +73,7 @@ impl<T: Serialize + DeserializeOwned> CryptData<T> {
         let mut nonce_buf = [0u8; 12];
         rng.fill_bytes(&mut nonce_buf);
 
-        let data = suite.key.encrypt(&nonce_buf.into(), buf.as_slice())?;
+        let data = key.key.encrypt(&nonce_buf.into(), buf.as_slice())?;
         Ok((
             Self {
                 data,
@@ -82,8 +82,8 @@ impl<T: Serialize + DeserializeOwned> CryptData<T> {
             nonce_buf,
         ))
     }
-    pub fn decrypt(self, suite: &CryptoKey, nonce: &[u8; 12]) -> Result<T, CryptError> {
-        let buf = suite.key.decrypt(nonce.into(), self.data.as_slice())?;
+    pub fn decrypt(self, key: &CryptoKey, nonce: &[u8; 12]) -> Result<T, CryptError> {
+        let buf = key.key.decrypt(nonce.into(), self.data.as_slice())?;
         Ok(ciborium::de::from_reader(Cursor::new(buf))?)
     }
 }
@@ -134,5 +134,30 @@ where
 impl<T> sqlx::Type<Sqlite> for CryptData<T> {
     fn type_info() -> <Sqlite as sqlx::Database>::TypeInfo {
         <Vec<u8> as sqlx::Type<Sqlite>>::type_info()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::{SeedableRng, rngs::StdRng};
+
+    use crate::database::crypto::{CryptData, CryptoKey};
+
+    #[test]
+    fn crypto_test() -> anyhow::Result<()> {
+        let mut rng = StdRng::from_os_rng();
+        let rng = &mut rng;
+        let password = "test_password";
+        let salt = "test_salt";
+        let key = CryptoKey::new(password, salt);
+        assert!(key.is_ok());
+        let key = key.unwrap();
+        let data = b"Very secretive data!".to_vec();
+        let (enc, salt) = CryptData::encrypt(data.clone(), &key, rng)?;
+        assert_ne!(data.as_slice(), enc.as_slice());
+        let dec = enc.decrypt(&key, &salt)?;
+        assert_eq!(data.as_slice(), dec.as_slice());
+
+        Ok(())
     }
 }
