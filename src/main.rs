@@ -1,4 +1,4 @@
-use crate::database::{crypto::CryptoSuite, sqlite::SQLiteDB};
+use crate::database::{crypto::CryptoKey, sqlite::SQLiteDB};
 use actix_files::Files;
 use actix_identity::IdentityMiddleware;
 use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
@@ -6,7 +6,7 @@ use actix_web::{App, HttpServer, middleware, web};
 use anyhow::anyhow;
 use clap::Parser;
 use cookie::{Key, time::Duration};
-use log::{info};
+use log::info;
 use std::path::PathBuf;
 use tokio::sync::RwLock;
 
@@ -55,11 +55,11 @@ enum Commands {
 }
 
 async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
-    let (db, suite) = match cli.command {
+    let db = match cli.command {
         Commands::Kiosk => {
-            let suite = CryptoSuite::new("demonstration_password", "demonstration_salt")
+            let suite = CryptoKey::new("demonstration_password", "demonstration_salt")
                 .map_err(|e| anyhow!("Error: {e}"))?;
-            (SQLiteDB::kiosk(&suite).await?, suite)
+            SQLiteDB::kiosk(suite).await?
         }
         Commands::Run {
             password,
@@ -68,21 +68,19 @@ async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
         } => {
             let p = std::fs::read_to_string(password)?;
             let s = std::fs::read_to_string(salt)?;
-            let suite = CryptoSuite::new(p.trim(), s.trim()).map_err(|e| anyhow!("Error: {e}"))?;
-            let db = SQLiteDB::new(&db_url).await?;
-            (db, suite)
+            let suite = CryptoKey::new(p.trim(), s.trim()).map_err(|e| anyhow!("Error: {e}"))?;
+            
+            SQLiteDB::new(&db_url, suite).await?
         }
     };
 
     let wd = web::Data::new(RwLock::new(db));
-    let pd = web::Data::new(suite);
 
     let secret_key = Key::generate();
 
     HttpServer::new(move || {
         App::new()
             .app_data(wd.clone())
-            .app_data(pd.clone())
             .service(rest::create_services())
             .service(Files::new("/", "frontend/out").index_file("index.html"))
             .wrap(IdentityMiddleware::default())

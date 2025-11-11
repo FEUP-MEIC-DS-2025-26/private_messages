@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "CREATE TABLE IF NOT EXISTS user (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    username TEXT UNIQUE,\n    name TEXT\n);\n\nCREATE TABLE IF NOT EXISTS conversation (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    sender_id INTEGER NOT NULL,\n    receiver_id INTEGER NOT NULL,\n    last_message_id INTEGER,\n    unread_for_sender INTEGER,\n    unread_for_receiver INTEGER,\n    FOREIGN KEY(sender_id) REFERENCES user(id),\n    FOREIGN KEY(receiver_id) REFERENCES user(id),\n    FOREIGN KEY(last_message_id) REFERENCES message(id)\n);\n\nCREATE TABLE IF NOT EXISTS message (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    sender_id INTEGER NOT NULL,\n    conversation_id INTEGER NOT NULL,\n    content BLOB,\n    salt BLOB,\n    previous_message_id INTEGER,\n    FOREIGN KEY(sender_id) REFERENCES user(id),\n    FOREIGN KEY(conversation_id) REFERENCES conversation(id),\n    FOREIGN KEY(previous_message_id) REFERENCES message(id)\n);\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "dcc1b02498caea421a51018b261d51e8cac0e21fdaee4c71a39e3e46a2c170ed"
+}
