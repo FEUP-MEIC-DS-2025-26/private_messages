@@ -6,16 +6,14 @@ use chacha20poly1305::{ChaCha20Poly1305, ChaChaPoly1305, KeyInit, aead::Aead};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use sqlx::{Decode, Encode, Sqlite};
 
-pub struct CryptoKey {
-    key: ChaCha20Poly1305,
-}
+pub struct CryptoKey(ChaCha20Poly1305);
 
 impl CryptoKey {
     pub fn new(password: &str, salt: &str) -> argon2::Result<Self> {
         let mut buf = [0; 32];
         Argon2::default().hash_password_into(password.as_bytes(), salt.as_bytes(), &mut buf)?;
         let key = ChaChaPoly1305::new(&buf.into());
-        Ok(Self { key })
+        Ok(Self(key))
     }
 }
 
@@ -73,7 +71,7 @@ impl<T: Serialize + DeserializeOwned> CryptData<T> {
         let mut nonce_buf = [0u8; 12];
         rng.fill_bytes(&mut nonce_buf);
 
-        let data = key.key.encrypt(&nonce_buf.into(), buf.as_slice())?;
+        let data = key.0.encrypt(&nonce_buf.into(), buf.as_slice())?;
         Ok((
             Self {
                 data,
@@ -83,7 +81,7 @@ impl<T: Serialize + DeserializeOwned> CryptData<T> {
         ))
     }
     pub fn decrypt(self, key: &CryptoKey, nonce: &[u8; 12]) -> Result<T, CryptError> {
-        let buf = key.key.decrypt(nonce.into(), self.data.as_slice())?;
+        let buf = key.0.decrypt(nonce.into(), self.data.as_slice())?;
         Ok(ciborium::de::from_reader(Cursor::new(buf))?)
     }
 }
