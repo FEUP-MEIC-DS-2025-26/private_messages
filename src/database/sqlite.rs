@@ -204,7 +204,7 @@ impl ResponseError for DbError {
             },
             DbError::PermissionDenied => StatusCode::FORBIDDEN,
             DbError::SaltWrongSize => StatusCode::INTERNAL_SERVER_ERROR,
-            DbError::Crypto(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            DbError::Crypto(e) => e.status_code(),
         }
     }
 }
