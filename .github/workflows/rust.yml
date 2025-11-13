@@ -1,4 +1,4 @@
-name: Check if Rust backend does not have compilation errors and passes all unit tests
+name: Rust backend build and unit tests
 
 on:
   push:

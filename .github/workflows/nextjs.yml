@@ -1,4 +1,4 @@
-name: Check frontend build for errors
+name: NextJS frontend build
 
 on:
   push:
