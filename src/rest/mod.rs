@@ -48,21 +48,38 @@ async fn default_service() -> impl Responder {
                     margin: 0 auto; /* Center the block */
                     width: 80%; /* Optional: set a width */
                 }
+                
+                body {
+                    display: flex;
+                    margin: 0;
+                    justify-content: center; /* Centers horizontally */
+                    align-items: center; /* Centers vertically */
+                    height: 100vh; /* Full viewport height */
+                }
+
+                div {
+                    width: 50%;
+                }
+                
             </style>
-            <h1>404: Not Found</h1>
-            Try:
-                 /api/chat
-                          ⊢ /login                             ---> Enables internal cookie.
-                          ⊢ /conversation                      ---> (GET) Lists conversations a user is in. (POST) Starts a conversation.
-                                         ⊢ /{convo_id}/peer    ---> Gets the username of the peer.
-                                         ⊢ /{convo_id}/latest  ---> Gets the latest message.
-                                         ⊢ /{convo_id}/recent  ---> Gets the 32 most recent messages.
-                                         ⊢ /{convo_id}/product ---> Gets the product associated with the conversation.
-                                         ⊢ /{convo_id}/message ---> Posts a new message into the chat.
-                          ⊢ /message/{msg_id}                  ---> Gets the message with ID 'msg_id'.
-                          ⊢ /user/{username}                   ---> Gets the profile of user with username 'username'.
-                          ⊢ /product                           ---> Posts a new product into the database.
-                          ⊢ /product/{prod_id}                 ---> Gets the product with id 'prod_id'.
+            <body><div>
+                <h1>404: Not Found</h1>
+                <textarea style="width:100%; font-family: Monospace; font-size:10px; border:0;" rows="30" disabled>
+                Try:
+                    /api/chat
+                             |- /login                              ---> Enables internal cookie.
+                             |- /conversation                       ---> (GET) Lists conversations a user is in. (POST) Starts a conversation.
+                                             |- /{convo_id}/peer    ---> Gets the username of the peer.
+                                             |- /{convo_id}/latest  ---> Gets the latest message.
+                                             |- /{convo_id}/recent  ---> Gets the 32 most recent messages.
+                                             |- /{convo_id}/product ---> Gets the product associated with the conversation.
+                                             |- /{convo_id}/message ---> Posts a new message into the chat.
+                             |- /message/{msg_id}                   ---> Gets the message with ID 'msg_id'.
+                             |- /user/{username}                    ---> Gets the profile of user with username 'username'.
+                             |- /product                            ---> Posts a new product into the database.
+                             |- /product/{prod_id}                  ---> Gets the product with id 'prod_id'.
+                </textarea>
+            </div></body>        
         </html>
          "#)
 }
