@@ -11,15 +11,60 @@ use tokio::sync::RwLock;
 pub fn create_services() -> actix_web::Scope {
     info!("Installing REST API services...");
     actix_web::web::scope("/api/chat")
+        // DONE: Doc'ed
         .service(login)
+        // DONE: Doc'ed
         .service(get_conversations)
+        // DONE: Doc'ed
         .service(get_peer)
+        // DONE: Doc'ed
         .service(get_user_profile)
+        // DONE: Doc'ed
         .service(get_message)
+        // DONE: Doc'ed
         .service(get_latest_message)
+        // DONE: Doc'ed
         .service(get_most_recent_messages)
+        // DONE: Doc'ed
         .service(start_conversation)
+        // DONE: Doc'ed
         .service(post_msg)
+        // DONE: Doc'ed
+        .service(add_product)
+        // DONE: Doc'ed
+        .service(get_product)
+        // DONE: Doc'ed
+        .service(get_product_in_conversation)
+        .default_service(actix_web::web::to(default_service))
+}
+
+async fn default_service() -> impl Responder {
+    HttpResponse::NotFound().content_type("text/html").body(r#"
+        <html>
+            <style>
+                h1 {
+                    text-align: center; /* Center the text */
+                    font-size: 3em; /* Make the text larger */
+                    margin: 0 auto; /* Center the block */
+                    width: 80%; /* Optional: set a width */
+                }
+            </style>
+            <h1>404: Not Found</h1>
+            Try:
+                 /api/chat
+                          ⊢ /login                             ---> Enables internal cookie.
+                          ⊢ /conversation                      ---> (GET) Lists conversations a user is in. (POST) Starts a conversation.
+                                         ⊢ /{convo_id}/peer    ---> Gets the username of the peer.
+                                         ⊢ /{convo_id}/latest  ---> Gets the latest message.
+                                         ⊢ /{convo_id}/recent  ---> Gets the 32 most recent messages.
+                                         ⊢ /{convo_id}/product ---> Gets the product associated with the conversation.
+                                         ⊢ /{convo_id}/message ---> Posts a new message into the chat.
+                          ⊢ /message/{msg_id}                  ---> Gets the message with ID 'msg_id'.
+                          ⊢ /user/{username}                   ---> Gets the profile of user with username 'username'.
+                          ⊢ /product                           ---> Posts a new product into the database.
+                          ⊢ /product/{prod_id}                 ---> Gets the product with id 'prod_id'.
+        </html>
+         "#)
 }
 
 trait EasyLog<E> {
@@ -118,7 +163,8 @@ async fn get_user_profile(
         .read()
         .await
         .get_user_id_from_username(&username)
-        .await.log(|e| warn!("{e}"))?;
+        .await
+        .log(|e| warn!("{e}"))?;
     let res = data
         .read()
         .await
@@ -229,6 +275,7 @@ async fn get_message(
 #[allow(dead_code)]
 struct ConversationForm {
     their_username: String,
+    product_id: i64,
 }
 
 #[post("/conversation")]
@@ -250,10 +297,15 @@ async fn start_conversation(
         .get_user_id_from_username(&form.their_username)
         .await
         .log(|e| warn!("{e}"))?;
+    data.read()
+        .await
+        .belongs_to_seller(&their_id, &form.product_id.into())
+        .await
+        .log(|e| warn!("{e}"))?;
     let res = data
         .write()
         .await
-        .start_conversation(&usr_id, &their_id)
+        .start_conversation(&usr_id, &their_id, &form.product_id.into())
         .await
         .map(Json)
         .log(|e| warn!("{e}"))?;
@@ -364,4 +416,57 @@ async fn get_most_recent_messages(
         })
     }
     Ok(Json(MessageFormat::many(msgs, prev_id)))
+}
+
+#[get("/product/{prod_id}")]
+async fn get_product(data: Data<RwLock<SQLiteDB>>, prod_id: Path<i64>) -> Result<impl Responder> {
+    let prod = data.read().await.get_product(&ProductId(*prod_id)).await?;
+    Ok(Json(prod))
+}
+
+#[get("/conversation/{convo_id}/product")]
+async fn get_product_in_conversation(
+    data: Data<RwLock<SQLiteDB>>,
+    convo_id: Path<i64>,
+    user: Identity,
+) -> Result<impl Responder> {
+    let username = user.id()?;
+    let usr_id = data
+        .read()
+        .await
+        .get_user_id_from_username(&username)
+        .await
+        .log(|e| warn!("{e}"))?;
+    data.read()
+        .await
+        .belongs_to_conversation(&usr_id, &ConversationId(*convo_id))
+        .await?;
+    let prod = data
+        .read()
+        .await
+        .get_product_id_from_conversation_id(&ConversationId(*convo_id))
+        .await?;
+    Ok(Json(prod))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ImportProductForm {
+    jumpseller_id: i64,
+    seller_id: i64,
+    name: String,
+}
+
+impl From<ImportProductForm> for Product {
+    fn from(value: ImportProductForm) -> Self {
+        Self::new(value.name, UserId(value.seller_id), value.jumpseller_id)
+    }
+}
+
+#[post("/product")]
+async fn add_product(
+    data: Data<RwLock<SQLiteDB>>,
+    form: Form<ImportProductForm>,
+) -> Result<impl Responder> {
+    let product = form.0.into();
+    Ok(data.write().await.add_product(&product).await.map(Json)?)
 }

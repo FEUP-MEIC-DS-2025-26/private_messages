@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO conversation (client_id, seller_id, product_id)\n            VALUES (?, ?, ?)\n            RETURNING id as \"id!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "e7dc7d7680ce25f222cc2701c7663b10ca988bac529c5b59fb122c1d66ec3f78"
+}

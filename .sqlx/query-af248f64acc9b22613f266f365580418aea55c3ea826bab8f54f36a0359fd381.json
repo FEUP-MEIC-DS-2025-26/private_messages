@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT id as \"id!\"\n            FROM conversation \n            WHERE sender_id = ? OR receiver_id = ?;\n        ",
+  "query": "\n            SELECT id as \"id!\"\n            FROM conversation \n            WHERE client_id = ? OR seller_id = ?;\n        ",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "b75f0e37cca84504281910a7218e73d4ffb967d4576276a13d7013bbbe8b5b13"
+  "hash": "af248f64acc9b22613f266f365580418aea55c3ea826bab8f54f36a0359fd381"
 }
