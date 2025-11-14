@@ -15,3 +15,7 @@ COPY . .
 
 # Rsbuild/Vite dev servers need this to be accessible
 ENV HOST=0.0.0.0
+
+# Start the development server
+# TODO: Figure out how to use production image.
+CMD ["npm", "run", "dev"]
