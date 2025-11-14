@@ -4,12 +4,7 @@ export default createModuleFederationConfig({
   name: "mip_chat",
   exposes: {
     "./Chat": "./src/components/Chat.tsx",
-    "./ChatHeader": "./src/components/ChatHeader.tsx",
-    "./ChatPreview": "./src/components/ChatPreview.tsx",
     "./Inbox": "./src/components/Inbox.tsx",
-    "./MessageInput": "./src/components/MessageInput.tsx",
-    "./ProfilePicture": "./src/components/ProfilePicture.tsx",
-    "./UserMessage": "./src/components/UserMessage.tsx",
   },
   shared: {
     react: {
