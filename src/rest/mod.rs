@@ -1,7 +1,12 @@
-use crate::database::{Database, sqlite::*};
+use crate::{
+    BackendInfoUpdater,
+    database::{Database, sqlite::*},
+};
 use actix_identity::Identity;
 use actix_web::{
-    HttpMessage, HttpRequest, HttpResponse, Responder, Result, get, post,
+    HttpMessage, HttpRequest, HttpResponse, Responder, Result,
+    error::ErrorInternalServerError,
+    get, post,
     web::{Data, Form, Json, Path, Query},
 };
 use log::{info, warn};
@@ -337,6 +342,7 @@ struct MessageForm {
 
 #[post("/conversation/{convo_id}/message")]
 async fn post_msg(
+    utils: Data<BackendInfoUpdater>,
     data: Data<RwLock<SQLiteDB>>,
     user: Identity,
     conversation: Path<i64>,
@@ -349,21 +355,35 @@ async fn post_msg(
         .get_user_id_from_username(&username)
         .await
         .log(|e| warn!("{e}"))?;
-    let conversation = ConversationId(conversation.into_inner());
+    let convo_id = ConversationId(conversation.into_inner());
     let msg = Message(form.into_inner().message);
     data.read()
         .await
-        .belongs_to_conversation(&usr_id, &conversation)
+        .belongs_to_conversation(&usr_id, &convo_id)
         .await
         .log(|e| warn!("{e}"))?;
     let res = data
         .write()
         .await
-        .post_msg(msg, &usr_id, &conversation)
+        .post_msg(msg, &usr_id, &convo_id)
         .await
-        .map(Json)
         .log(|e| warn!("{e}"))?;
-    Ok(res)
+
+    let callback = utils
+        .new_message(&*data.read().await, &res, &convo_id)
+        .await?;
+
+    match callback.await.map_err(|e| ErrorInternalServerError(e))? {
+        crate::F2BResponse::Ok => {}
+        crate::F2BResponse::GoogleCloud(error) => {
+            log::error!("Failed to publish message: {error}.");
+        }
+        crate::F2BResponse::Unrecoverable(error) => {
+            log::error!("Failed to publish message: {error}.");
+        }
+    }
+
+    Ok(Json(res))
 }
 
 #[get("/conversation/{convo_id}/latest")]
