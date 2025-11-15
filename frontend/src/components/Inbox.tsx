@@ -1,7 +1,5 @@
-'use client';
-
-import useSWR from 'swr';
-import ChatPreview, { ChatPreviewProps } from './ChatPreview';
+import useSWR from "swr";
+import ChatPreview, { ChatPreviewProps } from "./ChatPreview";
 
 /**
  * A function for fetching the user's conversations from the server.
@@ -9,21 +7,21 @@ import ChatPreview, { ChatPreviewProps } from './ChatPreview';
  * @returns the user's conversations
  */
 const getChats = async (username: string) => {
-  const API_URL = '/api/chat';
+  const API_URL = "/api/chat";
 
   // login
   await fetch(`${API_URL}/login?username=${username}`);
 
   // fetch the conversations
   const conversationIDs: number[] = await fetch(`${API_URL}/conversation`).then(
-    (res) => res.json(),
+    (res) => res.json()
   );
 
   // fetch the usernames of the peers with whom we are conversing
   const usernames: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetch(`${API_URL}/conversation/${id}/peer`).then((res) => res.json()),
-    ),
+      fetch(`${API_URL}/conversation/${id}/peer`).then((res) => res.json())
+    )
   );
 
   // fetch the peers' display names
@@ -31,8 +29,8 @@ const getChats = async (username: string) => {
     usernames.map((username: string) =>
       fetch(`${API_URL}/user/${username}`)
         .then((res) => res.json())
-        .then((user) => user.name),
-    ),
+        .then((user) => user.name)
+    )
   );
 
   // fetch the last message from each conversation
@@ -42,8 +40,8 @@ const getChats = async (username: string) => {
         .then((res) => res.json())
         .then((id: number) => fetch(`${API_URL}/message/${id}`))
         .then((res) => res.json())
-        .then((message) => message.content.msg),
-    ),
+        .then((message) => message.content.msg)
+    )
   );
 
   // create an array with the conversations
@@ -52,12 +50,14 @@ const getChats = async (username: string) => {
     username: usernames[index],
     name: fullNames[index],
     lastMessage: lastMessages[index],
-    profilePictureURL: 'https://thispersondoesnotexist.com/',
+    profilePictureURL: "https://thispersondoesnotexist.com/",
     unreadMessages: Math.floor(Math.random() * 10),
   }));
 };
 
 interface InboxProps {
+  /** The URL that points to the backend. */
+  backendURL: string;
   /** The user's username. */
   username: string;
   /**
@@ -70,9 +70,10 @@ interface InboxProps {
 /**
  * The user's inbox.
  */
-export default function Inbox({ username, goToChat }: InboxProps) {
-  const { data: chats, isLoading } = useSWR('/api/chat/conversation', () =>
-    getChats(username),
+export default function Inbox({ backendURL, username, goToChat }: InboxProps) {
+  const { data: chats, isLoading } = useSWR(
+    `${backendURL}/api/chat/conversation`,
+    () => getChats(username)
   );
 
   if (isLoading || !chats) {

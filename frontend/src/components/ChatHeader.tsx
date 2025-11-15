@@ -30,6 +30,8 @@ const getPeer = async (id: number) => {
 };
 
 interface ChatHeaderProps {
+  /** The URL that points to the backend server. */
+  backendURL: string;
   /** The unique chat identifier. */
   id: number;
   /** A function for navigating to the inbox. */
@@ -39,9 +41,14 @@ interface ChatHeaderProps {
 /**
  * The header of the chat, which displays information about the peer.
  */
-export default function ChatHeader({ id, goToInbox }: ChatHeaderProps) {
-  const { data: peer } = useSWR(`/api/chat/conversation/${id}/peer`, () =>
-    getPeer(id)
+export default function ChatHeader({
+  backendURL,
+  id,
+  goToInbox,
+}: ChatHeaderProps) {
+  const { data: peer } = useSWR(
+    `${backendURL}/api/chat/conversation/${id}/peer`,
+    () => getPeer(id)
   );
 
   return (

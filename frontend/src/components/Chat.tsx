@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import useSWR from 'swr';
-import { Ref, useLayoutEffect, useRef } from 'react';
+import useSWR from "swr";
+import { Ref, useLayoutEffect, useRef } from "react";
 
 // components
-import ChatHeader from './ChatHeader';
-import UserMessage, { UserMessageProps } from './UserMessage';
-import MessageInput from './MessageInput';
+import ChatHeader from "./ChatHeader";
+import UserMessage, { UserMessageProps } from "./UserMessage";
+import MessageInput from "./MessageInput";
 
 /**
  * A function for fetching data from the backend.
@@ -21,8 +21,9 @@ const fetcher = (URL: string) => fetch(URL).then((res) => res.json());
  */
 const getMessages = async (URL: string, username: string) => {
   const messages: any[] = await fetcher(`${URL}/recent`).then(
-    (message) => message.content,
+    (message) => message.content
   );
+
   return messages.map((message) => ({
     isFromUser: message.sender_username === username,
     content: message.msg,
@@ -30,6 +31,8 @@ const getMessages = async (URL: string, username: string) => {
 };
 
 interface ChatProps {
+  /** The URL that points to the backend. */
+  backendURL: string;
   /** The unique chat identifier. */
   id: number;
   /** The user's username. */
@@ -41,9 +44,15 @@ interface ChatProps {
 /**
  * A private conversation between two users.
  */
-export default function Chat({ id, username, goToInbox }: ChatProps) {
-  const { data: messages } = useSWR(`/api/chat/conversation/${id}`, (URL) =>
-    getMessages(URL, username),
+export default function Chat({
+  backendURL,
+  id,
+  username,
+  goToInbox,
+}: ChatProps) {
+  const { data: messages } = useSWR(
+    `${backendURL}/api/chat/conversation/${id}`,
+    (URL) => getMessages(URL, username)
   );
   const messageListRef: Ref<HTMLUListElement> = useRef(null);
 
@@ -56,9 +65,9 @@ export default function Chat({ id, username, goToInbox }: ChatProps) {
         () =>
           messageList.scrollTo({
             top: messageList.scrollHeight,
-            behavior: 'smooth',
+            behavior: "smooth",
           }),
-        100,
+        100
       );
     }
   }, [messages]);
@@ -66,7 +75,7 @@ export default function Chat({ id, username, goToInbox }: ChatProps) {
   return (
     <>
       {/** Header */}
-      <ChatHeader id={id} goToInbox={goToInbox} />
+      <ChatHeader backendURL={backendURL} id={id} goToInbox={goToInbox} />
 
       {/** Chat */}
       {messages ? (
