@@ -7,7 +7,13 @@ export default createModuleFederationConfig({
     "./Inbox": "./src/components/Inbox.tsx",
   },
   shared: {
-    react: { singleton: true },
-    "react-dom": { singleton: true },
+    react: {
+      singleton: true,
+      requiredVersion: "^18.0.0",
+    },
+    "react-dom": {
+      singleton: true,
+      requiredVersion: "^18.0.0",
+    },
   },
 });
