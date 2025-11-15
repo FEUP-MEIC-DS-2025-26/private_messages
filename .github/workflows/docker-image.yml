@@ -4,10 +4,9 @@ on:
   workflow_dispatch:
   # push:
   #   branches: [ "main" ]
-    
 
 jobs:
-  build-and-push:
+  frontend_image:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,18 +19,47 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
-          
+
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ds-2025-g51-private-messages
-          
+
       - name: Configure Docker to use gcloud as a credential helper
         run: |
           gcloud auth configure-docker europe-southwest1-docker.pkg.dev
-      
+
       - name: Build and Push Docker image
         run: |
-          IMAGE_URI="europe-southwest1-docker.pkg.dev/ds-2025-g51-private-messages/prototype/production:latest"
+          IMAGE_URI="europe-southwest1-docker.pkg.dev/ds-2025-g51-private-messages/frontend/production:latest"
+          docker build -t "$IMAGE_URI" ./frontend
+          docker push "$IMAGE_URI"
+
+  backend_image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_DEPLOY_SA }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ds-2025-g51-private-messages
+
+      - name: Configure Docker to use gcloud as a credential helper
+        run: |
+          gcloud auth configure-docker europe-southwest1-docker.pkg.dev
+
+      - name: Build and Push Docker image
+        run: |
+          IMAGE_URI="europe-southwest1-docker.pkg.dev/ds-2025-g51-private-messages/backend/production:latest"
           docker build -t "$IMAGE_URI" .
           docker push "$IMAGE_URI"
