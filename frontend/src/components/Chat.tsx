@@ -94,7 +94,7 @@ export default function Chat({
       )}
 
       {/* Text bar */}
-      <MessageInput id={id} />
+      <MessageInput backendURL={backendURL} id={id} />
     </>
   );
 }

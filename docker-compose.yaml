@@ -1,13 +1,7 @@
 services:
-  backend:
-    container_name: "backend_private_messages"
+  web-server:
+    container_name: "ds_2025_g51_private_messages"
     build:
       context: .
     ports:
       - "8080:8080"
-  frontend:
-    container_name: "frontend_private_messages"
-    build:
-      context: ./frontend
-    ports:
-      - "3001:3001"

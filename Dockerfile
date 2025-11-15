@@ -1,3 +1,13 @@
+# mips_product_page/Dockerfile
+FROM node:25-alpine3.21 AS frontend
+WORKDIR /app/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm install
+COPY frontend/tsconfig.json frontend/rsbuild.config.ts frontend/module-federation.config.ts ./
+COPY frontend/src ./src
+COPY frontend/public ./public
+RUN npm run build
+
 # Source: https://kerkour.com/rust-docker-from-scratch
 FROM rust:1.90-alpine AS backend
 RUN apk update && \
@@ -15,6 +25,7 @@ FROM scratch
 WORKDIR /app
 # COPY credentials ./credentials
 COPY --from=backend /app/target/release/ds-prototype /app/ds-prototype
+COPY --from=frontend /app/frontend/dist /app/frontend/dist
 
 EXPOSE 8080
 ENV RUST_LOG="off"
