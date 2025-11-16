@@ -42,6 +42,16 @@ const getChats = async (URL: string, username: string) => {
         .then((message) => message.content.msg)
     )
   );
+  
+  const products: string[] = await Promise.all(
+    conversationIDs.map((id: number) =>
+      fetch(`${API_URL}/conversation/${id}/product`)
+        .then(res => res.json())
+        .then((productId: number) => fetch(`${API_URL}/product/${productId}`))
+        .then(res => res.json())
+        .then(product => product.name)
+    ),
+  );
 
   // create an array with the conversations
   return conversationIDs.map((id: number, index: number) => ({
@@ -51,6 +61,7 @@ const getChats = async (URL: string, username: string) => {
     lastMessage: lastMessages[index],
     profilePictureURL: "https://thispersondoesnotexist.com/",
     unreadMessages: Math.floor(Math.random() * 10),
+    product: products[index]
   }));
 };
 
