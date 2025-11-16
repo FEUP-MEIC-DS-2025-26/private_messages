@@ -7,9 +7,6 @@
 # SQLite
 .sqlite3*
 
-# NextJS
-.next
-
 # Terraform
 /.terraform
 terraform.tfstate*

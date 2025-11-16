@@ -18,7 +18,6 @@ use tokio::sync::RwLock;
 use tokio::time::Duration as TDuration;
 
 mod database;
-mod pages;
 mod rest;
 
 #[derive(clap::Parser, Clone, Debug)]
@@ -92,7 +91,7 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
             .app_data(utils.clone())
             .app_data(wd.clone())
             .service(rest::create_services())
-            .service(Files::new("/", "frontend/out").index_file("index.html"))
+            // .service(Files::new("/", "frontend/dist").index_file("index.html"))
             .wrap(IdentityMiddleware::default())
             .wrap(
                 SessionMiddleware::builder(CookieSessionStore::default(), secret_key.clone())

@@ -1,11 +1,3 @@
-FROM node:20-alpine AS frontend
-WORKDIR /app/frontend
-COPY frontend/next.config.ts frontend/package.json frontend/package-lock.json frontend/postcss.config.mjs frontend/tsconfig.json ./
-COPY frontend/app ./app
-COPY frontend/public ./public
-ENV NEXT_TELEMETRY_DISABLED="1"
-RUN npm install && npm run build
-
 # Source: https://kerkour.com/rust-docker-from-scratch
 FROM rust:1.90-alpine AS backend
 RUN apk update && \
@@ -23,7 +15,6 @@ FROM scratch
 WORKDIR /app
 # COPY credentials ./credentials
 COPY --from=backend /app/target/release/ds-prototype /app/ds-prototype
-COPY --from=frontend /app/frontend/out /app/frontend/out
 
 EXPOSE 8080
 ENV RUST_LOG="off"

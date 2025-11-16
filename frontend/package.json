@@ -1,35 +1,27 @@
 {
-  "name": "frontend",
-  "version": "0.1.0",
+  "name": "mips_chat",
   "private": true,
+  "version": "1.0.0",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
-    "lint": "eslint",
-    "format": "npx prettier --write ."
+    "dev": "rsbuild dev --open",
+    "build": "rsbuild build",
+    "preview": "rsbuild preview"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/react-fontawesome": "^3.1.0",
-    "emoji-picker-react": "^4.15.0",
-    "next": "15.5.6",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "emoji-picker-react": "^4.15.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "swr": "^2.3.6"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.6",
-    "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.6.2",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@module-federation/rsbuild-plugin": "^0.21.3",
+    "@rsbuild/core": "^1.2.15",
+    "@rsbuild/plugin-react": "^1.1.1",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "~18.3.1",
+    "typescript": "^5.7.2"
   }
 }

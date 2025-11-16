@@ -1,5 +1,3 @@
-import Image from 'next/image';
-
 interface ProfilePictureProps {
   URL: string /** The URL of the profile picture. */;
   name: string /** The name of the profile picture's user. */;
@@ -15,10 +13,10 @@ export default function ProfilePicture({
   size,
 }: ProfilePictureProps) {
   return (
-    <Image
+    <img
       className="border-solid rounded-full"
       src={URL}
-      alt={`${name}'${name.endsWith('s') ? '' : 's'} profile picture`}
+      alt={`${name}'${name.endsWith("s") ? "" : "s"} profile picture`}
       width={size}
       height={size}
     />
