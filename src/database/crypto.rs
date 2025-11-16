@@ -129,9 +129,13 @@ where
     }
 }
 
-impl<T> sqlx::Type<Sqlite> for CryptData<T> {
-    fn type_info() -> <Sqlite as sqlx::Database>::TypeInfo {
-        <Vec<u8> as sqlx::Type<Sqlite>>::type_info()
+impl<T, DB> sqlx::Type<DB> for CryptData<T>
+where
+    DB: sqlx::Database,
+    Vec<u8>: sqlx::Type<DB>,
+{
+    fn type_info() -> DB::TypeInfo {
+        <Vec<u8> as sqlx::Type<DB>>::type_info()
     }
 }
 
