@@ -14,6 +14,7 @@ export interface ChatPreviewProps {
   unreadMessages: number;
   /** The last message sent by the user */
   lastMessage: string;
+  product: string;
 }
 
 /**
@@ -25,6 +26,7 @@ export default function ChatPreview({
   profilePictureURL,
   unreadMessages,
   lastMessage,
+  product
 }: ChatPreviewProps) {
   const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
 
@@ -39,10 +41,7 @@ export default function ChatPreview({
         )}
       </div>
       <div>
-        <strong>{name}</strong>
-        <span className="text-xs ml-2 italic before:content-['@']">
-          {username}
-        </span>
+        <strong>{name}</strong><span className="text-xs ml-2 italic before:content-['@']">{username}</span> | <span className="text-xs ml-2">{product}</span>
         <p>{lastMessage}</p>
       </div>
     </div>
