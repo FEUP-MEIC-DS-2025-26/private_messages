@@ -10,7 +10,7 @@ use actix_web::{App, HttpServer, middleware, web};
 use anyhow::anyhow;
 use clap::Parser;
 use cookie::{Key, time::Duration};
-use gcloud_pubsub::client::ClientConfig;
+use gcloud_pubsub::client::{Client, ClientConfig};
 use log::info;
 use std::{fmt::Debug, path::PathBuf};
 use tokio::sync::RwLock;
@@ -114,21 +114,10 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
 }
 
 async fn run_backend_code(
-    cli: Cli,
+    _cli: Cli,
     mut receiver: tokio::sync::mpsc::Receiver<F2BRequest>,
 ) -> anyhow::Result<()> {
-    let gcloud_ep = match cli.command {
-        Commands::Kiosk => gcloud_pubsub::client::Client::new(ClientConfig::default()).await?,
-        Commands::Run {
-            password,
-            salt,
-            db_url,
-        } => loop {
-            // I sleep for hours
-            tokio::time::sleep(TDuration::from_hours(10)).await;
-        },
-    };
-
+    let gcloud_ep = Client::new(ClientConfig::default()).await?;
     while let Some(F2BRequest { msg, callback }) = receiver.recv().await {
         match msg {
             F2BRequestType::NewMessage {
