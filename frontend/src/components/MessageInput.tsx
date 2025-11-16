@@ -38,6 +38,7 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
         method: "POST",
         body: new URLSearchParams({ message }),
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        credentials: "include",
       });
 
       // refetch the messages

@@ -12,7 +12,7 @@ import MessageInput from "./MessageInput";
  * A function for fetching data from the backend.
  * @param {string} URL - the URL
  */
-const fetcher = (URL: string) => fetch(URL).then((res) => res.json());
+const fetcher = (URL: string) => fetch(URL, {credentials: "include"}).then((res) => res.json());
 
 /**
  * Fetches the chat messages from the backend.
