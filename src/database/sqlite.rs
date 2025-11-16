@@ -185,6 +185,9 @@ impl Product {
             jumpseller_id,
         }
     }
+    pub fn product_info(&self) -> i64 {
+        self.jumpseller_id
+    }
 }
 
 impl From<i64> for UserId {

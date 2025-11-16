@@ -1,4 +1,8 @@
-use crate::database::{crypto::CryptoKey, sqlite::SQLiteDB};
+use crate::database::{
+    Database,
+    crypto::CryptoKey,
+    sqlite::{ConversationId, DbError, MessageId, SQLiteDB},
+};
 use actix_files::Files;
 use actix_identity::IdentityMiddleware;
 use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
@@ -6,9 +10,12 @@ use actix_web::{App, HttpServer, middleware, web};
 use anyhow::anyhow;
 use clap::Parser;
 use cookie::{Key, time::Duration};
+use gcloud_pubsub::client::{Client, ClientConfig};
 use log::info;
-use std::path::PathBuf;
+use std::{fmt::Debug, path::PathBuf};
 use tokio::sync::RwLock;
+
+use tokio::time::Duration as TDuration;
 
 mod database;
 mod pages;
@@ -54,7 +61,7 @@ enum Commands {
     },
 }
 
-async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
+async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Result<()> {
     let db = match cli.command {
         Commands::Kiosk => {
             let suite = CryptoKey::new("demonstration_password", "demonstration_salt")
@@ -69,17 +76,20 @@ async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
             let p = std::fs::read_to_string(password)?;
             let s = std::fs::read_to_string(salt)?;
             let suite = CryptoKey::new(p.trim(), s.trim()).map_err(|e| anyhow!("Error: {e}"))?;
-            
+
             SQLiteDB::new(&db_url, suite).await?
         }
     };
 
     let wd = web::Data::new(RwLock::new(db));
 
+    let utils = web::Data::new(utils);
+
     let secret_key = Key::generate();
 
     HttpServer::new(move || {
         App::new()
+            .app_data(utils.clone())
             .app_data(wd.clone())
             .service(rest::create_services())
             .service(Files::new("/", "frontend/out").index_file("index.html"))
@@ -103,8 +113,89 @@ async fn run_user_facing_code(cli: Cli) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn run_backend_code(_cli: Cli) -> anyhow::Result<()> {
+async fn run_backend_code(
+    _cli: Cli,
+    mut receiver: tokio::sync::mpsc::Receiver<F2BRequest>,
+) -> anyhow::Result<()> {
+    let gcloud_ep = Client::new(ClientConfig::default()).await?;
+    while let Some(F2BRequest { msg, callback }) = receiver.recv().await {
+        match msg {
+            F2BRequestType::NewMessage {
+                sender_name,
+                receiver_name,
+                product_info,
+                contents,
+            } => {
+                log::error!("BACKEND IS UNIMPLEMENTED.");
+                _ = callback.send(F2BResponse::Ok);
+            }
+        }
+    }
     Ok(())
+}
+
+pub enum F2BResponse {
+    Ok,
+    GoogleCloud(gcloud_pubsub::client::Error),
+    Unrecoverable(anyhow::Error),
+}
+
+enum F2BRequestType {
+    NewMessage {
+        sender_name: String,
+        receiver_name: String,
+        /// jumpseller id
+        product_info: i64,
+        contents: [char; 32],
+    },
+}
+
+struct F2BRequest {
+    msg: F2BRequestType,
+    callback: tokio::sync::oneshot::Sender<F2BResponse>,
+}
+
+pub struct BackendInfoUpdater(tokio::sync::mpsc::Sender<F2BRequest>);
+type CallBack = tokio::sync::oneshot::Receiver<F2BResponse>;
+
+impl BackendInfoUpdater {
+    pub async fn new_message(
+        &self,
+        database: &SQLiteDB,
+        message_id: &MessageId,
+        convo_id: &ConversationId,
+    ) -> Result<CallBack, DbError> {
+        let (s, r) = tokio::sync::oneshot::channel();
+        let (sender, message, _) = database.get_message(message_id).await?;
+        let receiver = database.get_peer(&sender, convo_id).await?;
+
+        let sender_name = database.get_user_profile(&sender).await?.username();
+        let receiver_name = database.get_user_profile(&receiver).await?.username();
+        let product_id = database
+            .get_product_id_from_conversation_id(convo_id)
+            .await?;
+        let product = database.get_product(&product_id).await?;
+        let product_info = product.product_info();
+        let mut message_sum = [char::default(); 32];
+        let fst_32 = message.0.chars().take(32).collect::<Vec<_>>();
+        message_sum.copy_from_slice(&fst_32);
+
+        let msg_type = F2BRequestType::NewMessage {
+            sender_name,
+            receiver_name,
+            product_info,
+            contents: message_sum,
+        };
+
+        let msg = F2BRequest {
+            msg: msg_type,
+            callback: s,
+        };
+
+        _ = self.0.send(msg).await;
+
+        Ok(r)
+    }
 }
 
 #[tokio::main]
@@ -113,17 +204,21 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
     cli.startup_log();
     let cli1 = cli.clone();
+
+    let (tcv, rcv) = tokio::sync::mpsc::channel::<F2BRequest>(10);
+    let frontend_util = BackendInfoUpdater(tcv);
+
     let local = tokio::task::LocalSet::new();
     let ufc = local.run_until(async {
         let cli = cli1;
-        tokio::task::spawn_local(run_user_facing_code(cli)).await
+        tokio::task::spawn_local(run_user_facing_code(cli, frontend_util)).await
     });
 
-    let backend = tokio::task::spawn(run_backend_code(cli));
+    let backend = tokio::task::spawn(run_backend_code(cli, rcv));
 
     let handles = tokio::join!(ufc, backend);
-    handles.0??;
-    handles.1??;
+    handles.0??; // no way bro!
+    handles.1??; // do you even hear yourself bro?
 
     Ok(())
 }

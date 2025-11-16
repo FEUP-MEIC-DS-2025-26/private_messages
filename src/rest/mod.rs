@@ -1,7 +1,12 @@
-use crate::database::{Database, sqlite::*};
+use crate::{
+    BackendInfoUpdater,
+    database::{Database, sqlite::*},
+};
 use actix_identity::Identity;
 use actix_web::{
-    HttpMessage, HttpRequest, HttpResponse, Responder, Result, get, post,
+    HttpMessage, HttpRequest, HttpResponse, Responder, Result,
+    error::ErrorInternalServerError,
+    get, post,
     web::{Data, Form, Json, Path, Query},
 };
 use log::{info, warn};
@@ -98,6 +103,34 @@ impl<T, E> EasyLog<E> for Result<T, E> {
     }
 }
 
+trait LogShort<E>: EasyLog<E>
+where
+    E: std::fmt::Display,
+    Self: Sized,
+{
+    /// Logs as an Error
+    fn e(self) -> Self {
+        self.log(|e| log::error!("{e}"))
+    }
+
+    /// Logs as a Warning
+    fn w(self) -> Self {
+        self.log(|e| log::warn!("{e}"))
+    }
+
+    /// Logs as an Info
+    fn i(self) -> Self {
+        self.log(|e| log::info!("{e}"))
+    }
+}
+
+impl<T, E> LogShort<E> for T
+where
+    T: EasyLog<E>,
+    E: std::fmt::Display,
+{
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Username {
     username: String,
@@ -135,14 +168,14 @@ async fn get_conversations(user: Identity, data: Data<RwLock<SQLiteDB>>) -> Resu
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let res = data
         .read()
         .await
         .get_conversations(&usr_id)
         .await
         .map(Json)
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     Ok(res)
 }
 
@@ -159,13 +192,13 @@ async fn get_peer(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let convo_id = ConversationId(*convo_id);
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let peer_id = data.read().await.get_peer(&usr_id, &convo_id).await?;
     let username = data.read().await.get_user_profile(&peer_id).await?;
     Ok(Json(username.username()))
@@ -181,14 +214,14 @@ async fn get_user_profile(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let res = data
         .read()
         .await
         .get_user_profile(&usr_id)
         .await
         .map(Json)
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     Ok(res)
 }
 
@@ -249,31 +282,26 @@ async fn get_message(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let msg_id = MessageId(*msg_id);
     let convo_id = data
         .read()
         .await
         .get_conversation_from_message(&msg_id)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
         .log(|e| warn!("{e}"))?;
-    let (sender_id, msg, prev_id) = data
-        .read()
-        .await
-        .get_message(&msg_id)
-        .await
-        .log(|e| warn!("{e}"))?;
+    let (sender_id, msg, prev_id) = data.read().await.get_message(&msg_id).await.w()?;
     let sender_username = data
         .read()
         .await
         .get_user_profile(&sender_id)
         .await
-        .log(|e| warn!("{e}"))?
+        .w()?
         .username();
     let msg = MessageContent::new(sender_username, msg);
     Ok(Json(MessageFormat::one(msg, prev_id)))
@@ -307,25 +335,25 @@ async fn start_conversation(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let their_id = data
         .read()
         .await
         .get_user_id_from_username(&form.their_username)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     data.read()
         .await
         .belongs_to_seller(&their_id, &form.product_id.into())
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let res = data
         .write()
         .await
         .start_conversation(&usr_id, &their_id, &form.product_id.into())
         .await
         .map(Json)
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     Ok(res)
 }
 
@@ -337,6 +365,7 @@ struct MessageForm {
 
 #[post("/conversation/{convo_id}/message")]
 async fn post_msg(
+    utils: Data<BackendInfoUpdater>,
     data: Data<RwLock<SQLiteDB>>,
     user: Identity,
     conversation: Path<i64>,
@@ -348,22 +377,36 @@ async fn post_msg(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| warn!("{e}"))?;
-    let conversation = ConversationId(conversation.into_inner());
+        .w()?;
+    let convo_id = ConversationId(conversation.into_inner());
     let msg = Message(form.into_inner().message);
     data.read()
         .await
-        .belongs_to_conversation(&usr_id, &conversation)
+        .belongs_to_conversation(&usr_id, &convo_id)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let res = data
         .write()
         .await
-        .post_msg(msg, &usr_id, &conversation)
+        .post_msg(msg, &usr_id, &convo_id)
         .await
-        .map(Json)
-        .log(|e| warn!("{e}"))?;
-    Ok(res)
+        .w()?;
+
+    let callback = utils
+        .new_message(&*data.read().await, &res, &convo_id)
+        .await?;
+
+    match callback.await.map_err(|e| ErrorInternalServerError(e))? {
+        crate::F2BResponse::Ok => {}
+        crate::F2BResponse::GoogleCloud(error) => {
+            log::error!("Failed to publish message: {error}.");
+        }
+        crate::F2BResponse::Unrecoverable(error) => {
+            log::error!("Failed to publish message: {error}.");
+        }
+    }
+
+    Ok(Json(res))
 }
 
 #[get("/conversation/{convo_id}/latest")]
@@ -378,19 +421,19 @@ async fn get_latest_message(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let convo_id = ConversationId(*convo_id);
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let db_handle = data.read().await;
     let res = db_handle
         .get_latest_message(&convo_id)
         .await
         .map(Json)
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     Ok(res)
 }
 
@@ -406,18 +449,15 @@ async fn get_most_recent_messages(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let convo_id = ConversationId(*convo_id);
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     let db_handle = data.read().await;
-    let (messages, prev_id) = db_handle
-        .get_most_recent_messages(&convo_id)
-        .await
-        .log(|e| warn!("{e}"))?;
+    let (messages, prev_id) = db_handle.get_most_recent_messages(&convo_id).await.w()?;
     let mut msgs = Vec::new();
     for (sender_id, msg) in messages {
         let sender_username = data
@@ -425,7 +465,7 @@ async fn get_most_recent_messages(
             .await
             .get_user_profile(&sender_id)
             .await
-            .log(|e| warn!("{e}"))?
+            .w()?
             .username();
         msgs.push(MessageContent {
             sender_username,
@@ -437,7 +477,12 @@ async fn get_most_recent_messages(
 
 #[get("/product/{prod_id}")]
 async fn get_product(data: Data<RwLock<SQLiteDB>>, prod_id: Path<i64>) -> Result<impl Responder> {
-    let prod = data.read().await.get_product(&ProductId(*prod_id)).await?;
+    let prod = data
+        .read()
+        .await
+        .get_product(&ProductId(*prod_id))
+        .await
+        .w()?;
     Ok(Json(prod))
 }
 
@@ -453,16 +498,18 @@ async fn get_product_in_conversation(
         .await
         .get_user_id_from_username(&username)
         .await
-        .log(|e| warn!("{e}"))?;
+        .w()?;
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &ConversationId(*convo_id))
-        .await?;
+        .await
+        .w()?;
     let prod = data
         .read()
         .await
         .get_product_id_from_conversation_id(&ConversationId(*convo_id))
-        .await?;
+        .await
+        .w()?;
     Ok(Json(prod))
 }
 
@@ -485,5 +532,11 @@ async fn add_product(
     form: Form<ImportProductForm>,
 ) -> Result<impl Responder> {
     let product = form.0.into();
-    Ok(data.write().await.add_product(&product).await.map(Json)?)
+    Ok(data
+        .write()
+        .await
+        .add_product(&product)
+        .await
+        .w()
+        .map(Json)?)
 }
