@@ -55,7 +55,7 @@ resource "google_cloud_run_v2_service" "frontend" {
         container_port = 3001
       }
       env {
-        name  = "BACKEND_URL"
+        name  = "PUBLIC_BACKEND_URL"
         value = google_cloud_run_v2_service.backend.uri
       }
     }
