@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n               SELECT id as \"id!\"\n               FROM product\n               WHERE js_id = ? \n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "17b2c1de77a222310f929ee881dd942082d34e0c4fbd294ffee421fd2fd302da"
+}

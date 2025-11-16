@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT EXISTS (\n                SELECT conversation.id as \"id!\"\n                FROM conversation\n                WHERE conversation.id = ? AND (client_id = ? OR seller_id = ?)\n            ) as is_there\n          ",
+  "describe": {
+    "columns": [
+      {
+        "name": "is_there",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0867da28daafd17acc4b5f4e467e1647bd07f92b9bf72b487aef01f9bcea4014"
+}

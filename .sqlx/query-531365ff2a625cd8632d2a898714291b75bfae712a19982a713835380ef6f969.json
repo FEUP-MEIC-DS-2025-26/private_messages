@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT seller_id\n                FROM product\n                WHERE id = ? AND seller_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "seller_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "531365ff2a625cd8632d2a898714291b75bfae712a19982a713835380ef6f969"
+}

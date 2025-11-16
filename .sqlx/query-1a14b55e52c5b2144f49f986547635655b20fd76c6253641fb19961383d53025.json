@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT product_id as \"product_id!\"\n                FROM conversation\n                WHERE id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "product_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1a14b55e52c5b2144f49f986547635655b20fd76c6253641fb19961383d53025"
+}

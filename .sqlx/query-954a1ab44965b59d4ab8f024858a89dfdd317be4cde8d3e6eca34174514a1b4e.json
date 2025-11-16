@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT name as \"name!\", js_id as \"jumpseller_id!\", seller_id as \"seller_id!\" \n                FROM product\n                WHERE product.id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "name!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "jumpseller_id!",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "seller_id!",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "954a1ab44965b59d4ab8f024858a89dfdd317be4cde8d3e6eca34174514a1b4e"
+}

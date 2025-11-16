@@ -35,13 +35,32 @@ impl SQLiteDB {
         for user in Self::kiosk_users() {
             db.add_user(&user).await?;
         }
-        for (my_id, their_id) in Self::kiosk_conversations() {
-            db.start_conversation(&my_id, &their_id).await?;
+        for product in Self::kiosk_products() {
+            db.add_product(&product).await?;
+        }
+
+        for (my_id, their_id, prod_id) in Self::kiosk_conversations() {
+            db.start_conversation(&my_id, &their_id, &prod_id).await?;
         }
         for (msg, sender, convo) in Self::kiosk_messages() {
             db.post_msg(msg, &sender, &convo).await?;
         }
         Ok(db)
+    }
+
+    fn kiosk_products() -> Vec<Product> {
+        vec![
+            Product {
+                name: "Orange".to_owned(),
+                seller_id: UserId(2),
+                jumpseller_id: 9347673,
+            },
+            Product {
+                name: "Orange Cake".to_owned(),
+                seller_id: UserId(1),
+                jumpseller_id: 9347699,
+            },
+        ]
     }
 
     fn kiosk_users() -> Vec<UserProfile> {
@@ -52,8 +71,11 @@ impl SQLiteDB {
         ]
     }
 
-    fn kiosk_conversations() -> Vec<(UserId, UserId)> {
-        vec![(UserId(1), UserId(2)), (UserId(1), UserId(3))]
+    fn kiosk_conversations() -> Vec<(UserId, UserId, ProductId)> {
+        vec![
+            (UserId(1), UserId(2), ProductId(1)),
+            (UserId(1), UserId(3), ProductId(2)),
+        ]
     }
 
     fn kiosk_messages() -> Vec<(Message, UserId, ConversationId)> {
@@ -144,6 +166,54 @@ pub struct Message(pub String);
 #[sqlx(transparent)]
 pub struct MessageId(pub i64);
 
+#[derive(Debug, sqlx::Type, PartialEq, Copy, Clone, serde::Serialize, serde::Deserialize)]
+#[sqlx(transparent)]
+pub struct ProductId(pub i64);
+
+#[derive(Debug, sqlx::Type, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Product {
+    name: String,
+    seller_id: UserId,
+    jumpseller_id: i64,
+}
+
+impl Product {
+    pub fn new(name: String, seller_id: UserId, jumpseller_id: i64) -> Self {
+        Self {
+            name,
+            seller_id,
+            jumpseller_id,
+        }
+    }
+    pub fn product_info(&self) -> i64 {
+        self.jumpseller_id
+    }
+}
+
+impl From<i64> for UserId {
+    fn from(value: i64) -> Self {
+        Self(value)
+    }
+}
+
+impl From<i64> for ConversationId {
+    fn from(value: i64) -> Self {
+        Self(value)
+    }
+}
+
+impl From<i64> for ProductId {
+    fn from(value: i64) -> Self {
+        Self(value)
+    }
+}
+
+impl From<i64> for MessageId {
+    fn from(value: i64) -> Self {
+        Self(value)
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum DbError {
     #[error(transparent)]
@@ -221,6 +291,10 @@ impl Database for SQLiteDB {
 
     type Message = Message;
 
+    type ProductId = ProductId;
+
+    type Product = Product;
+
     type Querier<'a> = Querier<'a>;
 
     async fn get_conversations(
@@ -231,7 +305,7 @@ impl Database for SQLiteDB {
             r#"
             SELECT id as "id!"
             FROM conversation 
-            WHERE sender_id = ? OR receiver_id = ?;
+            WHERE client_id = ? OR seller_id = ?;
         "#,
             my_id,
             my_id
@@ -249,9 +323,9 @@ impl Database for SQLiteDB {
     ) -> Result<Self::UserId, Self::Error> {
         let record = sqlx::query!(
             r#"
-            SELECT sender_id as "sender_id!", receiver_id as "receiver_id!"
+            SELECT client_id as "client_id!", seller_id as "seller_id!"
             FROM conversation
-            WHERE id = ? AND (sender_id = ? OR receiver_id = ?)
+            WHERE id = ? AND (client_id = ? OR seller_id = ?)
         "#,
             conversation,
             my_id,
@@ -260,10 +334,10 @@ impl Database for SQLiteDB {
         .fetch_one(&self.pool)
         .await?;
 
-        if record.sender_id == my_id.0 {
-            Ok(UserId(record.receiver_id))
-        } else if record.receiver_id == my_id.0 {
-            Ok(UserId(record.sender_id))
+        if record.client_id == my_id.0 {
+            Ok(UserId(record.seller_id))
+        } else if record.seller_id == my_id.0 {
+            Ok(UserId(record.client_id))
         } else {
             Err(DbError::PermissionDenied)
         }
@@ -402,6 +476,7 @@ impl Database for SQLiteDB {
         &mut self,
         my_id: &Self::UserId,
         their_id: &Self::UserId,
+        prod_id: &Self::ProductId,
     ) -> Result<Self::ConversationId, Self::Error> {
         let mut transaction = self.pool.begin().await?;
 
@@ -409,12 +484,13 @@ impl Database for SQLiteDB {
             r#"
             SELECT id as "id!"
             FROM conversation
-            WHERE (sender_id = ? AND receiver_id = ?) OR (receiver_id = ? AND sender_id = ?);
+            WHERE ((client_id = ? AND seller_id = ?) OR (seller_id = ? AND client_id = ?)) AND product_id = ?;
         "#,
             my_id,
             their_id,
             my_id,
-            their_id
+            their_id,
+            prod_id,
         )
         .fetch_optional(&mut *transaction)
         .await?;
@@ -425,12 +501,13 @@ impl Database for SQLiteDB {
 
         let record = sqlx::query!(
             r#"
-            INSERT INTO conversation (sender_id, receiver_id)
-            VALUES (?, ?)
+            INSERT INTO conversation (client_id, seller_id, product_id)
+            VALUES (?, ?, ?)
             RETURNING id as "id!"
         "#,
             my_id,
-            their_id
+            their_id,
+            prod_id
         )
         .fetch_one(&mut *transaction)
         .await;
@@ -536,7 +613,7 @@ impl Database for SQLiteDB {
             SELECT EXISTS (
                 SELECT conversation.id as "id!"
                 FROM conversation
-                WHERE conversation.id = ? AND (sender_id = ? OR receiver_id = ?)
+                WHERE conversation.id = ? AND (client_id = ? OR seller_id = ?)
             ) as is_there
           "#,
             conversation,
@@ -566,6 +643,109 @@ impl Database for SQLiteDB {
         .fetch_one(&self.pool)
         .await?;
         Ok(ConversationId(record.conversation_id))
+    }
+
+    async fn get_product(&self, prod_id: &Self::ProductId) -> Result<Self::Product, Self::Error> {
+        Ok(sqlx::query_as!(
+            Product,
+            r#"
+                SELECT name as "name!", js_id as "jumpseller_id!", seller_id as "seller_id!" 
+                FROM product
+                WHERE product.id = ?
+            "#,
+            prod_id
+        )
+        .fetch_one(&self.pool)
+        .await?)
+    }
+
+    async fn get_product_id_from_conversation_id(
+        &self,
+        conversation_id: &Self::ConversationId,
+    ) -> Result<Self::ProductId, Self::Error> {
+        let record = sqlx::query!(
+            r#"
+                SELECT product_id as "product_id!"
+                FROM conversation
+                WHERE id = ?
+            "#,
+            conversation_id
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(ProductId(record.product_id))
+    }
+
+    async fn add_product(
+        &mut self,
+        product: &Self::Product,
+    ) -> Result<Self::ProductId, Self::Error> {
+        let mut transaction = self.pool.begin().await?;
+
+        let record = sqlx::query!(
+            r#"
+               SELECT id as "id!"
+               FROM product
+               WHERE js_id = ? 
+            "#,
+            product.jumpseller_id,
+        )
+        .fetch_optional(&mut *transaction)
+        .await?;
+
+        let prod = if let Some(r) = record {
+            sqlx::query!(
+                r#"
+                    UPDATE product
+                    SET name = ?, seller_id = ?
+                    WHERE id = ?
+                "#,
+                product.name,
+                product.seller_id,
+                r.id
+            )
+            .execute(&mut *transaction)
+            .await?;
+            r.id.into()
+        } else {
+            let r = sqlx::query!(
+                r#"
+                    INSERT INTO product(name, js_id, seller_id)
+                    VALUES(?,?,?)
+                    RETURNING id as "id!"
+                "#,
+                product.name,
+                product.jumpseller_id,
+                product.seller_id
+            )
+            .fetch_one(&mut *transaction)
+            .await?;
+            r.id.into()
+        };
+        transaction.commit().await?;
+        Ok(prod)
+    }
+
+    async fn belongs_to_seller(
+        &self,
+        seller_id: &Self::UserId,
+        product_id: &Self::ProductId,
+    ) -> Result<(), Self::Error> {
+        let record = sqlx::query!(
+            r#"
+                SELECT seller_id
+                FROM product
+                WHERE id = ? AND seller_id = ?
+            "#,
+            product_id,
+            seller_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        match record {
+            Some(_) => Ok(()),
+            None => Err(DbError::PermissionDenied),
+        }
     }
 }
 
@@ -602,8 +782,15 @@ mod test {
         let alice_again = db.add_user(&alice).await?;
         assert_eq!(alice_id, alice_again);
 
-        let convo_id = db.start_conversation(&alice_id, &bob_id).await?;
-        let same_id = db.start_conversation(&bob_id, &alice_id).await?;
+        let prod = Product {
+            name: "Dill Dough".to_string(),
+            seller_id: 1.into(),
+            jumpseller_id: 1,
+        };
+        let prod_id = db.add_product(&prod).await?;
+
+        let convo_id = db.start_conversation(&alice_id, &bob_id, &prod_id).await?;
+        let same_id = db.start_conversation(&bob_id, &alice_id, &prod_id).await?;
 
         assert_eq!(convo_id, same_id);
 
@@ -694,7 +881,14 @@ mod test {
         let alice_again = db.add_user(&alice).await?;
         assert_eq!(alice_id, alice_again);
 
-        let convo_id = db.start_conversation(&alice_id, &bob_id).await?;
+        let prod = Product {
+            name: "Dill Dough".to_string(),
+            seller_id: 1.into(),
+            jumpseller_id: 1,
+        };
+        let prod_id = db.add_product(&prod).await?;
+
+        let convo_id = db.start_conversation(&alice_id, &bob_id, &prod_id).await?;
 
         // Test
         let last_msg = db.get_latest_message(&convo_id).await?;

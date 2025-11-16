@@ -9,6 +9,8 @@ import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 // components
 import ProfilePicture from '@/app/components/ProfilePicture';
 
+const API_URL = '/api/chat';
+
 /**
  * A function for fetching data from the backend.
  * @param {string} URL - the URL
@@ -20,7 +22,6 @@ const fetcher = (URL: string) => fetch(URL).then((res) => res.json());
  * @param {number} id - the chat ID
  */
 const getPeer = async (id: number) => {
-  const API_URL = '/api/chat';
 
   // fetch the peer's username
   const username: string = await fetcher(`${API_URL}/conversation/${id}/peer`);
@@ -28,6 +29,14 @@ const getPeer = async (id: number) => {
   // fetch the peer's information
   return await fetcher(`${API_URL}/user/${username}`);
 };
+
+const getProduct = async (id: number) => {
+  return await fetch(`${API_URL}/conversation/${id}/product`)
+    .then(res => res.json())
+    .then((productId: number) => fetch(`${API_URL}/product/${productId}`))
+    .then(res => res.json())
+    .then(product => product.name);
+}
 
 interface ChatHeaderProps {
   /** The unique chat identifier. */
@@ -43,6 +52,8 @@ export default function ChatHeader({ id, goToInbox }: ChatHeaderProps) {
   const { data: peer } = useSWR(`/api/chat/conversation/${id}/peer`, () =>
     getPeer(id),
   );
+
+  const { data: product } = useSWR(`/api/chat/conversation/${id}/product`, () => getProduct(id));
 
   return (
     <header className="flex items-center gap-5 pl-4 pb-4 border-b">
@@ -60,7 +71,7 @@ export default function ChatHeader({ id, goToInbox }: ChatHeaderProps) {
             size={56}
           />
           <div>
-            <strong className="text-xl">{peer.name}</strong>
+            <strong className="text-xl">{peer.name}</strong> | <span className="text-xl">{product}</span>
             <p className="text-xs italic before:content-['@']">
               {peer.username}
             </p>
