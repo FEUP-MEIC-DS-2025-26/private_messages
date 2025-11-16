@@ -21,16 +21,16 @@ const fetcher = (URL: string) => fetch(URL, {credentials: "include"}).then((res)
  */
 const getPeer = async (id: number, backendURL: string) => {
   // fetch the peer's username
-  const username: string = await fetcher(`${backendURL}/conversation/${id}/peer`);
+  const username: string = await fetcher(`${backendURL}/api/chat/conversation/${id}/peer`);
 
   // fetch the peer's information
-  return await fetcher(`${backendURL}/user/${username}`);
+  return await fetcher(`${backendURL}/api/chat/user/${username}`);
 };
 
 const getProduct = async (id: number, backendURL: string) => {
-  return await fetch(`${backendURL}/conversation/${id}/product`, {credentials: "include"})
+  return await fetch(`${backendURL}/api/chat/conversation/${id}/product`, {credentials: "include"})
     .then(res => res.json())
-    .then((productId: number) => fetch(`${backendURL}/product/${productId}`, {credentials: "include"}))
+    .then((productId: number) => fetch(`${backendURL}/api/chat/product/${productId}`, {credentials: "include"}))
     .then(res => res.json())
     .then(product => product.name);
 }
@@ -57,7 +57,7 @@ export default function ChatHeader({
     () => getPeer(id, backendURL)
   );
   
-  const { data: product } = useSWR(`${backendURL}/api/chat/conversation/${id}/product`, () => getProduct(id));
+  const { data: product } = useSWR(`${backendURL}/api/chat/conversation/${id}/product`, () => getProduct(id, backendURL));
   
   return (
     <header className="flex items-center gap-5 pl-4 pb-4 border-b">
