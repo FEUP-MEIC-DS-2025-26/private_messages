@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS message (
     sender_id INTEGER NOT NULL,
     conversation_id INTEGER NOT NULL,
     content BLOB,
+    salt BLOB,
     previous_message_id INTEGER,
     FOREIGN KEY(sender_id) REFERENCES user(id),
     FOREIGN KEY(conversation_id) REFERENCES conversation(id),

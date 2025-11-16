@@ -1,30 +1,23 @@
-use std::{io::Cursor, marker::PhantomData};
+use std::{io::Cursor, marker::PhantomData, ops::Deref};
 
 use actix_web::{ResponseError, http::StatusCode};
 use argon2::Argon2;
-use chacha20poly1305::{ChaCha20Poly1305, ChaChaPoly1305, KeyInit, Nonce, aead::Aead};
-use serde::{Serialize, de::DeserializeOwned};
+use chacha20poly1305::{ChaCha20Poly1305, ChaChaPoly1305, KeyInit, aead::Aead};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use sqlx::{Decode, Encode, Sqlite};
 
-pub struct CryptoSuite {
-    key: ChaCha20Poly1305,
-    nonce: Nonce,
-}
+pub struct CryptoKey(ChaCha20Poly1305);
 
-impl CryptoSuite {
+impl CryptoKey {
     pub fn new(password: &str, salt: &str) -> argon2::Result<Self> {
-        let mut key = [0u8; 32];
-        let mut nonce = [0u8; 12];
-        let mut buf = [0; 44];
+        let mut buf = [0; 32];
         Argon2::default().hash_password_into(password.as_bytes(), salt.as_bytes(), &mut buf)?;
-        key.copy_from_slice(&buf[..32]);
-        nonce.copy_from_slice(&buf[32..]);
-        let key = ChaChaPoly1305::new(&key.into());
-        let nonce = Nonce::from(nonce);
-        Ok(Self { key, nonce })
+        let key = ChaChaPoly1305::new(&buf.into());
+        Ok(Self(key))
     }
 }
 
-#[derive(Debug, sqlx::Type, serde::Deserialize, serde::Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CryptData<T> {
     data: Vec<u8>,
     _pd: PhantomData<T>,
@@ -39,9 +32,9 @@ impl<T> From<Vec<u8>> for CryptData<T> {
     }
 }
 
-impl<T> Into<Vec<u8>> for CryptData<T> {
-    fn into(self) -> Vec<u8> {
-        self.data
+impl<T> From<CryptData<T>> for Vec<u8> {
+    fn from(val: CryptData<T>) -> Self {
+        val.data
     }
 }
 
@@ -68,17 +61,105 @@ impl From<chacha20poly1305::Error> for CryptError {
 }
 
 impl<T: Serialize + DeserializeOwned> CryptData<T> {
-    pub fn encrypt(data: T, suite: &CryptoSuite) -> Result<Self, CryptError> {
+    pub fn encrypt<RNG: rand::CryptoRng>(
+        data: T,
+        key: &CryptoKey,
+        rng: &mut RNG,
+    ) -> Result<(Self, [u8; 12]), CryptError> {
         let mut buf = Vec::new();
         ciborium::into_writer(&data, &mut buf)?;
-        let data = suite.key.encrypt(&suite.nonce, buf.as_slice())?;
-        Ok(Self {
-            data,
-            _pd: PhantomData,
-        })
+        let mut nonce_buf = [0u8; 12];
+        rng.fill_bytes(&mut nonce_buf);
+
+        let data = key.0.encrypt(&nonce_buf.into(), buf.as_slice())?;
+        Ok((
+            Self {
+                data,
+                _pd: PhantomData,
+            },
+            nonce_buf,
+        ))
     }
-    pub fn decrypt(self, suite: &CryptoSuite) -> Result<T, CryptError> {
-        let buf = suite.key.decrypt(&suite.nonce, self.data.as_slice())?;
+    pub fn decrypt(self, key: &CryptoKey, nonce: &[u8; 12]) -> Result<T, CryptError> {
+        let buf = key.0.decrypt(nonce.into(), self.data.as_slice())?;
         Ok(ciborium::de::from_reader(Cursor::new(buf))?)
+    }
+}
+
+impl<T> Deref for CryptData<T> {
+    type Target = Vec<u8>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<'q, DB, T> Encode<'q, DB> for CryptData<T>
+where
+    DB: sqlx::Database,
+    Vec<u8>: Encode<'q, DB>,
+{
+    fn encode_by_ref(
+        &self,
+        buf: &mut <DB as sqlx::Database>::ArgumentBuffer<'q>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError> {
+        <Vec<u8> as Encode<'q, DB>>::encode_by_ref(&self.data, buf)
+    }
+
+    fn encode(
+        self,
+        buf: &mut <DB as sqlx::Database>::ArgumentBuffer<'q>,
+    ) -> Result<sqlx::encode::IsNull, sqlx::error::BoxDynError>
+    where
+        Self: Sized,
+    {
+        <Vec<u8> as Encode<'q, DB>>::encode(self.data, buf)
+    }
+}
+
+impl<'r, DB, T> Decode<'r, DB> for CryptData<T>
+where
+    DB: sqlx::Database,
+    Vec<u8>: Decode<'r, DB>,
+{
+    fn decode(
+        value: <DB as sqlx::Database>::ValueRef<'r>,
+    ) -> Result<Self, sqlx::error::BoxDynError> {
+        Ok(CryptData::from(<Vec<u8> as Decode<'r, DB>>::decode(value)?))
+    }
+}
+
+impl<T, DB> sqlx::Type<DB> for CryptData<T>
+where
+    DB: sqlx::Database,
+    Vec<u8>: sqlx::Type<DB>,
+{
+    fn type_info() -> DB::TypeInfo {
+        <Vec<u8> as sqlx::Type<DB>>::type_info()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::{SeedableRng, rngs::StdRng};
+
+    use crate::database::crypto::{CryptData, CryptoKey};
+
+    #[test]
+    fn crypto_test() -> anyhow::Result<()> {
+        let mut rng = StdRng::from_os_rng();
+        let rng = &mut rng;
+        let password = "test_password";
+        let salt = "test_salt";
+        let key = CryptoKey::new(password, salt);
+        assert!(key.is_ok());
+        let key = key.unwrap();
+        let data = b"Very secretive data!".to_vec();
+        let (enc, salt) = CryptData::encrypt(data.clone(), &key, rng)?;
+        assert_ne!(data.as_slice(), enc.as_slice());
+        let dec = enc.decrypt(&key, &salt)?;
+        assert_eq!(data.as_slice(), dec.as_slice());
+
+        Ok(())
     }
 }
