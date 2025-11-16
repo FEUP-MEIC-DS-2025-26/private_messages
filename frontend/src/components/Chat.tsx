@@ -21,8 +21,9 @@ const fetcher = (URL: string) => fetch(URL).then((res) => res.json());
  */
 const getMessages = async (URL: string, username: string) => {
   const messages: any[] = await fetcher(`${URL}/recent`).then(
-    (message) => message.content,
+    (message) => message.content
   );
+
   return messages.map((message) => ({
     isFromUser: message.sender_username === username,
     content: message.msg,
