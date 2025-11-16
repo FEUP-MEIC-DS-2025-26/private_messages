@@ -9,30 +9,28 @@ import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 // components
 import ProfilePicture from "./ProfilePicture";
 
-const API_URL = "/api/chat";
-
 /**
  * A function for fetching data from the backend.
  * @param {string} URL - the URL
  */
-const fetcher = (URL: string) => fetch(URL).then((res) => res.json());
+const fetcher = (URL: string) => fetch(URL, {credentials: "include"}).then((res) => res.json());
 
 /**
  * Fetches information regarding the peer.
  * @param {number} id - the chat ID
  */
-const getPeer = async (id: number) => {
+const getPeer = async (id: number, backendURL: string) => {
   // fetch the peer's username
-  const username: string = await fetcher(`${API_URL}/conversation/${id}/peer`);
+  const username: string = await fetcher(`${backendURL}/conversation/${id}/peer`);
 
   // fetch the peer's information
-  return await fetcher(`${API_URL}/user/${username}`);
+  return await fetcher(`${backendURL}/user/${username}`);
 };
 
-const getProduct = async (id: number) => {
-  return await fetch(`${API_URL}/conversation/${id}/product`)
+const getProduct = async (id: number, backendURL: string) => {
+  return await fetch(`${backendURL}/conversation/${id}/product`, {credentials: "include"})
     .then(res => res.json())
-    .then((productId: number) => fetch(`${API_URL}/product/${productId}`))
+    .then((productId: number) => fetch(`${backendURL}/product/${productId}`, {credentials: "include"}))
     .then(res => res.json())
     .then(product => product.name);
 }
@@ -56,11 +54,11 @@ export default function ChatHeader({
 }: ChatHeaderProps) {
   const { data: peer } = useSWR(
     `${backendURL}/api/chat/conversation/${id}/peer`,
-    () => getPeer(id)
+    () => getPeer(id, backendURL)
   );
   
-  const { data: product } = useSWR(`/api/chat/conversation/${id}/product`, () => getProduct(id));
-
+  const { data: product } = useSWR(`${backendURL}/api/chat/conversation/${id}/product`, () => getProduct(id));
+  
   return (
     <header className="flex items-center gap-5 pl-4 pb-4 border-b">
       <button
