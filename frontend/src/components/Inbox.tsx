@@ -2,6 +2,13 @@ import useSWR from "swr";
 import ChatPreview, { ChatPreviewProps } from "./ChatPreview";
 
 /**
+ * A function for fetching data from the backend.
+ * @param {string} URL - the URL
+ */
+const fetcher = (URL: string) =>
+  fetch(URL, { credentials: "include" }).then((res) => res.json());
+
+/**
  * A function for fetching the user's conversations from the server.
  * @param {string} URL - the URL
  * @param {string} username - the user's username
@@ -30,33 +37,23 @@ const getChats = async (URL: string, username: string) => {
   // fetch the peers' display names
   const fullNames: string[] = await Promise.all(
     usernames.map((username: string) =>
-      fetch(`${URL}/user/${username}`)
-        .then((res) => res.json())
-        .then((user) => user.name)
+      fetcher(`${URL}/user/${username}`).then((user) => user.name)
     )
   );
 
   // fetch the last message from each conversation
   const lastMessages: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetch(`${URL}/conversation/${id}/latest`, { credentials: "include" })
-        .then((res) => res.json())
-        .then((id: number) =>
-          fetch(`${URL}/message/${id}`, { credentials: "include" })
-        )
-        .then((res) => res.json())
+      fetcher(`${URL}/conversation/${id}/latest`)
+        .then((id: number) => fetcher(`${URL}/message/${id}`))
         .then((message) => message.content.msg)
     )
   );
 
   const products: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetch(`${URL}/conversation/${id}/product`, { credentials: "include" })
-        .then((res) => res.json())
-        .then((productId: number) =>
-          fetch(`${URL}/product/${productId}`, { credentials: "include" })
-        )
-        .then((res) => res.json())
+      fetcher(`${URL}/conversation/${id}/product`)
+        .then((productId: number) => fetcher(`${URL}/product/${productId}`))
         .then((product) => product.name)
     )
   );
@@ -95,7 +92,6 @@ export default function Inbox({ backendURL, username, goToChat }: InboxProps) {
   );
   // const chats = await getChats(`${backendURL}/api/chat`, username);
 
-  console.log(chats);
   if (isLoading || !chats) {
     return <div>Loading...</div>;
   }
