@@ -23,7 +23,7 @@ const fetcher = (URL: string) =>
 const getPeer = async (id: number, backendURL: string) => {
   // fetch the peer's username
   const username: string = await fetcher(
-    `${backendURL}/conversation/${id}/peer`
+    `${backendURL}/api/conversation/${id}/peer`
   );
 
   // fetch the peer's information
