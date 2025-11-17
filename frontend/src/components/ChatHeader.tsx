@@ -23,7 +23,7 @@ const fetcher = (URL: string) =>
 const getPeer = async (id: number, backendURL: string) => {
   // fetch the peer's username
   const username: string = await fetcher(
-    `${backendURL}/api/conversation/${id}/peer`
+    `${backendURL}/api/chat/conversation/${id}/peer`
   );
 
   // fetch the peer's information
@@ -36,7 +36,7 @@ const getPeer = async (id: number, backendURL: string) => {
  * @param backendURL - The URL that points to the backend server.
  */
 const getProduct = async (id: number, backendURL: string) => {
-  return await fetcher(`${backendURL}/api/conversation/${id}/product`)
+  return await fetcher(`${backendURL}/api/chat/conversation/${id}/product`)
     .then((productId: number) => fetcher(`${backendURL}/product/${productId}`))
     .then((product) => product.name);
 };
