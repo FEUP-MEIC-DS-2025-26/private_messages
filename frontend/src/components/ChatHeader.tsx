@@ -37,7 +37,7 @@ const getPeer = async (id: number, backendURL: string) => {
  */
 const getProduct = async (id: number, backendURL: string) => {
   return await fetcher(`${backendURL}/api/chat/conversation/${id}/product`)
-    .then((productId: number) => fetcher(`${backendURL}/product/${productId}`))
+    .then((productId: number) => fetcher(`${backendURL}/api/chat/product/${productId}`))
     .then((product) => product.name);
 };
 
