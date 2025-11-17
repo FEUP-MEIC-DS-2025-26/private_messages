@@ -2,6 +2,13 @@ import useSWR from "swr";
 import ChatPreview, { ChatPreviewProps } from "./ChatPreview";
 
 /**
+ * A function for fetching data from the backend.
+ * @param {string} URL - the URL
+ */
+const fetcher = (URL: string) =>
+  fetch(URL, { credentials: "include" }).then((res) => res.json());
+
+/**
  * A function for fetching the user's conversations from the server.
  * @param {string} URL - the URL
  * @param {string} username - the user's username
@@ -9,37 +16,45 @@ import ChatPreview, { ChatPreviewProps } from "./ChatPreview";
  */
 const getChats = async (URL: string, username: string) => {
   // login
-  await fetch(`${URL}/login?username=${username}`);
+  await fetch(`${URL}/login?username=${username}`, {
+    credentials: "include",
+  }).then(console.log);
 
   // fetch the conversations
-  const conversationIDs: number[] = await fetch(`${URL}/conversation`).then(
-    (res) => res.json()
-  );
+  const conversationIDs: number[] = await fetch(`${URL}/conversation`, {
+    credentials: "include",
+  }).then((res) => res.json());
 
   // fetch the usernames of the peers with whom we are conversing
   const usernames: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetch(`${URL}/conversation/${id}/peer`).then((res) => res.json())
+      fetch(`${URL}/conversation/${id}/peer`, { credentials: "include" }).then(
+        (res) => res.json()
+      )
     )
   );
 
   // fetch the peers' display names
   const fullNames: string[] = await Promise.all(
     usernames.map((username: string) =>
-      fetch(`${URL}/user/${username}`)
-        .then((res) => res.json())
-        .then((user) => user.name)
+      fetcher(`${URL}/user/${username}`).then((user) => user.name)
     )
   );
 
   // fetch the last message from each conversation
   const lastMessages: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetch(`${URL}/conversation/${id}/latest`)
-        .then((res) => res.json())
-        .then((id: number) => fetch(`${URL}/message/${id}`))
-        .then((res) => res.json())
+      fetcher(`${URL}/conversation/${id}/latest`)
+        .then((id: number) => fetcher(`${URL}/message/${id}`))
         .then((message) => message.content.msg)
+    )
+  );
+
+  const products: string[] = await Promise.all(
+    conversationIDs.map((id: number) =>
+      fetcher(`${URL}/conversation/${id}/product`)
+        .then((productId: number) => fetcher(`${URL}/product/${productId}`))
+        .then((product) => product.name)
     )
   );
 
@@ -51,6 +66,7 @@ const getChats = async (URL: string, username: string) => {
     lastMessage: lastMessages[index],
     profilePictureURL: "https://thispersondoesnotexist.com/",
     unreadMessages: Math.floor(Math.random() * 10),
+    product: products[index],
   }));
 };
 
@@ -74,6 +90,7 @@ export default function Inbox({ backendURL, username, goToChat }: InboxProps) {
     `${backendURL}/api/chat/conversation`,
     () => getChats(`${backendURL}/api/chat`, username)
   );
+  // const chats = await getChats(`${backendURL}/api/chat`, username);
 
   if (isLoading || !chats) {
     return <div>Loading...</div>;

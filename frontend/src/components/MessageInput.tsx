@@ -38,6 +38,7 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
         method: "POST",
         body: new URLSearchParams({ message }),
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        credentials: "include",
       });
 
       // refetch the messages
@@ -61,7 +62,13 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
   return (
     <div className="relative">
       <form
-        action={sendMessage}
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const form = e.currentTarget as HTMLFormElement;
+          const formData = new FormData(form);
+          await sendMessage(formData);
+          form.reset();
+        }}
         className="sticky flex items-center gap-2 px-6 py-1 rounded-full border-2 focus-within:border-biloba-flower-500 transition-all"
       >
         {/** Input area */}

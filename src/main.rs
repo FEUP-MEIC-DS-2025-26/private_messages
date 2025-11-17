@@ -116,7 +116,7 @@ async fn run_backend_code(
     _cli: Cli,
     mut receiver: tokio::sync::mpsc::Receiver<F2BRequest>,
 ) -> anyhow::Result<()> {
-    let gcloud_ep = Client::new(ClientConfig::default()).await?;
+    // let gcloud_ep = Client::new(ClientConfig::default()).await?;
     while let Some(F2BRequest { msg, callback }) = receiver.recv().await {
         match msg {
             F2BRequestType::NewMessage {
@@ -177,7 +177,7 @@ impl BackendInfoUpdater {
         let product_info = product.product_info();
         let mut message_sum = [char::default(); 32];
         let fst_32 = message.0.chars().take(32).collect::<Vec<_>>();
-        message_sum.copy_from_slice(&fst_32);
+        message_sum[..fst_32.len()].copy_from_slice(&fst_32);
 
         let msg_type = F2BRequestType::NewMessage {
             sender_name,

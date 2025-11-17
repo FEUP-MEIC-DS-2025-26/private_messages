@@ -13,20 +13,32 @@ import ProfilePicture from "./ProfilePicture";
  * A function for fetching data from the backend.
  * @param {string} URL - the URL
  */
-const fetcher = (URL: string) => fetch(URL).then((res) => res.json());
+const fetcher = (URL: string) =>
+  fetch(URL, { credentials: "include" }).then((res) => res.json());
 
 /**
  * Fetches information regarding the peer.
- * @param {number} id - the chat ID
+ * @param {number} id - the unique chat identifier
  */
-const getPeer = async (id: number) => {
-  const API_URL = "/api/chat";
-
+const getPeer = async (id: number, backendURL: string) => {
   // fetch the peer's username
-  const username: string = await fetcher(`${API_URL}/conversation/${id}/peer`);
+  const username: string = await fetcher(
+    `${backendURL}/api/chat/conversation/${id}/peer`
+  );
 
   // fetch the peer's information
-  return await fetcher(`${API_URL}/user/${username}`);
+  return await fetcher(`${backendURL}/api/chat/user/${username}`);
+};
+
+/**
+ * Fetches information regarding the product the chat concerns.
+ * @param id - The unique chat identifier
+ * @param backendURL - The URL that points to the backend server.
+ */
+const getProduct = async (id: number, backendURL: string) => {
+  return await fetcher(`${backendURL}/api/chat/conversation/${id}/product`)
+    .then((productId: number) => fetcher(`${backendURL}/api/chat/product/${productId}`))
+    .then((product) => product.name);
 };
 
 interface ChatHeaderProps {
@@ -48,7 +60,12 @@ export default function ChatHeader({
 }: ChatHeaderProps) {
   const { data: peer } = useSWR(
     `${backendURL}/api/chat/conversation/${id}/peer`,
-    () => getPeer(id)
+    () => getPeer(id, backendURL)
+  );
+
+  const { data: product } = useSWR(
+    `${backendURL}/api/chat/conversation/${id}/product`,
+    () => getProduct(id, backendURL)
   );
 
   return (
@@ -67,7 +84,8 @@ export default function ChatHeader({
             size={56}
           />
           <div>
-            <strong className="text-xl">{peer.name}</strong>
+            <strong className="text-xl">{peer.name}</strong> |{" "}
+            <span className="text-xl">{product}</span>
             <p className="text-xs italic before:content-['@']">
               {peer.username}
             </p>
