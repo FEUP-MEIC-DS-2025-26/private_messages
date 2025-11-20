@@ -379,12 +379,12 @@ async fn post_msg(
         .await
         .w()?;
     let convo_id = ConversationId(conversation.into_inner());
-    let msg = Message(form.into_inner().message);
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
         .w()?;
+    let msg = Message::from(form.into_inner().message.as_str());
     let res = data
         .write()
         .await

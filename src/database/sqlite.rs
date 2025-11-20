@@ -5,6 +5,7 @@ use crate::database::{
     crypto::{CryptData, CryptError, CryptoKey},
 };
 use actix_web::{ResponseError, http::StatusCode};
+use chrono::{DateTime, Utc};
 use rand::{SeedableRng, rngs::StdRng};
 use serde;
 use sqlx::{Pool, Sqlite, migrate::MigrateDatabase, sqlite::SqlitePoolOptions};
@@ -81,32 +82,32 @@ impl SQLiteDB {
     fn kiosk_messages() -> Vec<(Message, UserId, ConversationId)> {
         vec![
             (
-                Message("Hi Jane! I would like to buy a few oranges, are they fresh?".to_string()),
+                Message::from("Hi Jane! I would like to buy a few oranges, are they fresh?"),
                 UserId(1),
                 ConversationId(1),
             ),
             (
-                Message("Yes John! I just collected them this morning!".to_string()),
+                Message::from("Yes John! I just collected them this morning!"),
                 UserId(2),
                 ConversationId(1),
             ),
             (
-                Message("Thank you for the clarification!".to_string()),
+                Message::from("Thank you for the clarification!"),
                 UserId(1),
                 ConversationId(1),
             ),
             (
-                Message("Hi John! Is your orange cake made from fresh oranges?".to_string()),
+                Message::from("Hi John! Is your orange cake made from fresh oranges?"),
                 UserId(3),
                 ConversationId(2),
             ),
             (
-                Message("Yes Fred! I bought them today from Jane!".to_string()),
+                Message::from("Yes Fred! I bought them today from Jane!"),
                 UserId(1),
                 ConversationId(2),
             ),
             (
-                Message("Amazing! That makes me relieved, thank you!".to_string()),
+                Message::from("Amazing! That makes me relieved, thank you!"),
                 UserId(3),
                 ConversationId(2),
             ),
@@ -159,8 +160,35 @@ impl UserProfile {
 pub struct ConversationId(pub i64);
 
 #[derive(Debug, sqlx::Type, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
-#[sqlx(transparent)]
-pub struct Message(pub String);
+pub struct Message {
+    contents: String,
+    timestamp: DateTime<Utc>,
+}
+
+impl Message {
+    pub fn new(contents: String, timestamp: DateTime<Utc>) -> Self {
+        Self {
+            contents,
+            timestamp,
+        }
+    }
+
+    pub fn message(&self) -> &str {
+        &self.contents
+    }
+
+    pub fn timestamp(&self) -> &DateTime<Utc> {
+        &self.timestamp
+    }
+}
+
+impl From<&str> for Message {
+    fn from(value: &str) -> Self {
+        let owned = value.to_owned();
+        let timestamp = Utc::now();
+        Self::new(owned, timestamp)
+    }
+}
 
 #[derive(Debug, sqlx::Type, PartialEq, Copy, Clone, serde::Serialize, serde::Deserialize)]
 #[sqlx(transparent)]
@@ -367,7 +395,7 @@ impl Database for SQLiteDB {
     ) -> Result<(Self::UserId, Self::Message, Option<Self::MessageId>), Self::Error> {
         let result = sqlx::query!(
             r#"
-            SELECT sender_id as "sender_id!", content as "content!", salt as "salt!", previous_message_id
+            SELECT sender_id as "sender_id!", content as "content!", timestamp as "timestamp!", salt as "salt!", previous_message_id
             FROM message
             WHERE id = ?
         "#,
@@ -377,14 +405,17 @@ impl Database for SQLiteDB {
         .await;
 
         match result {
-            Ok(res) => Ok((
-                UserId(res.sender_id),
-                CryptData::from(res.content).decrypt(
+            Ok(res) => {
+                let contents = CryptData::from(res.content).decrypt(
                     &self.suite,
                     &res.salt.try_into().map_err(|_| DbError::SaltWrongSize)?,
-                )?,
-                res.previous_message_id.map(MessageId),
-            )),
+                )?;
+                Ok((
+                    UserId(res.sender_id),
+                    Message::new(contents, res.timestamp.and_utc()),
+                    res.previous_message_id.map(MessageId),
+                ))
+            }
             Err(e) => Err(e.into()),
         }
     }
@@ -395,13 +426,13 @@ impl Database for SQLiteDB {
     ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error> {
         let result = sqlx::query!(r#"
             WITH id_asc as (
-                SELECT id, sender_id, content, salt, previous_message_id
+                SELECT id, sender_id, content, salt, timestamp, previous_message_id
                 FROM message
                 WHERE conversation_id = ?
                 ORDER BY id desc
                 LIMIT 32
             )
-            SELECT sender_id as "sender_id!", content as "content!", salt as "salt!", previous_message_id FROM id_asc ORDER BY id
+            SELECT sender_id as "sender_id!", content as "content!", salt as "salt!", timestamp as "timestamp!", previous_message_id FROM id_asc ORDER BY id
         "#,
             conversation_id
         ).fetch_all(&self.pool)
@@ -411,17 +442,16 @@ impl Database for SQLiteDB {
             Ok(res) => Ok((
                 res.iter()
                     .map(|record| -> Result<(Self::UserId, Self::Message), DbError> {
-                        Ok((
-                            UserId(record.sender_id),
-                            CryptData::from(record.content.clone()).decrypt(
-                                &self.suite,
-                                &record
-                                    .salt
-                                    .clone()
-                                    .try_into()
-                                    .map_err(|_| DbError::SaltWrongSize)?,
-                            )?,
-                        ))
+                        let contents = CryptData::from(record.content.clone()).decrypt(
+                            &self.suite,
+                            &record
+                                .salt
+                                .clone()
+                                .try_into()
+                                .map_err(|_| DbError::SaltWrongSize)?,
+                        )?;
+                        let timestamp = record.timestamp.and_utc();
+                        Ok((UserId(record.sender_id), Message::new(contents, timestamp)))
                     })
                     .collect::<Result<Vec<_>, DbError>>()?,
                 res.first().unwrap().previous_message_id.map(MessageId),
@@ -536,20 +566,24 @@ impl Database for SQLiteDB {
         .await?
         .last_message_id;
 
-        let (contents, salt) = CryptData::encrypt(msg, &self.suite, &mut self.rng)?;
+        let (contents, salt) =
+            CryptData::encrypt(msg.message().to_owned(), &self.suite, &mut self.rng)?;
         let salt = salt.to_vec();
+
+        let timestamp = msg.timestamp().clone();
 
         let msg_id = sqlx::query!(
             r#"
-            INSERT INTO message (content, salt, sender_id, conversation_id, previous_message_id)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO message (content, salt, sender_id, conversation_id, previous_message_id, timestamp)
+            VALUES (?, ?, ?, ?, ?,?)
             RETURNING id as "id!"
         "#,
             contents,
             salt,
             my_id,
             conversation,
-            prev_id
+            prev_id,
+            timestamp,
         )
         .fetch_one(&mut *transaction)
         .await?
@@ -794,8 +828,8 @@ mod test {
 
         assert_eq!(convo_id, same_id);
 
-        let hello = Message("Hello Bob!".to_owned());
-        let hello_id = db.post_msg(hello, &alice_id, &convo_id).await?;
+        let hello = Message::from("Hello Bob!");
+        let hello_id = db.post_msg(hello.clone(), &alice_id, &convo_id).await?;
 
         // Example queries
         let alice_bob_messages: Result<Vec<Message>, _> = {
@@ -851,7 +885,7 @@ mod test {
                 .collect()
         };
 
-        assert_eq!(alice_bob_messages?, vec![Message("Hello Bob!".to_owned())]);
+        assert_eq!(alice_bob_messages?, vec![hello]);
 
         Ok(())
     }
@@ -894,13 +928,13 @@ mod test {
         let last_msg = db.get_latest_message(&convo_id).await?;
         assert_eq!(last_msg, None);
 
-        let hello = Message("Hello Bob!".to_owned());
+        let hello = Message::from("Hello Bob!");
         let first_hello_id = db.post_msg(hello, &alice_id, &convo_id).await?;
 
         let last_msg = db.get_latest_message(&convo_id).await?;
         assert_eq!(last_msg, Some(first_hello_id));
 
-        let hello = Message("Hello Alice!".to_owned());
+        let hello = Message::from("Hello Alice!");
         let second_hello_id = db.post_msg(hello, &bob_id, &convo_id).await?;
 
         let last_msg = db.get_latest_message(&convo_id).await?.unwrap();

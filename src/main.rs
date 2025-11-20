@@ -176,7 +176,7 @@ impl BackendInfoUpdater {
         let product = database.get_product(&product_id).await?;
         let product_info = product.product_info();
         let mut message_sum = [char::default(); 32];
-        let fst_32 = message.0.chars().take(32).collect::<Vec<_>>();
+        let fst_32 = message.message().chars().take(32).collect::<Vec<_>>();
         message_sum[..fst_32.len()].copy_from_slice(&fst_32);
 
         let msg_type = F2BRequestType::NewMessage {
