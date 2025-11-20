@@ -1,0 +1,37 @@
+syntax = "proto3";
+package priv_msgs.v1;
+
+message NewMessage {
+  /// UUID for this request
+  string uuid = 1;
+   
+  /// Username of the sender
+  string sender_name = 2;
+  /// Username of the receiver
+  string receiver_name = 3;
+
+  /// JumpSeller Id for the product
+  int64 product_info = 4;
+
+  /// UTC TimeStamp when message was sent
+  string timestamp = 5;
+
+  /// Small preview (if necessary) 
+  optional string preview = 6;
+
+  /// Encrypted contents of the message
+  bytes encrypted_content = 7;
+}
+
+message NewConversation {
+  /// UUID for this request
+  string uuid = 1;
+
+  /// Username of the sender
+  string seller_name = 2;
+  /// Username of the receiver
+  string buyer_name = 3;
+  
+  /// JumpSeller Id for the product
+  int64 product_info = 4;
+}

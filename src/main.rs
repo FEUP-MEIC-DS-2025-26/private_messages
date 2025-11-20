@@ -18,6 +18,7 @@ use tokio::sync::RwLock;
 use tokio::time::Duration as TDuration;
 
 mod database;
+mod pubsub;
 mod rest;
 
 #[derive(clap::Parser, Clone, Debug)]
