@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            WITH id_asc as (\n                SELECT id, sender_id, content, salt, timestamp, previous_message_id\n                FROM message\n                WHERE conversation_id = ?\n                ORDER BY id desc\n                LIMIT 32\n            )\n            SELECT sender_id as \"sender_id!\", content as \"content!\", salt as \"salt!\", timestamp as \"timestamp!\", previous_message_id FROM id_asc ORDER BY id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "sender_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "content!",
+        "ordinal": 1,
+        "type_info": "Blob"
+      },
+      {
+        "name": "salt!",
+        "ordinal": 2,
+        "type_info": "Blob"
+      },
+      {
+        "name": "timestamp!",
+        "ordinal": 3,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "previous_message_id",
+        "ordinal": 4,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "5b749105b320ca9ce25ff209d2b7dc5b6c3ecaf3110c7bfa456ca1c9a6f3f39e"
+}
