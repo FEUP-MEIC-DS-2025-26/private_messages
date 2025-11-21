@@ -15,7 +15,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Build
-        run: cargo build --verbose
+      - name: Install dependencies
+        run: apt update -y && apt upgrade -y && apt install protobuf-compiler
+      - name: Check if any best practice was violated
+        run: cargo clippy
       - name: Run tests
         run: cargo test --verbose
