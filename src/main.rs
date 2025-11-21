@@ -1,4 +1,6 @@
 #![warn(clippy::pedantic)]
+#![warn(clippy::perf)]
+#![deny(clippy::correctness)]
 #![deny(clippy::panicking_unwrap)]
 #![deny(clippy::unwrap_used)]
 
@@ -16,7 +18,6 @@ use cookie::{Key, time::Duration};
 use log::info;
 use std::{fmt::Debug, path::PathBuf};
 use tokio::sync::RwLock;
-
 
 mod database;
 mod rest;
