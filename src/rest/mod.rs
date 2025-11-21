@@ -1,6 +1,6 @@
 use crate::{
     BackendInfoUpdater,
-    database::{Database, sqlite::*},
+    database::{Database, sqlite::{SQLiteDB, ConversationId, Message, MessageId, ProductId, Product, UserId}},
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -396,7 +396,7 @@ async fn post_msg(
         .new_message(&*data.read().await, &res, &convo_id)
         .await?;
 
-    match callback.await.map_err(|e| ErrorInternalServerError(e))? {
+    match callback.await.map_err(ErrorInternalServerError)? {
         crate::F2BResponse::Ok => {}
         crate::F2BResponse::GoogleCloud(error) => {
             log::error!("Failed to publish message: {error}.");
@@ -470,7 +470,7 @@ async fn get_most_recent_messages(
         msgs.push(MessageContent {
             sender_username,
             msg,
-        })
+        });
     }
     Ok(Json(MessageFormat::many(msgs, prev_id)))
 }

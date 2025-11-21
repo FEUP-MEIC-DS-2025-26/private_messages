@@ -4,7 +4,7 @@ use actix_web::{ResponseError, http::StatusCode};
 use argon2::Argon2;
 use chacha20poly1305::{ChaCha20Poly1305, ChaChaPoly1305, KeyInit, aead::Aead};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
-use sqlx::{Decode, Encode, Sqlite};
+use sqlx::{Decode, Encode};
 
 pub struct CryptoKey(ChaCha20Poly1305);
 

@@ -7,19 +7,16 @@ use crate::database::{
     crypto::CryptoKey,
     sqlite::{ConversationId, DbError, MessageId, SQLiteDB},
 };
-use actix_files::Files;
 use actix_identity::IdentityMiddleware;
 use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
 use actix_web::{App, HttpServer, middleware, web};
 use anyhow::anyhow;
 use clap::Parser;
 use cookie::{Key, time::Duration};
-use gcloud_pubsub::client::{Client, ClientConfig};
 use log::info;
 use std::{fmt::Debug, path::PathBuf};
 use tokio::sync::RwLock;
 
-use tokio::time::Duration as TDuration;
 
 mod database;
 mod rest;
@@ -124,10 +121,10 @@ async fn run_backend_code(
     while let Some(F2BRequest { msg, callback }) = receiver.recv().await {
         match msg {
             F2BRequestType::NewMessage {
-                sender_name,
-                receiver_name,
-                product_info,
-                contents,
+                sender_name: _,
+                receiver_name: _,
+                product_info: _,
+                contents: _,
             } => {
                 log::error!("BACKEND IS UNIMPLEMENTED.");
                 _ = callback.send(F2BResponse::Ok);

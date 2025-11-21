@@ -261,11 +261,11 @@ pub struct Querier<'a> {
     rng: &'a StdRng,
 }
 
-impl<'a> Deref for Querier<'a> {
+impl Deref for Querier<'_> {
     type Target = Pool<Sqlite>;
 
     fn deref(&self) -> &Self::Target {
-        &self.q
+        self.q
     }
 }
 
@@ -455,8 +455,7 @@ impl Database for SQLiteDB {
                     })
                     .collect::<Result<Vec<_>, DbError>>()?,
                 res.first()
-                    .map(|x| x.previous_message_id)
-                    .flatten()
+                    .and_then(|x| x.previous_message_id)
                     .map(MessageId),
             )),
             Err(e) => Err(e.into()),
@@ -573,7 +572,7 @@ impl Database for SQLiteDB {
             CryptData::encrypt(msg.contents().to_owned(), &self.suite, &mut self.rng)?;
         let salt = salt.to_vec();
 
-        let timestamp = msg.timestamp().clone();
+        let timestamp = *msg.timestamp();
 
         let msg_id = sqlx::query!(
             r#"
@@ -659,10 +658,7 @@ impl Database for SQLiteDB {
         )
         .fetch_one(&self.pool)
         .await?;
-        match record.is_there == 1 {
-            true => Ok(()),
-            false => Err(DbError::PermissionDenied),
-        }
+        if record.is_there == 1 { Ok(()) } else { Err(DbError::PermissionDenied) }
     }
 
     async fn get_conversation_from_message(
