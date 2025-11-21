@@ -1,3 +1,7 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::panicking_unwrap)]
+#![deny(clippy::unwrap_used)]
+
 use crate::database::{
     Database,
     crypto::CryptoKey,

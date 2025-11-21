@@ -454,7 +454,10 @@ impl Database for SQLiteDB {
                         Ok((UserId(record.sender_id), Message::new(contents, timestamp)))
                     })
                     .collect::<Result<Vec<_>, DbError>>()?,
-                res.first().unwrap().previous_message_id.map(MessageId),
+                res.first()
+                    .map(|x| x.previous_message_id)
+                    .flatten()
+                    .map(MessageId),
             )),
             Err(e) => Err(e.into()),
         }
