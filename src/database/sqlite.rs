@@ -173,7 +173,7 @@ impl Message {
         }
     }
 
-    pub fn message(&self) -> &str {
+    pub fn contents(&self) -> &str {
         &self.contents
     }
 
@@ -567,7 +567,7 @@ impl Database for SQLiteDB {
         .last_message_id;
 
         let (contents, salt) =
-            CryptData::encrypt(msg.message().to_owned(), &self.suite, &mut self.rng)?;
+            CryptData::encrypt(msg.contents().to_owned(), &self.suite, &mut self.rng)?;
         let salt = salt.to_vec();
 
         let timestamp = msg.timestamp().clone();
