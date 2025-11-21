@@ -61,6 +61,7 @@ impl From<chacha20poly1305::Error> for CryptError {
 }
 
 impl<T: Serialize + DeserializeOwned> CryptData<T> {
+    #[allow(clippy::needless_pass_by_value)]
     pub fn encrypt<RNG: rand::CryptoRng>(
         data: T,
         key: &CryptoKey,

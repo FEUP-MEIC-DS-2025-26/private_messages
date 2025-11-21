@@ -1,6 +1,9 @@
 use crate::{
     BackendInfoUpdater,
-    database::{Database, sqlite::{SQLiteDB, ConversationId, Message, MessageId, ProductId, Product, UserId}},
+    database::{
+        Database,
+        sqlite::{ConversationId, Message, MessageId, Product, ProductId, SQLiteDB, UserId},
+    },
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -103,6 +106,7 @@ impl<T, E> EasyLog<E> for Result<T, E> {
     }
 }
 
+#[allow(dead_code)]
 trait LogShort<E>: EasyLog<E>
 where
     E: std::fmt::Display,

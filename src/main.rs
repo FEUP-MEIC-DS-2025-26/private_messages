@@ -161,6 +161,8 @@ pub struct BackendInfoUpdater(tokio::sync::mpsc::Sender<F2BRequest>);
 type CallBack = tokio::sync::oneshot::Receiver<F2BResponse>;
 
 impl BackendInfoUpdater {
+    /// # Errors
+    /// This function may fail if the Database state is buggy or when the database has a bug
     pub async fn new_message(
         &self,
         database: &SQLiteDB,

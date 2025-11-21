@@ -273,31 +273,31 @@ impl ResponseError for DbError {
     fn status_code(&self) -> actix_web::http::StatusCode {
         match &self {
             DbError::Db(error) => match error {
-                sqlx::Error::Configuration(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::InvalidArgument(_) => StatusCode::BAD_REQUEST,
-                sqlx::Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::Tls(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::Protocol(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::RowNotFound => StatusCode::NO_CONTENT,
-                sqlx::Error::TypeNotFound { type_name: _ } => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::ColumnIndexOutOfBounds { index: _, len: _ } => {
-                    StatusCode::INTERNAL_SERVER_ERROR
+                sqlx::Error::InvalidSavePointStatement | sqlx::Error::InvalidArgument(_) => {
+                    StatusCode::BAD_REQUEST
                 }
-                sqlx::Error::ColumnNotFound(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::ColumnDecode {
+                sqlx::Error::ColumnIndexOutOfBounds { index: _, len: _ }
+                | sqlx::Error::ColumnDecode {
                     index: _,
                     source: _,
-                } => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::Encode(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::Decode(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::AnyDriverError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::PoolTimedOut => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::PoolClosed => StatusCode::INTERNAL_SERVER_ERROR,
+                }
+                | sqlx::Error::Encode(_)
+                | sqlx::Error::Decode(_)
+                | sqlx::Error::AnyDriverError(_)
+                | sqlx::Error::PoolTimedOut
+                | sqlx::Error::PoolClosed
+                | sqlx::Error::Migrate(_)
+                | sqlx::Error::BeginFailed
+                | sqlx::Error::ColumnNotFound(_)
+                | sqlx::Error::TypeNotFound { type_name: _ }
+                | sqlx::Error::Configuration(_)
+                | sqlx::Error::Database(_)
+                | sqlx::Error::Io(_)
+                | sqlx::Error::Tls(_)
+                | sqlx::Error::Protocol(_) => StatusCode::INTERNAL_SERVER_ERROR,
+
                 sqlx::Error::WorkerCrashed => StatusCode::TOO_MANY_REQUESTS,
-                sqlx::Error::Migrate(_) => StatusCode::INTERNAL_SERVER_ERROR,
-                sqlx::Error::InvalidSavePointStatement => StatusCode::BAD_REQUEST,
-                sqlx::Error::BeginFailed => StatusCode::INTERNAL_SERVER_ERROR,
+                sqlx::Error::RowNotFound => StatusCode::NO_CONTENT,
                 _ => StatusCode::IM_A_TEAPOT,
             },
             DbError::PermissionDenied => StatusCode::FORBIDDEN,
@@ -462,7 +462,7 @@ impl Database for SQLiteDB {
         }
     }
 
-    async fn get_querier<'a>(&'a self) -> Result<Self::Querier<'a>, Self::Error> {
+    async fn get_querier(&self) -> Result<Self::Querier<'_>, Self::Error> {
         Ok(Querier {
             q: &self.pool,
             key: &self.suite,
