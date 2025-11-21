@@ -142,6 +142,7 @@ pub enum F2BResponse {
 }
 
 enum F2BRequestType {
+    #[allow(dead_code)]
     NewMessage {
         sender_name: String,
         receiver_name: String,

@@ -54,12 +54,12 @@ impl SQLiteDB {
             Product {
                 name: "Orange".to_owned(),
                 seller_id: UserId(2),
-                jumpseller_id: 9347673,
+                jumpseller_id: 9_347_673,
             },
             Product {
                 name: "Orange Cake".to_owned(),
                 seller_id: UserId(1),
-                jumpseller_id: 9347699,
+                jumpseller_id: 9_347_699,
             },
         ]
     }
@@ -658,7 +658,11 @@ impl Database for SQLiteDB {
         )
         .fetch_one(&self.pool)
         .await?;
-        if record.is_there == 1 { Ok(()) } else { Err(DbError::PermissionDenied) }
+        if record.is_there == 1 {
+            Ok(())
+        } else {
+            Err(DbError::PermissionDenied)
+        }
     }
 
     async fn get_conversation_from_message(
