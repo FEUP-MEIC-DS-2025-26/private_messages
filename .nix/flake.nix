@@ -64,6 +64,7 @@
               cargo-watch
               rust-analyzer
               watchexec
+              protobuf
 
               # NodeJS (NextJS)
               node2nix
