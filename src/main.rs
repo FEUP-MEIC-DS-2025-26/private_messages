@@ -1,21 +1,23 @@
+#![warn(clippy::pedantic)]
+#![warn(clippy::perf)]
+#![deny(clippy::correctness)]
+#![deny(clippy::panicking_unwrap)]
+#![deny(clippy::unwrap_used)]
+
 use crate::database::{
     Database,
     crypto::CryptoKey,
     sqlite::{ConversationId, DbError, MessageId, SQLiteDB},
 };
-use actix_files::Files;
 use actix_identity::IdentityMiddleware;
 use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
 use actix_web::{App, HttpServer, middleware, web};
 use anyhow::anyhow;
 use clap::Parser;
 use cookie::{Key, time::Duration};
-use gcloud_pubsub::client::{Client, ClientConfig};
 use log::info;
 use std::{fmt::Debug, path::PathBuf};
 use tokio::sync::RwLock;
-
-use tokio::time::Duration as TDuration;
 
 mod database;
 mod rest;
@@ -120,10 +122,10 @@ async fn run_backend_code(
     while let Some(F2BRequest { msg, callback }) = receiver.recv().await {
         match msg {
             F2BRequestType::NewMessage {
-                sender_name,
-                receiver_name,
-                product_info,
-                contents,
+                sender_name: _,
+                receiver_name: _,
+                product_info: _,
+                contents: _,
             } => {
                 log::error!("BACKEND IS UNIMPLEMENTED.");
                 _ = callback.send(F2BResponse::Ok);
@@ -140,6 +142,7 @@ pub enum F2BResponse {
 }
 
 enum F2BRequestType {
+    #[allow(dead_code)]
     NewMessage {
         sender_name: String,
         receiver_name: String,
@@ -158,6 +161,8 @@ pub struct BackendInfoUpdater(tokio::sync::mpsc::Sender<F2BRequest>);
 type CallBack = tokio::sync::oneshot::Receiver<F2BResponse>;
 
 impl BackendInfoUpdater {
+    /// # Errors
+    /// This function may fail if the Database state is buggy or when the database has a bug
     pub async fn new_message(
         &self,
         database: &SQLiteDB,
@@ -176,7 +181,7 @@ impl BackendInfoUpdater {
         let product = database.get_product(&product_id).await?;
         let product_info = product.product_info();
         let mut message_sum = [char::default(); 32];
-        let fst_32 = message.0.chars().take(32).collect::<Vec<_>>();
+        let fst_32 = message.contents().chars().take(32).collect::<Vec<_>>();
         message_sum[..fst_32.len()].copy_from_slice(&fst_32);
 
         let msg_type = F2BRequestType::NewMessage {
