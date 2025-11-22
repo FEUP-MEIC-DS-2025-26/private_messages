@@ -8,8 +8,7 @@
 .sqlite3*
 
 # Terraform
-/.terraform
-terraform.tfstate*
+/infra/.terraform
 
 # IDEs
 /.vscode
