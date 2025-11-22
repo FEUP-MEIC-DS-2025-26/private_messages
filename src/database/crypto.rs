@@ -4,7 +4,7 @@ use actix_web::{ResponseError, http::StatusCode};
 use argon2::Argon2;
 use chacha20poly1305::{ChaCha20Poly1305, ChaChaPoly1305, KeyInit, aead::Aead};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
-use sqlx::{Decode, Encode, Sqlite};
+use sqlx::{Decode, Encode};
 
 pub struct CryptoKey(ChaCha20Poly1305);
 
@@ -61,6 +61,7 @@ impl From<chacha20poly1305::Error> for CryptError {
 }
 
 impl<T: Serialize + DeserializeOwned> CryptData<T> {
+    #[allow(clippy::needless_pass_by_value)]
     pub fn encrypt<RNG: rand::CryptoRng>(
         data: T,
         key: &CryptoKey,

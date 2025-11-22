@@ -1,0 +1,43 @@
+name: Check for errors
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  check-frontend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build to check for errors
+        run: npm run build
+
+  check-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@
+      
+      - name: Install dependencies
+        run: sudo apt update -y && sudo apt upgrade -y && sudo apt install protobuf-compiler
+      
+      - name: Check if any best practice was violated
+        run: cargo clippy
+     
+      - name: Run tests
+        run: cargo test --verbose
