@@ -794,6 +794,8 @@ mod test {
     use crate::database::crypto::CryptoKey;
     use crate::database::sqlite::*;
 
+    type ResultInfoNeededDecrypt = Result<(CryptData<String>, [u8; 12], DateTime<Utc>), DbError>;
+
     #[tokio::test]
     async fn test_sqlite() -> anyhow::Result<()> {
         let alice = UserProfile {
@@ -848,7 +850,6 @@ mod test {
             )
             .fetch_one(querier.q)
             .await?;
-            let msg_count: i64 = msg_count.into();
             assert_eq!(msg_count, 1);
             // Make sure that the only message is the 'Hello Bob!' one.
             let msg_id = sqlx::query!(
@@ -865,7 +866,7 @@ mod test {
             // Retrieve all messages between Alice and Bob
             let messages = sqlx::query!(
                 r#"
-                SELECT content as "content!", salt as "salt!"
+                SELECT content as "content!", salt as "salt!", timestamp as "timestamp!"
                 FROM message
                 WHERE conversation_id = ?;
             "#,
@@ -875,20 +876,21 @@ mod test {
             .await?;
             messages
                 .into_iter()
-                .map(|m| -> Result<(CryptData<Message>, [u8; 12]), DbError> {
+                .map(|m| -> ResultInfoNeededDecrypt {
                     Ok((
                         CryptData::from(m.content),
                         m.salt.try_into().map_err(|_| DbError::SaltWrongSize)?,
+                        m.timestamp.and_utc(),
                     ))
                 })
                 .map(|m| -> Result<Message, DbError> {
-                    let (m, s) = m?;
-                    Ok(m.decrypt(&querier.key, &s)?)
+                    let (c, s, t) = m?;
+                    Ok(Message::new(c.decrypt(querier.key, &s)?, t))
                 })
                 .collect()
         };
 
-        assert_eq!(alice_bob_messages?, vec![hello]);
+        assert_eq!(alice_bob_messages?, vec![hello],);
 
         Ok(())
     }
@@ -940,6 +942,8 @@ mod test {
         let hello = Message::from("Hello Alice!");
         let second_hello_id = db.post_msg(hello, &bob_id, &convo_id).await?;
 
+        // Allow unwrap because this is a test.
+        #[allow(clippy::unwrap_used)]
         let last_msg = db.get_latest_message(&convo_id).await?.unwrap();
         assert_eq!(last_msg, second_hello_id);
 
