@@ -396,8 +396,9 @@ async fn post_msg(
         .await
         .w()?;
 
+    // Don't divulge for now.
     let callback = utils
-        .new_message(&*data.read().await, &res, &convo_id)
+        .new_message(&*data.read().await, &res, &convo_id, false)
         .await?;
 
     match callback.await.map_err(ErrorInternalServerError)? {

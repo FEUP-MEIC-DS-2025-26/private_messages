@@ -2,8 +2,8 @@ syntax = "proto3";
 package priv_msgs.v1;
 
 message NewMessage {
-  /// UUID for this request
-  string uuid = 1;
+  /// UID for this msg
+  int64 uid = 1;
    
   /// Username of the sender
   string sender_name = 2;
@@ -18,14 +18,11 @@ message NewMessage {
 
   /// Small preview (if necessary) 
   optional string preview = 6;
-
-  /// Encrypted contents of the message
-  bytes encrypted_content = 7;
 }
 
 message NewConversation {
-  /// UUID for this request
-  string uuid = 1;
+  /// UID for this broadcast
+  int64 uid = 1;
 
   /// Username of the sender
   string seller_name = 2;

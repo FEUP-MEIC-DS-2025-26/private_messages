@@ -16,7 +16,10 @@ use actix_web::{App, HttpServer, middleware, web};
 use anyhow::anyhow;
 use clap::Parser;
 use cookie::{Key, time::Duration};
+use gcloud_googleapis::pubsub::v1::PubsubMessage;
+use gcloud_pubsub::client::{Client, ClientConfig};
 use log::info;
+use prost::Message;
 use std::{fmt::Debug, path::PathBuf};
 use tokio::sync::RwLock;
 
@@ -116,21 +119,87 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
     Ok(())
 }
 
+async fn handle_pubsub_failure_state(mut receiver: tokio::sync::mpsc::Receiver<F2BRequest>) -> ! {
+    loop {
+        let lost_req = receiver.recv().await.map(|x| {
+            _ = x.callback.send(F2BResponse::Ok);
+            x.msg
+        });
+        log::error!("Lost request {lost_req:?} because GCloud feature is disabled.");
+        if lost_req.is_none() {
+            std::process::exit(0);
+        }
+    }
+}
+
 async fn run_backend_code(
     _cli: Cli,
     mut receiver: tokio::sync::mpsc::Receiver<F2BRequest>,
 ) -> anyhow::Result<()> {
-    // let gcloud_ep = Client::new(ClientConfig::default()).await?;
+    let debug_env = std::env::var("PUBSUB_EMULATOR_HOST");
+
+    let config = if debug_env.is_ok() {
+        ClientConfig::default()
+    } else {
+        match ClientConfig::default().with_auth().await {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!(
+                    "Failed to initialize gcloud config, disabling feature... (Reason: {e})"
+                );
+                handle_pubsub_failure_state(receiver).await
+            }
+        }
+    };
+
+    let gcloud_ep = match Client::new(config).await {
+        Ok(c) => c,
+        Err(e) => {
+            log::error!("Failed to initialize gcloud endpoint, disabling feature... (Reason: {e})");
+            handle_pubsub_failure_state(receiver).await
+        }
+    };
+    let private_messages_topic = gcloud_ep.topic("private_messages");
+
+    let pm_publisher = private_messages_topic.new_publisher(None);
+
     while let Some(F2BRequest { msg, callback }) = receiver.recv().await {
         match msg {
             F2BRequestType::NewMessage {
-                sender_name: _,
-                receiver_name: _,
-                product_info: _,
-                contents: _,
+                sender_name,
+                receiver_name,
+                product_info,
+                uid,
+                timestamp,
+                preview,
             } => {
-                log::error!("BACKEND IS UNIMPLEMENTED.");
-                _ = callback.send(F2BResponse::Ok);
+                let pubsub_msg = pubsub::priv_msgs_v1::NewMessage {
+                    uid,
+                    sender_name,
+                    receiver_name,
+                    product_info,
+                    timestamp,
+                    preview,
+                };
+
+                let message = PubsubMessage {
+                    data: pubsub_msg.encode_to_vec(),
+                    ..Default::default()
+                };
+
+                let waiter = pm_publisher.publish(message).await.get().await;
+
+                match waiter {
+                    Ok(s) => {
+                        log::info!("Success: '{s}'.");
+                        _ = callback.send(F2BResponse::Ok);
+                    }
+                    // TODO: Handle this error
+                    Err(e) => {
+                        log::error!("Failure: '{e}'.");
+                        _ = callback.send(F2BResponse::Unrecoverable(e.into()));
+                    }
+                }
             }
         }
     }
@@ -143,14 +212,17 @@ pub enum F2BResponse {
     Unrecoverable(anyhow::Error),
 }
 
+#[derive(Debug)]
 enum F2BRequestType {
     #[allow(dead_code)]
     NewMessage {
+        uid: i64,
         sender_name: String,
         receiver_name: String,
         /// jumpseller id
         product_info: i64,
-        contents: [char; 32],
+        timestamp: String,
+        preview: Option<String>,
     },
 }
 
@@ -170,6 +242,7 @@ impl BackendInfoUpdater {
         database: &SQLiteDB,
         message_id: &MessageId,
         convo_id: &ConversationId,
+        divulge: bool,
     ) -> Result<CallBack, DbError> {
         let (s, r) = tokio::sync::oneshot::channel();
         let (sender, message, _) = database.get_message(message_id).await?;
@@ -182,15 +255,17 @@ impl BackendInfoUpdater {
             .await?;
         let product = database.get_product(&product_id).await?;
         let product_info = product.product_info();
-        let mut message_sum = [char::default(); 32];
-        let fst_32 = message.contents().chars().take(32).collect::<Vec<_>>();
-        message_sum[..fst_32.len()].copy_from_slice(&fst_32);
+        let fst_32 = message.contents().chars().take(32).collect::<String>();
+
+        let message_sum = if divulge { Some(fst_32) } else { None };
 
         let msg_type = F2BRequestType::NewMessage {
             sender_name,
             receiver_name,
             product_info,
-            contents: message_sum,
+            preview: message_sum,
+            uid: message_id.0,
+            timestamp: message.timestamp().to_string(),
         };
 
         let msg = F2BRequest {
