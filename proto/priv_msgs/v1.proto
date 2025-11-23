@@ -10,10 +10,10 @@ message NewMessage {
   /// Username of the receiver
   string receiver_name = 3;
 
-  /// JumpSeller Id for the product
+  /// `JumpSeller` Id for the product
   int64 product_info = 4;
 
-  /// UTC TimeStamp when message was sent
+  /// UTC Timestamp when message was sent
   string timestamp = 5;
 
   /// Small preview (if necessary) 
@@ -32,6 +32,6 @@ message NewConversation {
   /// Username of the receiver
   string buyer_name = 3;
   
-  /// JumpSeller Id for the product
+  /// `JumpSeller` Id for the product
   int64 product_info = 4;
 }
