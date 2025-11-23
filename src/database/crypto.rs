@@ -154,7 +154,7 @@ mod tests {
         let salt = "test_salt";
         let key = CryptoKey::new(password, salt);
         assert!(key.is_ok());
-        let key = key.unwrap();
+        let Ok(key) = key else { unreachable!() };
         let data = b"Very secretive data!".to_vec();
         let (enc, salt) = CryptData::encrypt(data.clone(), &key, rng)?;
         assert_ne!(data.as_slice(), enc.as_slice());
