@@ -3,6 +3,7 @@
 #![deny(clippy::correctness)]
 #![deny(clippy::panicking_unwrap)]
 #![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
 
 use crate::database::{
     Database,

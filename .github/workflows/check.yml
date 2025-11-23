@@ -31,7 +31,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
       - name: Install dependencies
         run: sudo apt update -y && sudo apt upgrade -y && sudo apt install protobuf-compiler
