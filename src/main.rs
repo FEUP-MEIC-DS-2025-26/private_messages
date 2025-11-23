@@ -139,8 +139,10 @@ async fn run_backend_code(
     let debug_env = std::env::var("PUBSUB_EMULATOR_HOST");
 
     let config = if debug_env.is_ok() {
+        log::info!("Starting with Emulator...");
         ClientConfig::default()
     } else {
+        log::info!("Starting with GCloud...");
         match ClientConfig::default().with_auth().await {
             Ok(c) => c,
             Err(e) => {
@@ -160,6 +162,15 @@ async fn run_backend_code(
         }
     };
     let private_messages_topic = gcloud_ep.topic("private_messages");
+    if !private_messages_topic.exists(None).await.unwrap_or(false) {
+        match private_messages_topic.create(None, None).await {
+            Ok(_) => {}
+            Err(e) => {
+                log::error!("Failed to create topic with {e}. Disabling pubsub...");
+                handle_pubsub_failure_state(receiver).await
+            }
+        }
+    }
 
     let pm_publisher = private_messages_topic.new_publisher(None);
 
