@@ -329,6 +329,7 @@ struct ConversationForm {
 
 #[post("/conversation")]
 async fn start_conversation(
+    utils: Data<BackendInfoUpdater>,
     data: Data<RwLock<SQLiteDB>>,
     user: Identity,
     form: Form<ConversationForm>,
@@ -356,9 +357,21 @@ async fn start_conversation(
         .await
         .start_conversation(&usr_id, &their_id, &form.product_id.into())
         .await
-        .map(Json)
         .w()?;
-    Ok(res)
+
+    // Don't divulge for now.
+    let callback = utils.new_convo(&*data.read().await, &res, &usr_id).await?;
+
+    match callback.await.map_err(ErrorInternalServerError)? {
+        crate::F2BResponse::Ok => {}
+        crate::F2BResponse::GoogleCloud(error) => {
+            log::error!("Failed to publish message: {error}.");
+        }
+        crate::F2BResponse::Unrecoverable(error) => {
+            log::error!("Failed to publish message: {error}.");
+        }
+    }
+    Ok(Json(res))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

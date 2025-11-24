@@ -8,7 +8,7 @@
 use crate::database::{
     Database,
     crypto::CryptoKey,
-    sqlite::{ConversationId, DbError, MessageId, SQLiteDB},
+    sqlite::{ConversationId, DbError, MessageId, SQLiteDB, UserId},
 };
 use actix_identity::IdentityMiddleware;
 use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
@@ -149,7 +149,7 @@ async fn run_backend_code(
                 log::error!(
                     "Failed to initialize gcloud config, disabling feature... (Reason: {e})"
                 );
-                handle_pubsub_failure_state(receiver).await
+                handle_pubsub_failure_state(receiver).await;
             }
         }
     };
@@ -164,10 +164,10 @@ async fn run_backend_code(
     let private_messages_topic = gcloud_ep.topic("private_messages");
     if !private_messages_topic.exists(None).await.unwrap_or(false) {
         match private_messages_topic.create(None, None).await {
-            Ok(_) => {}
+            Ok(()) => {}
             Err(e) => {
                 log::error!("Failed to create topic with {e}. Disabling pubsub...");
-                handle_pubsub_failure_state(receiver).await
+                handle_pubsub_failure_state(receiver).await;
             }
         }
     }
@@ -175,7 +175,7 @@ async fn run_backend_code(
     let pm_publisher = private_messages_topic.new_publisher(None);
 
     while let Some(F2BRequest { msg, callback }) = receiver.recv().await {
-        match msg {
+        let pubsub_msg = match msg {
             F2BRequestType::NewMessage {
                 sender_name,
                 receiver_name,
@@ -193,24 +193,40 @@ async fn run_backend_code(
                     preview,
                 };
 
-                let message = PubsubMessage {
+                PubsubMessage {
                     data: pubsub_msg.encode_to_vec(),
                     ..Default::default()
-                };
-
-                let waiter = pm_publisher.publish(message).await.get().await;
-
-                match waiter {
-                    Ok(s) => {
-                        log::info!("Success: '{s}'.");
-                        _ = callback.send(F2BResponse::Ok);
-                    }
-                    // TODO: Handle this error
-                    Err(e) => {
-                        log::error!("Failure: '{e}'.");
-                        _ = callback.send(F2BResponse::Unrecoverable(e.into()));
-                    }
                 }
+            }
+            F2BRequestType::NewConvo {
+                uid,
+                seller,
+                buyer,
+                product_info,
+            } => {
+                let pubsub_msg = pubsub::priv_msgs_v1::NewConversation {
+                    uid,
+                    seller_name: seller,
+                    buyer_name: buyer,
+                    product_info,
+                };
+                PubsubMessage {
+                    data: pubsub_msg.encode_to_vec(),
+                    ..Default::default()
+                }
+            }
+        };
+        let waiter = pm_publisher.publish(pubsub_msg).await.get().await;
+
+        match waiter {
+            Ok(s) => {
+                log::info!("Success: '{s}'.");
+                _ = callback.send(F2BResponse::Ok);
+            }
+            // TODO: Handle this error
+            Err(e) => {
+                log::error!("Failure: '{e}'.");
+                _ = callback.send(F2BResponse::Unrecoverable(e.into()));
             }
         }
     }
@@ -234,6 +250,13 @@ enum F2BRequestType {
         product_info: i64,
         timestamp: String,
         preview: Option<String>,
+    },
+    NewConvo {
+        uid: i64,
+        seller: String,
+        buyer: String,
+        /// jumpseller id
+        product_info: i64,
     },
 }
 
@@ -284,6 +307,39 @@ impl BackendInfoUpdater {
             callback: s,
         };
 
+        _ = self.0.send(msg).await;
+
+        Ok(r)
+    }
+    /// # Errors
+    /// This function may fail if the Database state is buggy or when the database has a bug
+    pub async fn new_convo(
+        &self,
+        database: &SQLiteDB,
+        convo_id: &ConversationId,
+        buyer: &UserId,
+    ) -> Result<CallBack, DbError> {
+        let (s, r) = tokio::sync::oneshot::channel();
+        let prod_id = database
+            .get_product_id_from_conversation_id(convo_id)
+            .await?;
+        let prod = database.get_product(&prod_id).await?;
+        let product_info = prod.product_info();
+        let seller_id = database.get_peer(buyer, convo_id).await?;
+        let buyer = database.get_user_profile(buyer).await?.username();
+        let seller = database.get_user_profile(&seller_id).await?.username();
+
+        let msg_type = F2BRequestType::NewConvo {
+            uid: convo_id.0,
+            seller,
+            buyer,
+            product_info,
+        };
+
+        let msg = F2BRequest {
+            msg: msg_type,
+            callback: s,
+        };
         _ = self.0.send(msg).await;
 
         Ok(r)
