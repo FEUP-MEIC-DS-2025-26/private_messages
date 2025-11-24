@@ -84,6 +84,7 @@ export default function Chat({
 
   useEffect(() => {
     const intervalId = setInterval(async () => {
+    
       // msgId is only -1 when the data hasn't been fetched yet. No matter the result, msgId cannot be -1 afterwards
       if (messageId != -1) {
 
@@ -97,20 +98,22 @@ export default function Chat({
             const message = await fetcher(`${backendURL}/api/chat/message/${currentId}`); 
             currentId = message.previous_msg;
 
-            if (message.sender_username !== username) {
-              newMessages.push({
-                isFromUser: false,
-                content: message.content.msg.contents
-              });
-            }
-
+            // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
+            newMessages.push({
+              isFromUser: false,
+              content: message.content.msg.contents
+            });
           }
 
           if (newMessages.length > 0) {
+            /*
+             * The first message is the latest one, the second one is the second-to-latest and so on
+             * Reversing the array sorts the messages chronologically - no need for timestamps
+             */
+            newMessages.reverse();
             setMessageId(latestMessageId);
             setMessages([...messages, ...newMessages]);
           }
-
         }
       }
     }, 5000);
