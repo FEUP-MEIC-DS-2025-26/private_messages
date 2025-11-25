@@ -1,34 +1,45 @@
 syntax = "proto3";
 package priv_msgs.v1;
 
-message NewMessage {
-  /// UID for this msg
-  int64 uid = 1;
-   
-  /// Username of the sender
-  string sender_name = 2;
-  /// Username of the receiver
-  string receiver_name = 3;
-
-  /// `JumpSeller` Id for the product
-  int64 product_info = 4;
-
-  /// UTC Timestamp when message was sent
-  string timestamp = 5;
-
-  /// Small preview (if necessary) 
-  optional string preview = 6;
-}
-
-message NewConversation {
-  /// UID for this broadcast
-  int64 uid = 1;
-
-  /// Username of the sender
-  string seller_name = 2;
-  /// Username of the receiver
-  string buyer_name = 3;
+message PrivateMessageSchema {
+  oneof contents {
+    NewMessage new_message = 1;
+    NewConversation new_conversation = 2;
+  }
   
-  /// `JumpSeller` Id for the product
-  int64 product_info = 4;
+  /// User messages
+  message NewMessage {
+    /// UID for this msg
+    int64 uid = 1;
+   
+    /// Username of the sender
+    string sender_name = 2;
+    /// Username of the receiver
+    string receiver_name = 3;
+
+    /// `JumpSeller` Id for the product
+    int64 product_info = 4;
+
+    /// UTC Timestamp when message was sent
+    string timestamp = 5;
+
+    /// Small preview (if necessary) 
+    optional string preview = 6;
+  }
+
+  /// Conversations being created
+  message NewConversation {
+    /// UID for this broadcast
+    int64 uid = 1;
+
+    /// Username of the sender
+    string seller_name = 2;
+    /// Username of the receiver
+    string buyer_name = 3;
+  
+    /// `JumpSeller` Id for the product
+    int64 product_info = 4;
+  }  
 }
+
+

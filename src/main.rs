@@ -161,7 +161,7 @@ async fn run_backend_code(
             handle_pubsub_failure_state(receiver).await
         }
     };
-    let private_messages_topic = gcloud_ep.topic("private_messages");
+    let private_messages_topic = gcloud_ep.topic("projects/ds-2526-mips/topics/private_messages");
     if !private_messages_topic.exists(None).await.unwrap_or(false) {
         match private_messages_topic.create(None, None).await {
             Ok(()) => {}
@@ -175,6 +175,7 @@ async fn run_backend_code(
     let pm_publisher = private_messages_topic.new_publisher(None);
 
     while let Some(F2BRequest { msg, callback }) = receiver.recv().await {
+        use pubsub::priv_msgs_v1::{PrivateMessageSchema, private_message_schema};
         let pubsub_msg = match msg {
             F2BRequestType::NewMessage {
                 sender_name,
@@ -184,13 +185,17 @@ async fn run_backend_code(
                 timestamp,
                 preview,
             } => {
-                let pubsub_msg = pubsub::priv_msgs_v1::NewMessage {
+                let pubsub_msg = private_message_schema::NewMessage {
                     uid,
                     sender_name,
                     receiver_name,
                     product_info,
                     timestamp,
                     preview,
+                };
+
+                let pubsub_msg = PrivateMessageSchema {
+                    contents: Some(private_message_schema::Contents::NewMessage(pubsub_msg)),
                 };
 
                 PubsubMessage {
@@ -204,12 +209,19 @@ async fn run_backend_code(
                 buyer,
                 product_info,
             } => {
-                let pubsub_msg = pubsub::priv_msgs_v1::NewConversation {
+                let pubsub_msg = private_message_schema::NewConversation {
                     uid,
                     seller_name: seller,
                     buyer_name: buyer,
                     product_info,
                 };
+
+                let pubsub_msg = PrivateMessageSchema {
+                    contents: Some(private_message_schema::Contents::NewConversation(
+                        pubsub_msg,
+                    )),
+                };
+
                 PubsubMessage {
                     data: pubsub_msg.encode_to_vec(),
                     ..Default::default()

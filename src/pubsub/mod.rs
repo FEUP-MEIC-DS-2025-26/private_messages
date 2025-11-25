@@ -19,7 +19,7 @@ pub mod priv_msgs_v1 {
 
 #[cfg(test)]
 mod test {
-    use super::priv_msgs_v1::NewMessage;
+    use super::priv_msgs_v1::private_message_schema::NewMessage;
     #[test]
     fn is_included() {
         let msg = NewMessage::default();
