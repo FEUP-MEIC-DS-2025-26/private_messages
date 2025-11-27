@@ -64,6 +64,7 @@
               cargo-watch
               rust-analyzer
               watchexec
+              protobuf
 
               # NodeJS (NextJS)
               node2nix
@@ -84,6 +85,7 @@
               # Required by rust-analyzer
               RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
               CARGO = "${pkgs.rustToolchain}/bin/cargo";
+              LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [pkgs.openssl];
             };
           };
         }
