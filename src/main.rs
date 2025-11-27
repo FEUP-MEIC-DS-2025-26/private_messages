@@ -125,7 +125,7 @@ async fn handle_pubsub_failure_state(mut receiver: tokio::sync::mpsc::Receiver<F
             _ = x.callback.send(F2BResponse::Ok);
             x.msg
         });
-        log::error!("Lost request {lost_req:?} because GCloud feature is disabled.");
+        log::warn!("Lost request {lost_req:?} because GCloud feature is disabled.");
         if lost_req.is_none() {
             std::process::exit(0);
         }
