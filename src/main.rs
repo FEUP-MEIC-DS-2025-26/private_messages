@@ -12,13 +12,15 @@ use clap::Parser;
 use cookie::{Key, time::Duration};
 use gcloud_pubsub::client::{Client, ClientConfig};
 use log::info;
-use std::{fmt::Debug, path::PathBuf};
+use serde::{Deserialize, Serialize};
+use std::{ffi::OsString, fmt::Debug, path::PathBuf};
 use tokio::sync::RwLock;
 
 use tokio::time::Duration as TDuration;
 
 mod database;
 mod rest;
+mod jumpseller;
 
 #[derive(clap::Parser, Clone, Debug)]
 struct Cli {
@@ -37,6 +39,7 @@ impl Cli {
                 password: _,
                 salt: _,
                 db_url: _,
+                jumpseller_cred_file:_,
             } => "Production",
         };
         let port = self.port;
@@ -54,31 +57,49 @@ enum Commands {
         password: PathBuf,
         /// File containing the hash
         salt: PathBuf,
+        /// File containing json for the JumpSeller credentials.
+        #[arg(default_value = OsString::from("local/jumpseller_cred.json"))]
+        jumpseller_cred_file: PathBuf,
         /// Path to sqlite db
         #[arg(short, long, default_value_t = String::from("sqlite:.sqlite3"))]
         db_url: String,
     },
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JumpSellerCredentials {
+    pub(crate) login : String,
+    pub(crate) token: String,
+}
+
 async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Result<()> {
-    let db = match cli.command {
+    let (db, js_cred) = match cli.command {
         Commands::Kiosk => {
             let suite = CryptoKey::new("demonstration_password", "demonstration_salt")
                 .map_err(|e| anyhow!("Error: {e}"))?;
-            SQLiteDB::kiosk(suite).await?
+            (SQLiteDB::kiosk(suite).await?, None)
         }
         Commands::Run {
             password,
             salt,
             db_url,
+            jumpseller_cred_file
         } => {
             let p = std::fs::read_to_string(password)?;
             let s = std::fs::read_to_string(salt)?;
             let suite = CryptoKey::new(p.trim(), s.trim()).map_err(|e| anyhow!("Error: {e}"))?;
+            let js_f: Option<JumpSellerCredentials> = std::fs::read_to_string(jumpseller_cred_file).ok().and_then(|x| serde_json::from_str(&x).ok());
 
-            SQLiteDB::new(&db_url, suite).await?
+            (SQLiteDB::new(&db_url, suite).await?, js_f)
         }
     };
+
+    let js_client = match js_cred {
+        Some(s) => jumpseller::Client::from(s),
+        None => panic!("[FAIL] Jumpseller credential file not found or invalid."),
+    };
+
+    let jsc = web::Data::new(js_client);
 
     let wd = web::Data::new(RwLock::new(db));
 
@@ -90,6 +111,7 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
         App::new()
             .app_data(utils.clone())
             .app_data(wd.clone())
+            .app_data(jsc.clone())
             .service(rest::create_services())
             // .service(Files::new("/", "frontend/dist").index_file("index.html"))
             .wrap(IdentityMiddleware::default())
