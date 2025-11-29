@@ -349,12 +349,16 @@ async fn start_conversation(
         .await
         .w()?;
 
-    let product = jumpseller.get_product(form.jumpseller_id).await?;
-    data.write()
-        .await
-        .add_product(&Product::new(product.name, their_id, product.id))
-        .await
-        .w()?;
+    match jumpseller.get_product(form.jumpseller_id).await {
+        Ok(product) => {
+            data.write()
+                .await
+                .add_product(&Product::new(product.name, their_id, product.id))
+                .await
+                .w()?;
+        },
+        Err(e) => log::error!("start_conversation: JumpSeller: {e}"),
+    };
 
     data.read()
         .await
