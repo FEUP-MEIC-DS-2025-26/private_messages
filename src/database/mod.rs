@@ -43,7 +43,7 @@ pub trait Database {
     ) -> Result<(Vec<(Self::UserId, Self::Message)>, Option<Self::MessageId>), Self::Error>;
 
     #[allow(dead_code)]
-    async fn get_querier<'a>(&'a self) -> Result<Self::Querier<'a>, Self::Error>;
+    async fn get_querier(&self) -> Result<Self::Querier<'_>, Self::Error>;
 
     async fn get_product(&self, prod_id: &Self::ProductId) -> Result<Self::Product, Self::Error>;
 

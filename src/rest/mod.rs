@@ -1,6 +1,9 @@
 use crate::{
     BackendInfoUpdater,
-    database::{Database, sqlite::*},
+    database::{
+        Database,
+        sqlite::{ConversationId, Message, MessageId, Product, ProductId, SQLiteDB, UserId},
+    },
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -103,6 +106,7 @@ impl<T, E> EasyLog<E> for Result<T, E> {
     }
 }
 
+#[allow(dead_code)]
 trait LogShort<E>: EasyLog<E>
 where
     E: std::fmt::Display,
@@ -325,6 +329,7 @@ struct ConversationForm {
 
 #[post("/conversation")]
 async fn start_conversation(
+    utils: Data<BackendInfoUpdater>,
     data: Data<RwLock<SQLiteDB>>,
     user: Identity,
     form: Form<ConversationForm>,
@@ -352,9 +357,21 @@ async fn start_conversation(
         .await
         .start_conversation(&usr_id, &their_id, &form.product_id.into())
         .await
-        .map(Json)
         .w()?;
-    Ok(res)
+
+    // Don't divulge for now.
+    let callback = utils.new_convo(&*data.read().await, &res, &usr_id).await?;
+
+    match callback.await.map_err(ErrorInternalServerError)? {
+        crate::F2BResponse::Ok => {}
+        crate::F2BResponse::GoogleCloud(error) => {
+            log::error!("Failed to publish message: {error}.");
+        }
+        crate::F2BResponse::Unrecoverable(error) => {
+            log::error!("Failed to publish message: {error}.");
+        }
+    }
+    Ok(Json(res))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -379,12 +396,12 @@ async fn post_msg(
         .await
         .w()?;
     let convo_id = ConversationId(conversation.into_inner());
-    let msg = Message(form.into_inner().message);
     data.read()
         .await
         .belongs_to_conversation(&usr_id, &convo_id)
         .await
         .w()?;
+    let msg = Message::from(form.into_inner().message.as_str());
     let res = data
         .write()
         .await
@@ -392,11 +409,12 @@ async fn post_msg(
         .await
         .w()?;
 
+    // Don't divulge for now.
     let callback = utils
-        .new_message(&*data.read().await, &res, &convo_id)
+        .new_message(&*data.read().await, &res, &convo_id, false)
         .await?;
 
-    match callback.await.map_err(|e| ErrorInternalServerError(e))? {
+    match callback.await.map_err(ErrorInternalServerError)? {
         crate::F2BResponse::Ok => {}
         crate::F2BResponse::GoogleCloud(error) => {
             log::error!("Failed to publish message: {error}.");
@@ -470,7 +488,7 @@ async fn get_most_recent_messages(
         msgs.push(MessageContent {
             sender_username,
             msg,
-        })
+        });
     }
     Ok(Json(MessageFormat::many(msgs, prev_id)))
 }

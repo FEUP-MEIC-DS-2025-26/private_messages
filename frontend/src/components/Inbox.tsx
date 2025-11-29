@@ -18,7 +18,7 @@ const getChats = async (URL: string, username: string) => {
   // login
   await fetch(`${URL}/login?username=${username}`, {
     credentials: "include",
-  }).then(console.log);
+  });
 
   // fetch the conversations
   const conversationIDs: number[] = await fetch(`${URL}/conversation`, {
@@ -46,7 +46,7 @@ const getChats = async (URL: string, username: string) => {
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/latest`)
         .then((id: number) => fetcher(`${URL}/message/${id}`))
-        .then((message) => message.content.msg)
+        .then((message) => message.content.msg.contents)
     )
   );
 

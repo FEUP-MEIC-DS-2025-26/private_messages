@@ -11,3 +11,20 @@ services:
       context: ./frontend
     ports:
       - "3001:3001"
+  pubsub-emulator:
+    container_name: pubsub-emulator
+    image: dipjyotimetia/pubsub-emulator:latest
+    environment:
+      - PUBSUB_PROJECT=ds-2526-mips
+      - PUBSUB_TOPIC=notifications
+      - PUBSUB_SUBSCRIPTION=notifications-sub
+      - PUBSUB_PORT=8085
+      - DASHBOARD_PORT=3011
+    ports:
+      - "8085:8085" # Pub/Sub emulator
+      - "3011:3011" # Web dashboard
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3011/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
