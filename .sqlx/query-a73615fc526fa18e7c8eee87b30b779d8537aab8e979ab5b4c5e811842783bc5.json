@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                SELECT name as \"name!\", js_id as \"jumpseller_id!\", seller_id as \"seller_id!\" \n                FROM product\n                WHERE product.id = ?\n            ",
+  "query": "\n                SELECT name as \"name!\", id as \"jumpseller_id!\", seller_id as \"seller_id!\" \n                FROM product\n                WHERE product.id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -28,5 +28,5 @@
       false
     ]
   },
-  "hash": "954a1ab44965b59d4ab8f024858a89dfdd317be4cde8d3e6eca34174514a1b4e"
+  "hash": "a73615fc526fa18e7c8eee87b30b779d8537aab8e979ab5b4c5e811842783bc5"
 }

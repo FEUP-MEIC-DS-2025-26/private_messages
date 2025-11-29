@@ -2,10 +2,13 @@ use anyhow::anyhow;
 
 use crate::JumpSellerCredentials;
 
-pub struct Client {
-    login: String,
-    token: String,
-    client: reqwest::Client,
+pub enum Client {
+    Dummy,
+    Client {
+        login: String,
+        token: String,
+        client: reqwest::Client,
+    },
 }
 
 impl From<JumpSellerCredentials> for Client {
@@ -25,13 +28,16 @@ struct ProductWrapper {
     product: Product,
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum JumpSellerErr {
-    /// error occured before getting response (e.g. jumpseller unavailable)
+    #[error("Tried to call method on dummy client")]
+    IsDummy,
+
+    #[error("Failed to request from JumpSeller: {0}")]
     RequestErr(reqwest::Error),
 
-    /// error occured when processing response (e.g. product not found when calling get_product())
-    ResponseErr(anyhow::Error),
+    #[error("Response from JumpSeller: {0}")]
+    ResponseErr(anyhow::Error, Option<reqwest::StatusCode>),
 }
 
 // impl std::fmt::Display for JumpSellerErr {
@@ -44,7 +50,7 @@ pub enum JumpSellerErr {
 
 impl Client {
     pub fn new(login: String, token: String) -> Self {
-        Self {
+        Self::Client {
             login,
             token,
             client: reqwest::Client::new(),
@@ -52,6 +58,11 @@ impl Client {
     }
 
     pub async fn get_product(&self, id: u64) -> anyhow::Result<Product, JumpSellerErr> {
+        let client = match self {
+            Client::Dummy => return Err(JumpSellerErr::IsDummy),
+            Client::Client { login, token, client } => (),
+        }?;
+
         let response = self.client
             .get(format!("https://api.jumpseller.com/v1/products/{id}.json"))
             .basic_auth(&self.login, Some(&self.token))
@@ -61,20 +72,20 @@ impl Client {
             ?;
 
         let status = response.status();
-        let body = response.text().await.or_else(|err| Err(JumpSellerErr::ResponseErr(err.into())))?;
+        let body = response.text().await.or_else(|err| Err(JumpSellerErr::ResponseErr(err.into(), None)))?;
 
         if status != 200 {
-            let json: serde_json::Value = serde_json::from_str(&body).or_else(|err| Err(JumpSellerErr::ResponseErr(err.into())))?;
+            let json: serde_json::Value = serde_json::from_str(&body).or_else(|err| Err(JumpSellerErr::ResponseErr(err.into(), None)))?;
             let err_str = json
                 .get("message")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Request failed")
                 ;
-            return Err(JumpSellerErr::ResponseErr(anyhow!(err_str.to_owned())));
+            return Err(JumpSellerErr::ResponseErr(anyhow!(err_str.to_owned()), Some(status)));
         }
 
         let product = serde_json::from_str::<ProductWrapper>(&body)
-            .or_else(|err| Err(JumpSellerErr::ResponseErr(err.into())))?
+            .or_else(|err| Err(JumpSellerErr::ResponseErr(err.into(), None)))?
             .product;
 
         Ok(product)

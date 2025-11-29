@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                    INSERT INTO product(name, id, seller_id)\n                    VALUES(?,?,?)\n                    RETURNING id as \"id!\"\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "e76a341fe87089e608b49e71a5397b2ec5d466644606d505502c31eff1b5514d"
+}

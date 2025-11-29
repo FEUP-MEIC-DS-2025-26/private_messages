@@ -3,7 +3,7 @@ use crate::{
     database::{
         Database,
         sqlite::{ConversationId, Message, MessageId, Product, ProductId, SQLiteDB, UserId},
-    },
+    }, jumpseller,
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -324,13 +324,14 @@ async fn get_message(
 #[allow(dead_code)]
 struct ConversationForm {
     their_username: String,
-    product_id: i64,
+    jumpseller_id: i64,
 }
 
 #[post("/conversation")]
 async fn start_conversation(
     utils: Data<BackendInfoUpdater>,
     data: Data<RwLock<SQLiteDB>>,
+    jsc: Data<jumpseller::Client>,
     user: Identity,
     form: Form<ConversationForm>,
 ) -> Result<impl Responder> {
@@ -349,13 +350,13 @@ async fn start_conversation(
         .w()?;
     data.read()
         .await
-        .belongs_to_seller(&their_id, &form.product_id.into())
+        .belongs_to_seller(&their_id, &form.jumpseller_id.into())
         .await
         .w()?;
     let res = data
         .write()
         .await
-        .start_conversation(&usr_id, &their_id, &form.product_id.into())
+        .start_conversation(&usr_id, &their_id, &form.jumpseller_id.into())
         .await
         .w()?;
 

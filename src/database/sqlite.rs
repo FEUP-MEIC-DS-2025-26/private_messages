@@ -74,8 +74,8 @@ impl SQLiteDB {
 
     fn kiosk_conversations() -> Vec<(UserId, UserId, ProductId)> {
         vec![
-            (UserId(1), UserId(2), ProductId(1)),
-            (UserId(1), UserId(3), ProductId(2)),
+            (UserId(1), UserId(2), ProductId(9_347_673)),
+            (UserId(3), UserId(1), ProductId(9_347_699)),
         ]
     }
 
@@ -686,7 +686,7 @@ impl Database for SQLiteDB {
         Ok(sqlx::query_as!(
             Product,
             r#"
-                SELECT name as "name!", js_id as "jumpseller_id!", seller_id as "seller_id!" 
+                SELECT name as "name!", id as "jumpseller_id!", seller_id as "seller_id!" 
                 FROM product
                 WHERE product.id = ?
             "#,
@@ -723,7 +723,7 @@ impl Database for SQLiteDB {
             r#"
                SELECT id as "id!"
                FROM product
-               WHERE js_id = ? 
+               WHERE id = ? 
             "#,
             product.jumpseller_id,
         )
@@ -747,7 +747,7 @@ impl Database for SQLiteDB {
         } else {
             let r = sqlx::query!(
                 r#"
-                    INSERT INTO product(name, js_id, seller_id)
+                    INSERT INTO product(name, id, seller_id)
                     VALUES(?,?,?)
                     RETURNING id as "id!"
                 "#,
