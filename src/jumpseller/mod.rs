@@ -11,6 +11,12 @@ pub enum Client {
     },
 }
 
+pub struct ClientGuard<'a> {
+    login: &'a String,
+    token: &'a String,
+    client: &'a reqwest::Client,
+}
+
 impl From<JumpSellerCredentials> for Client {
     fn from(value: JumpSellerCredentials) -> Self {
         Self::new(value.login, value.token)
@@ -57,31 +63,49 @@ impl Client {
         }
     }
 
-    pub async fn get_product(&self, id: u64) -> anyhow::Result<Product, JumpSellerErr> {
-        let client = match self {
+    pub fn get_guard<'a>(&'a self) -> Result<ClientGuard<'a>, JumpSellerErr> {
+        match self {
             Client::Dummy => return Err(JumpSellerErr::IsDummy),
-            Client::Client { login, token, client } => (),
-        }?;
+            Client::Client {
+                login,
+                token,
+                client,
+            } => Ok(ClientGuard {
+                login,
+                token,
+                client,
+            }),
+        }
+    }
 
-        let response = self.client
+    pub async fn get_product(&self, id: u64) -> anyhow::Result<Product, JumpSellerErr> {
+        let this = self.get_guard()?;
+
+        let response = this
+            .client
             .get(format!("https://api.jumpseller.com/v1/products/{id}.json"))
-            .basic_auth(&self.login, Some(&self.token))
+            .basic_auth(&this.login, Some(&this.token))
             .send()
             .await
-            .or_else(|err| Err(JumpSellerErr::RequestErr(err)))
-            ?;
+            .or_else(|err| Err(JumpSellerErr::RequestErr(err)))?;
 
         let status = response.status();
-        let body = response.text().await.or_else(|err| Err(JumpSellerErr::ResponseErr(err.into(), None)))?;
+        let body = response
+            .text()
+            .await
+            .or_else(|err| Err(JumpSellerErr::ResponseErr(err.into(), None)))?;
 
         if status != 200 {
-            let json: serde_json::Value = serde_json::from_str(&body).or_else(|err| Err(JumpSellerErr::ResponseErr(err.into(), None)))?;
+            let json: serde_json::Value = serde_json::from_str(&body)
+                .or_else(|err| Err(JumpSellerErr::ResponseErr(err.into(), None)))?;
             let err_str = json
                 .get("message")
                 .and_then(|v| v.as_str())
-                .unwrap_or("Request failed")
-                ;
-            return Err(JumpSellerErr::ResponseErr(anyhow!(err_str.to_owned()), Some(status)));
+                .unwrap_or("Request failed");
+            return Err(JumpSellerErr::ResponseErr(
+                anyhow!(err_str.to_owned()),
+                Some(status),
+            ));
         }
 
         let product = serde_json::from_str::<ProductWrapper>(&body)
