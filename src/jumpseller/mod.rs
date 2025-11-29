@@ -63,6 +63,10 @@ impl Client {
         }
     }
 
+    pub const fn dummy() -> Self {
+        Self::Dummy
+    }
+
     pub fn get_guard<'a>(&'a self) -> Result<ClientGuard<'a>, JumpSellerErr> {
         match self {
             Client::Dummy => return Err(JumpSellerErr::IsDummy),

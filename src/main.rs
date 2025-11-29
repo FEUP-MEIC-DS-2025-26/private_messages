@@ -103,7 +103,7 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
 
     let js_client = match js_cred {
         Some(s) => jumpseller::Client::from(s),
-        None => panic!("[FAIL] Jumpseller credential file not found or invalid."),
+        None => jumpseller::Client::dummy(),
     };
 
     let jsc = web::Data::new(js_client);
