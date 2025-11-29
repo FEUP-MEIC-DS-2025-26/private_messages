@@ -1,5 +1,7 @@
+import { Badge } from "@mui/material";
+
 // components
-import ProfilePicture from './ProfilePicture';
+import ProfilePicture from "./ProfilePicture";
 
 export interface ChatPreviewProps {
   /** The unique identifier of the conversation. */
@@ -28,20 +30,22 @@ export default function ChatPreview({
   lastMessage,
   product,
 }: ChatPreviewProps) {
-  const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
-
   return (
     <div className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors">
-      <div className="relative">
+      <Badge
+        badgeContent={unreadMessages}
+        max={9}
+        color="primary"
+        overlap="circular"
+      >
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
-        {unreadMessages > 0 && (
-          <span className="inline-flex w-5 h-5 items-center justify-center text-xs bg-red-600 rounded-full absolute top-0 right-0">
-            {notificationText}
-          </span>
-        )}
-      </div>
+      </Badge>
       <div>
-        <strong>{name}</strong><span className="text-xs ml-2 italic before:content-['@']">{username}</span> | <span className="text-xs ml-2">{product}</span>
+        <strong>{name}</strong>
+        <span className="text-xs ml-2 italic before:content-['@']">
+          {username}
+        </span>{" "}
+        | <span className="text-xs ml-2">{product}</span>
         <p>{lastMessage}</p>
       </div>
     </div>
