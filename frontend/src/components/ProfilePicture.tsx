@@ -1,3 +1,5 @@
+import { Avatar } from "@mui/material";
+
 interface ProfilePictureProps {
   URL: string /** The URL of the profile picture. */;
   name: string /** The name of the profile picture's user. */;
@@ -13,12 +15,10 @@ export default function ProfilePicture({
   size,
 }: ProfilePictureProps) {
   return (
-    <img
-      className="border-solid rounded-full"
+    <Avatar
       src={URL}
       alt={`${name}'${name.endsWith("s") ? "" : "s"} profile picture`}
-      width={size}
-      height={size}
+      sx={{ width: size, height: size }}
     />
   );
 }
