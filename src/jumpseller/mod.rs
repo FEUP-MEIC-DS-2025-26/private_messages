@@ -1,3 +1,4 @@
+use actix_web::http::StatusCode as ActixStatusCode;
 use anyhow::anyhow;
 
 use crate::JumpSellerCredentials;
@@ -23,10 +24,24 @@ impl From<JumpSellerCredentials> for Client {
     }
 }
 
+impl actix_web::ResponseError for JumpSellerErr {
+    fn status_code(&self) -> ActixStatusCode {
+        match self {
+            JumpSellerErr::IsDummy => ActixStatusCode::INTERNAL_SERVER_ERROR,
+            JumpSellerErr::RequestErr(_) => ActixStatusCode::SERVICE_UNAVAILABLE,
+            JumpSellerErr::ResponseErr(_, status_code) => match status_code {
+                Some(code) => ActixStatusCode::from_u16(code.as_u16()).unwrap_or(ActixStatusCode::INTERNAL_SERVER_ERROR),
+                None => ActixStatusCode::INTERNAL_SERVER_ERROR,
+            },
+        }
+    }
+}
+
+
 #[derive(serde::Deserialize, Debug)]
 pub struct Product {
-    id: u64,
-    name: String,
+    pub id: i64,
+    pub name: String,
 }
 
 #[derive(serde::Deserialize)]
@@ -82,7 +97,7 @@ impl Client {
         }
     }
 
-    pub async fn get_product(&self, id: u64) -> anyhow::Result<Product, JumpSellerErr> {
+    pub async fn get_product(&self, id: i64) -> anyhow::Result<Product, JumpSellerErr> {
         let this = self.get_guard()?;
 
         let response = this

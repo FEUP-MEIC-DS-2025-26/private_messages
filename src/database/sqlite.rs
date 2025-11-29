@@ -200,9 +200,9 @@ pub struct ProductId(pub i64);
 
 #[derive(Debug, sqlx::Type, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Product {
-    name: String,
-    seller_id: UserId,
-    jumpseller_id: i64,
+    pub(crate) name: String,
+    pub(crate) seller_id: UserId,
+    pub(crate) jumpseller_id: i64,
 }
 
 impl Product {

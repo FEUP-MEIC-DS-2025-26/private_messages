@@ -331,7 +331,7 @@ struct ConversationForm {
 async fn start_conversation(
     utils: Data<BackendInfoUpdater>,
     data: Data<RwLock<SQLiteDB>>,
-    jsc: Data<jumpseller::Client>,
+    jumpseller: Data<jumpseller::Client>,
     user: Identity,
     form: Form<ConversationForm>,
 ) -> Result<impl Responder> {
@@ -348,6 +348,14 @@ async fn start_conversation(
         .get_user_id_from_username(&form.their_username)
         .await
         .w()?;
+
+    let product = jumpseller.get_product(form.jumpseller_id).await?;
+    data.write()
+        .await
+        .add_product(&Product::new(product.name, their_id, product.id))
+        .await
+        .w()?;
+
     data.read()
         .await
         .belongs_to_seller(&their_id, &form.jumpseller_id.into())
@@ -495,14 +503,41 @@ async fn get_most_recent_messages(
 }
 
 #[get("/product/{prod_id}")]
-async fn get_product(data: Data<RwLock<SQLiteDB>>, prod_id: Path<i64>) -> Result<impl Responder> {
-    let prod = data
+async fn get_product(data: Data<RwLock<SQLiteDB>>, jumpseller: Data<jumpseller::Client>, prod_id: Path<i64>) -> Result<impl Responder> {
+    let jumpseller_prod = jumpseller.get_product(*prod_id);
+
+    let mut sql_prod = data
         .read()
         .await
         .get_product(&ProductId(*prod_id))
         .await
         .w()?;
-    Ok(Json(prod))
+
+    match jumpseller_prod.await {
+        Ok(jumpseller_prod) => {
+            // keep local database updated
+            // TODO: this stinks
+            if jumpseller_prod.name != sql_prod.name {
+                sql_prod.name = jumpseller_prod.name;
+                data.write()
+                    .await
+                    .add_product(&sql_prod) // put_product
+                    .await
+                    .w()?;
+            }
+        },
+        Err(err) => {
+            if let jumpseller::JumpSellerErr::ResponseErr(_, Some(reqwest::StatusCode::NOT_FOUND)) = err {
+                // TODO: delete product from local database
+                log::warn!("TODO: jumpseller product not found, should be deleted from local database (if present)");
+                Err(err)?;
+            } else {
+                log::error!("get_product: JumpSeller: {err}");
+            }
+        }
+    };
+
+    Ok(Json(sql_prod))
 }
 
 #[get("/conversation/{convo_id}/product")]

@@ -79,12 +79,23 @@ pub struct JumpSellerCredentials {
     pub(crate) token: String,
 }
 
+fn get_jumpseller_credentials(path: PathBuf) -> Option<JumpSellerCredentials> {
+    std::fs::read_to_string(path)
+        .inspect_err(|e| log::error!("Failed to read jumpseller credentials: {e}"))
+        .ok()
+        .and_then(|x|
+            serde_json::from_str(&x)
+            .inspect_err(|e| log::error!("Failed to parse jumpseller credentials: {e}"))
+            .ok()
+        )
+}
+
 async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Result<()> {
     let (db, js_cred) = match cli.command {
         Commands::Kiosk => {
             let suite = CryptoKey::new("demonstration_password", "demonstration_salt")
                 .map_err(|e| anyhow!("Error: {e}"))?;
-            (SQLiteDB::kiosk(suite).await?, None)
+            (SQLiteDB::kiosk(suite).await?, get_jumpseller_credentials("local/jumpseller_cred.json".into()))
         }
         Commands::Run {
             password,
@@ -95,7 +106,7 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
             let p = std::fs::read_to_string(password)?;
             let s = std::fs::read_to_string(salt)?;
             let suite = CryptoKey::new(p.trim(), s.trim()).map_err(|e| anyhow!("Error: {e}"))?;
-            let js_f: Option<JumpSellerCredentials> = std::fs::read_to_string(jumpseller_cred_file).ok().and_then(|x| serde_json::from_str(&x).ok());
+            let js_f = get_jumpseller_credentials(jumpseller_cred_file);
 
             (SQLiteDB::new(&db_url, suite).await?, js_f)
         }
@@ -103,7 +114,10 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
 
     let js_client = match js_cred {
         Some(s) => jumpseller::Client::from(s),
-        None => jumpseller::Client::dummy(),
+        None => {
+            log::warn!("Running without jumpseller client");
+            jumpseller::Client::dummy()
+        },
     };
 
     let jsc = web::Data::new(js_client);
