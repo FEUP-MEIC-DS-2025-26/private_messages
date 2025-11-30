@@ -30,13 +30,13 @@ impl actix_web::ResponseError for JumpSellerErr {
             JumpSellerErr::IsDummy => ActixStatusCode::INTERNAL_SERVER_ERROR,
             JumpSellerErr::RequestErr(_) => ActixStatusCode::SERVICE_UNAVAILABLE,
             JumpSellerErr::ResponseErr(_, status_code) => match status_code {
-                Some(code) => ActixStatusCode::from_u16(code.as_u16()).unwrap_or(ActixStatusCode::INTERNAL_SERVER_ERROR),
+                Some(code) => ActixStatusCode::from_u16(code.as_u16())
+                    .unwrap_or(ActixStatusCode::INTERNAL_SERVER_ERROR),
                 None => ActixStatusCode::INTERNAL_SERVER_ERROR,
             },
         }
     }
 }
-
 
 #[derive(serde::Deserialize, Debug)]
 pub struct Product {
@@ -82,9 +82,9 @@ impl Client {
         Self::Dummy
     }
 
-    pub fn get_guard<'a>(&'a self) -> Result<ClientGuard<'a>, JumpSellerErr> {
+    pub fn get_guard(&self) -> Result<ClientGuard<'_>, JumpSellerErr> {
         match self {
-            Client::Dummy => return Err(JumpSellerErr::IsDummy),
+            Client::Dummy => Err(JumpSellerErr::IsDummy),
             Client::Client {
                 login,
                 token,
@@ -103,20 +103,20 @@ impl Client {
         let response = this
             .client
             .get(format!("https://api.jumpseller.com/v1/products/{id}.json"))
-            .basic_auth(&this.login, Some(&this.token))
+            .basic_auth(this.login, Some(&this.token))
             .send()
             .await
-            .or_else(|err| Err(JumpSellerErr::RequestErr(err)))?;
+            .map_err(JumpSellerErr::RequestErr)?;
 
         let status = response.status();
         let body = response
             .text()
             .await
-            .or_else(|err| Err(JumpSellerErr::ResponseErr(err.into(), None)))?;
+            .map_err(|err| JumpSellerErr::ResponseErr(err.into(), None))?;
 
         if status != 200 {
             let json: serde_json::Value = serde_json::from_str(&body)
-                .or_else(|err| Err(JumpSellerErr::ResponseErr(err.into(), None)))?;
+                .map_err(|err| JumpSellerErr::ResponseErr(err.into(), None))?;
             let err_str = json
                 .get("message")
                 .and_then(|v| v.as_str())
@@ -128,7 +128,7 @@ impl Client {
         }
 
         let product = serde_json::from_str::<ProductWrapper>(&body)
-            .or_else(|err| Err(JumpSellerErr::ResponseErr(err.into(), None)))?
+            .map_err(|err| JumpSellerErr::ResponseErr(err.into(), None))?
             .product;
 
         Ok(product)

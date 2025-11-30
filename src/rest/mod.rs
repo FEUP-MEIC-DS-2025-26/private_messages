@@ -3,7 +3,8 @@ use crate::{
     database::{
         Database,
         sqlite::{ConversationId, Message, MessageId, Product, ProductId, SQLiteDB, UserId},
-    }, jumpseller,
+    },
+    jumpseller,
 };
 use actix_identity::Identity;
 use actix_web::{
@@ -356,9 +357,9 @@ async fn start_conversation(
                 .add_product(&Product::new(product.name, their_id, product.id))
                 .await
                 .w()?;
-        },
+        }
         Err(e) => log::error!("start_conversation: JumpSeller: {e}"),
-    };
+    }
 
     data.read()
         .await
@@ -507,7 +508,11 @@ async fn get_most_recent_messages(
 }
 
 #[get("/product/{prod_id}")]
-async fn get_product(data: Data<RwLock<SQLiteDB>>, jumpseller: Data<jumpseller::Client>, prod_id: Path<i64>) -> Result<impl Responder> {
+async fn get_product(
+    data: Data<RwLock<SQLiteDB>>,
+    jumpseller: Data<jumpseller::Client>,
+    prod_id: Path<i64>,
+) -> Result<impl Responder> {
     let jumpseller_prod = jumpseller.get_product(*prod_id);
 
     let mut sql_prod = data
@@ -529,17 +534,21 @@ async fn get_product(data: Data<RwLock<SQLiteDB>>, jumpseller: Data<jumpseller::
                     .await
                     .w()?;
             }
-        },
+        }
         Err(err) => {
-            if let jumpseller::JumpSellerErr::ResponseErr(_, Some(reqwest::StatusCode::NOT_FOUND)) = err {
+            if let jumpseller::JumpSellerErr::ResponseErr(_, Some(reqwest::StatusCode::NOT_FOUND)) =
+                err
+            {
                 // TODO: delete product from local database
-                log::warn!("TODO: jumpseller product not found, should be deleted from local database (if present)");
+                log::warn!(
+                    "TODO: jumpseller product not found, should be deleted from local database (if present)"
+                );
                 Err(err)?;
             } else {
                 log::error!("get_product: JumpSeller: {err}");
             }
         }
-    };
+    }
 
     Ok(Json(sql_prod))
 }

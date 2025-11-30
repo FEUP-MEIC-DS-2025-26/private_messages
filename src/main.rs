@@ -19,15 +19,15 @@ use cookie::{Key, time::Duration};
 use gcloud_googleapis::pubsub::v1::PubsubMessage;
 use gcloud_pubsub::client::{Client, ClientConfig};
 use log::info;
+use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::{ffi::OsString, fmt::Debug, path::PathBuf};
-use prost::Message;
 use tokio::sync::RwLock;
 
 mod database;
+mod jumpseller;
 mod pubsub;
 mod rest;
-mod jumpseller;
 
 #[derive(clap::Parser, Clone, Debug)]
 struct Cli {
@@ -46,7 +46,7 @@ impl Cli {
                 password: _,
                 salt: _,
                 db_url: _,
-                jumpseller_cred_file:_,
+                jumpseller_cred_file: _,
             } => "Production",
         };
         let port = self.port;
@@ -64,7 +64,7 @@ enum Commands {
         password: PathBuf,
         /// File containing the hash
         salt: PathBuf,
-        /// File containing json for the JumpSeller credentials.
+        /// File containing json for the `JumpSeller` credentials.
         #[arg(default_value = OsString::from("local/jumpseller_cred.json"))]
         jumpseller_cred_file: PathBuf,
         /// Path to sqlite db
@@ -75,7 +75,7 @@ enum Commands {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JumpSellerCredentials {
-    pub(crate) login : String,
+    pub(crate) login: String,
     pub(crate) token: String,
 }
 
@@ -83,11 +83,11 @@ fn get_jumpseller_credentials(path: PathBuf) -> Option<JumpSellerCredentials> {
     std::fs::read_to_string(path)
         .inspect_err(|e| log::error!("Failed to read jumpseller credentials: {e}"))
         .ok()
-        .and_then(|x|
+        .and_then(|x| {
             serde_json::from_str(&x)
-            .inspect_err(|e| log::error!("Failed to parse jumpseller credentials: {e}"))
-            .ok()
-        )
+                .inspect_err(|e| log::error!("Failed to parse jumpseller credentials: {e}"))
+                .ok()
+        })
 }
 
 async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Result<()> {
@@ -95,13 +95,16 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
         Commands::Kiosk => {
             let suite = CryptoKey::new("demonstration_password", "demonstration_salt")
                 .map_err(|e| anyhow!("Error: {e}"))?;
-            (SQLiteDB::kiosk(suite).await?, get_jumpseller_credentials("local/jumpseller_cred.json".into()))
+            (
+                SQLiteDB::kiosk(suite).await?,
+                get_jumpseller_credentials("local/jumpseller_cred.json".into()),
+            )
         }
         Commands::Run {
             password,
             salt,
             db_url,
-            jumpseller_cred_file
+            jumpseller_cred_file,
         } => {
             let p = std::fs::read_to_string(password)?;
             let s = std::fs::read_to_string(salt)?;
@@ -112,12 +115,11 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
         }
     };
 
-    let js_client = match js_cred {
-        Some(s) => jumpseller::Client::from(s),
-        None => {
-            log::warn!("Running without jumpseller client");
-            jumpseller::Client::dummy()
-        },
+    let js_client = if let Some(s) = js_cred {
+        jumpseller::Client::from(s)
+    } else {
+        log::warn!("Running without jumpseller client");
+        jumpseller::Client::dummy()
     };
 
     let jsc = web::Data::new(js_client);
