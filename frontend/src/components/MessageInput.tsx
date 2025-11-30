@@ -7,7 +7,13 @@ import { useSWRConfig } from "swr";
 // icons
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faSmile } from "@fortawesome/free-solid-svg-icons";
-import { Box, IconButton, InputAdornment, TextField } from "@mui/material";
+import {
+  Box,
+  IconButton,
+  InputAdornment,
+  Popover,
+  TextField,
+} from "@mui/material";
 
 interface MessageInputProps {
   /** The URL that points to the backend. */
@@ -21,7 +27,7 @@ interface MessageInputProps {
  */
 export default function MessageInput({ backendURL, id }: MessageInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [showEmojis, setShowEmojis] = useState(false);
+  //const [showEmojis, setShowEmojis] = useState(false);
 
   // to force SWR to refetch the messages
   const { mutate } = useSWRConfig();
@@ -30,8 +36,15 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
    * A function for sending messages.
    * @param {FormData} data - the form data containing the message
    */
-  const sendMessage = async (data: FormData) => {
-    const message = data.get("message") as string;
+  const sendMessage = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    // fetch the form component
+    const form = event.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
+
+    // fetch the message
+    const message = formData.get("message") as string;
 
     // if a message exists, send it
     if (message) {
@@ -45,6 +58,8 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
       // refetch the messages
       mutate(`/api/chat/conversation/${id}`);
     }
+
+    form.reset();
   };
 
   // a function for handling emoji clicks
@@ -61,10 +76,11 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
   };
 
   return (
-    <Box sx={{ position: "relative" }}>
+    <Box component="form" onSubmit={sendMessage}>
       {/* input field */}
       <TextField
         fullWidth
+        name="message"
         size="small"
         placeholder="Type your message here"
         slotProps={{
@@ -72,14 +88,11 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
             endAdornment: (
               <InputAdornment position="end">
                 {/** send button */}
-                <IconButton size="small">
+                <IconButton size="small" type="submit">
                   <FontAwesomeIcon icon={faPaperPlane} />
                 </IconButton>
                 {/** button to toggle emoji picker */}
-                <IconButton
-                  size="small"
-                  onClick={() => setShowEmojis(!showEmojis)}
-                >
+                <IconButton size="small">
                   <FontAwesomeIcon icon={faSmile} />
                 </IconButton>
               </InputAdornment>
@@ -87,6 +100,8 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
           },
         }}
       />
+
+      {/* emoji picker */}
     </Box>
   );
 }

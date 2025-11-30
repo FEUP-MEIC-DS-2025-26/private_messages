@@ -130,7 +130,7 @@ export default function Chat({
       sx={{
         display: "flex",
         flexDirection: "column",
-        height: "100vh",
+        height: "100%",
       }}
     >
       {/* Header */}
