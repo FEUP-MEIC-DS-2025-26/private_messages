@@ -7,7 +7,7 @@ import { Ref, useLayoutEffect, useRef, useState, useEffect } from "react";
 import ChatHeader from "./ChatHeader";
 import UserMessage, { UserMessageProps } from "./UserMessage";
 import MessageInput from "./MessageInput";
-import { Divider } from "@mui/material";
+import { Divider, List, ListItem } from "@mui/material";
 
 const fetcher = (URL: string) =>
   fetch(URL, { credentials: "include" }).then((res) => res.json());
@@ -132,16 +132,13 @@ export default function Chat({
 
       {/** Chat */}
       {messages ? (
-        <ul
-          className="grow overflow-scroll flex flex-col gap-3 px-3"
-          ref={messageListRef}
-        >
+        <List ref={messageListRef}>
           {messages.map((message: UserMessageProps, index: number) => (
-            <li key={`message-${index}`}>
+            <ListItem key={`message-${index}`}>
               <UserMessage {...message} />
-            </li>
+            </ListItem>
           ))}
-        </ul>
+        </List>
       ) : (
         <div>Loading...</div>
       )}
