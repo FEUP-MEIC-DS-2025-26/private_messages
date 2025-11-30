@@ -1,22 +1,22 @@
-import { useState } from "react";
+import { useState } from 'react';
 
 // components
-import Inbox from "./components/Inbox";
-import Chat from "./components/Chat";
+import Inbox from './components/Inbox';
+import Chat from './components/Chat';
 
 // hard-coded user (only for the prototype)
-const USERNAME = "john";
+const USERNAME = 'john';
 
 /**
  * The user's inbox.
  */
 export default function App() {
   const backendURL =
-    import.meta.env.PUBLIC_BACKEND_URL ?? "http://localhost:8080";
+    import.meta.env.PUBLIC_BACKEND_URL ?? 'http://localhost:8080';
   const [chatID, setChatID] = useState<number | null>(null);
 
   return (
-    <div style={{ height: "100vh" }}>
+    <div style={{ height: '100vh' }}>
       {chatID ? (
         <Chat
           backendURL={backendURL}

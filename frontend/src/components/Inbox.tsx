@@ -1,15 +1,15 @@
-import { Button, Divider, List, ListItem } from "@mui/material";
-import useSWR from "swr";
+import { Button, Divider, List, ListItem } from '@mui/material';
+import useSWR from 'swr';
 
 // components
-import ChatPreview, { ChatPreviewProps } from "./ChatPreview";
+import ChatPreview, { ChatPreviewProps } from './ChatPreview';
 
 /**
  * A function for fetching data from the backend.
  * @param {string} URL - the URL
  */
 const fetcher = (URL: string) =>
-  fetch(URL, { credentials: "include" }).then((res) => res.json());
+  fetch(URL, { credentials: 'include' }).then((res) => res.json());
 
 /**
  * A function for fetching the user's conversations from the server.
@@ -20,28 +20,28 @@ const fetcher = (URL: string) =>
 const getChats = async (URL: string, username: string) => {
   // login
   await fetch(`${URL}/login?username=${username}`, {
-    credentials: "include",
+    credentials: 'include',
   });
 
   // fetch the conversations
   const conversationIDs: number[] = await fetch(`${URL}/conversation`, {
-    credentials: "include",
+    credentials: 'include',
   }).then((res) => res.json());
 
   // fetch the usernames of the peers with whom we are conversing
   const usernames: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetch(`${URL}/conversation/${id}/peer`, { credentials: "include" }).then(
-        (res) => res.json()
-      )
-    )
+      fetch(`${URL}/conversation/${id}/peer`, { credentials: 'include' }).then(
+        (res) => res.json(),
+      ),
+    ),
   );
 
   // fetch the peers' display names
   const fullNames: string[] = await Promise.all(
     usernames.map((username: string) =>
-      fetcher(`${URL}/user/${username}`).then((user) => user.name)
-    )
+      fetcher(`${URL}/user/${username}`).then((user) => user.name),
+    ),
   );
 
   // fetch the last message from each conversation
@@ -49,16 +49,16 @@ const getChats = async (URL: string, username: string) => {
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/latest`)
         .then((id: number) => fetcher(`${URL}/message/${id}`))
-        .then((message) => message.content.msg.contents)
-    )
+        .then((message) => message.content.msg.contents),
+    ),
   );
 
   const products: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/product`)
         .then((productId: number) => fetcher(`${URL}/product/${productId}`))
-        .then((product) => product.name)
-    )
+        .then((product) => product.name),
+    ),
   );
 
   // create an array with the conversations
@@ -67,7 +67,7 @@ const getChats = async (URL: string, username: string) => {
     username: usernames[index],
     name: fullNames[index],
     lastMessage: lastMessages[index],
-    profilePictureURL: "https://thispersondoesnotexist.com/",
+    profilePictureURL: 'https://thispersondoesnotexist.com/',
     unreadMessages: Math.floor(Math.random() * 10),
     product: products[index],
   }));
@@ -91,7 +91,7 @@ interface InboxProps {
 export default function Inbox({ backendURL, username, goToChat }: InboxProps) {
   const { data: chats, isLoading } = useSWR(
     `${backendURL}/api/chat/conversation`,
-    () => getChats(`${backendURL}/api/chat`, username)
+    () => getChats(`${backendURL}/api/chat`, username),
   );
   // const chats = await getChats(`${backendURL}/api/chat`, username);
 

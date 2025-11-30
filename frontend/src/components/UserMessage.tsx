@@ -1,4 +1,4 @@
-import { Box } from "@mui/material";
+import { Box } from '@mui/material';
 
 export interface UserMessageProps {
   /** Indicates if the user sent the message. */
@@ -13,19 +13,19 @@ export interface UserMessageProps {
 export default function UserMessage({ isFromUser, content }: UserMessageProps) {
   const extraStyles = isFromUser
     ? {
-        backgroundColor: "primary.main",
+        backgroundColor: 'primary.main',
         borderBottomRightRadius: 2,
-        ml: "auto",
+        ml: 'auto',
       }
-    : { backgroundColor: "grey.400", borderBottomLeftRadius: 2 };
+    : { backgroundColor: 'grey.400', borderBottomLeftRadius: 2 };
 
   return (
     <Box
       sx={{
-        padding: "12px",
-        maxWidth: "75%",
+        padding: '12px',
+        maxWidth: '75%',
         borderRadius: 6,
-        color: "text.primary",
+        color: 'text.primary',
         ...extraStyles,
       }}
     >

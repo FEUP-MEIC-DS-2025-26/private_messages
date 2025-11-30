@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "rsbuild dev --open",
     "build": "rsbuild build",
-    "preview": "rsbuild preview"
+    "preview": "rsbuild preview",
+    "format": "npx prettier --write ."
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -25,6 +26,7 @@
     "@rsbuild/plugin-react": "^1.1.1",
     "@types/react": "^18.3.11",
     "@types/react-dom": "~18.3.1",
+    "prettier": "^3.7.3",
     "typescript": "^5.7.2"
   }
 }

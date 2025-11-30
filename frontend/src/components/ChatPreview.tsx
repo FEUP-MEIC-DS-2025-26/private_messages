@@ -1,7 +1,7 @@
-import { Badge, Box, Divider, ListItemButton, Typography } from "@mui/material";
+import { Badge, Box, Divider, ListItemButton, Typography } from '@mui/material';
 
 // components
-import ProfilePicture from "./ProfilePicture";
+import ProfilePicture from './ProfilePicture';
 
 export interface ChatPreviewProps {
   /** The unique identifier of the conversation. */
@@ -34,11 +34,11 @@ export default function ChatPreview({
   return (
     <ListItemButton
       sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: "20px",
+        display: 'flex',
+        alignItems: 'center',
+        gap: '20px',
         width: 1,
-        py: "16px",
+        py: '16px',
       }}
     >
       {/** profile picture with notification counter */}
@@ -52,7 +52,7 @@ export default function ChatPreview({
       </Badge>
 
       <div>
-        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           {/** display name */}
           <Typography component="strong" variant="body1" fontWeight="bold">
             {name}
@@ -64,7 +64,7 @@ export default function ChatPreview({
             display="inline"
             fontStyle="italic"
             sx={{
-              "&::before": {
+              '&::before': {
                 content: '"@"',
               },
             }}

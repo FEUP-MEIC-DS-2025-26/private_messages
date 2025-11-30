@@ -1,19 +1,19 @@
-import { Box, Divider, IconButton, Typography } from "@mui/material";
-import useSWR from "swr";
+import { Box, Divider, IconButton, Typography } from '@mui/material';
+import useSWR from 'swr';
 
 // icons
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 // components
-import ProfilePicture from "./ProfilePicture";
+import ProfilePicture from './ProfilePicture';
 
 /**
  * A function for fetching data from the backend.
  * @param {string} URL - the URL
  */
 const fetcher = (URL: string) =>
-  fetch(URL, { credentials: "include" }).then((res) => res.json());
+  fetch(URL, { credentials: 'include' }).then((res) => res.json());
 
 /**
  * Fetches information regarding the peer.
@@ -22,7 +22,7 @@ const fetcher = (URL: string) =>
 const getPeer = async (id: number, backendURL: string) => {
   // fetch the peer's username
   const username: string = await fetcher(
-    `${backendURL}/api/chat/conversation/${id}/peer`
+    `${backendURL}/api/chat/conversation/${id}/peer`,
   );
 
   // fetch the peer's information
@@ -37,7 +37,7 @@ const getPeer = async (id: number, backendURL: string) => {
 const getProduct = async (id: number, backendURL: string) => {
   return await fetcher(`${backendURL}/api/chat/conversation/${id}/product`)
     .then((productId: number) =>
-      fetcher(`${backendURL}/api/chat/product/${productId}`)
+      fetcher(`${backendURL}/api/chat/product/${productId}`),
     )
     .then((product) => product.name);
 };
@@ -61,22 +61,22 @@ export default function ChatHeader({
 }: ChatHeaderProps) {
   const { data: peer } = useSWR(
     `${backendURL}/api/chat/conversation/${id}/peer`,
-    () => getPeer(id, backendURL)
+    () => getPeer(id, backendURL),
   );
 
   const { data: product } = useSWR(
     `${backendURL}/api/chat/conversation/${id}/product`,
-    () => getProduct(id, backendURL)
+    () => getProduct(id, backendURL),
   );
 
   return (
     <Box
       sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: "16px",
-        px: "16px",
-        py: "16px",
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        px: '16px',
+        py: '16px',
       }}
     >
       {/** button to navigate to the inbox */}
@@ -110,7 +110,7 @@ export default function ChatHeader({
               variant="body2"
               fontStyle="italic"
               sx={{
-                "&::before": {
+                '&::before': {
                   content: '"@"',
                 },
               }}

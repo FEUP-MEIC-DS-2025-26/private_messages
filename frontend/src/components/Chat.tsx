@@ -1,15 +1,15 @@
-import { Box } from "@mui/material";
-import { Ref, useLayoutEffect, useRef, useState, useEffect } from "react";
-import useSWR from "swr";
+import { Box } from '@mui/material';
+import { Ref, useLayoutEffect, useRef, useState, useEffect } from 'react';
+import useSWR from 'swr';
 
 // components
-import ChatHeader from "./ChatHeader";
-import UserMessage, { UserMessageProps } from "./UserMessage";
-import MessageInput from "./MessageInput";
-import { Divider, List, ListItem } from "@mui/material";
+import ChatHeader from './ChatHeader';
+import UserMessage, { UserMessageProps } from './UserMessage';
+import MessageInput from './MessageInput';
+import { Divider, List, ListItem } from '@mui/material';
 
 const fetcher = (URL: string) =>
-  fetch(URL, { credentials: "include" }).then((res) => res.json());
+  fetch(URL, { credentials: 'include' }).then((res) => res.json());
 
 /**
  * Fetches the chat messages from the backend.
@@ -18,7 +18,7 @@ const fetcher = (URL: string) =>
  */
 const getMessages = async (URL: string, username: string) => {
   const messages: any[] = await fetcher(`${URL}/recent`).then(
-    ({ content }) => content
+    ({ content }) => content,
   );
 
   return messages.map((message) => ({
@@ -78,7 +78,7 @@ export default function Chat({
       setTimeout(() => {
         messageList.scrollTo({
           top: messageList.scrollHeight,
-          behavior: "smooth",
+          behavior: 'smooth',
         });
       }, 100);
     }
@@ -89,14 +89,14 @@ export default function Chat({
       // msgId is only -1 when the data hasn't been fetched yet. No matter the result, msgId cannot be -1 afterwards
       if (messageId != -1) {
         const latestMessageId = await fetcher(
-          `${backendURL}/api/chat/conversation/${id}/latest`
+          `${backendURL}/api/chat/conversation/${id}/latest`,
         );
         if (latestMessageId !== null && latestMessageId !== undefined) {
           const newMessages = [];
           let currentId = latestMessageId;
           while (messageId != currentId) {
             const message = await fetcher(
-              `${backendURL}/api/chat/message/${currentId}`
+              `${backendURL}/api/chat/message/${currentId}`,
             );
             currentId = message.previous_msg;
 
@@ -125,9 +125,9 @@ export default function Chat({
   return (
     <Box
       sx={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
       }}
     >
       {/* Header */}
@@ -138,13 +138,13 @@ export default function Chat({
       {messages ? (
         <List
           sx={{
-            display: "flex",
-            flexDirection: "column",
-            py: "16px",
-            maxHeight: "100%",
-            gap: "8px",
+            display: 'flex',
+            flexDirection: 'column',
+            py: '16px',
+            maxHeight: '100%',
+            gap: '8px',
             flexGrow: 1,
-            overflow: "scroll",
+            overflow: 'scroll',
           }}
         >
           {messages.map((message: UserMessageProps, index: number) => (

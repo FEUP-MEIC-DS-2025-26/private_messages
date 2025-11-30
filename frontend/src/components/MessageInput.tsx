@@ -1,17 +1,17 @@
-import { useRef, useState } from "react";
-import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
-import { useSWRConfig } from "swr";
+import { useRef, useState } from 'react';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import { useSWRConfig } from 'swr';
 
 // icons
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperPlane, faSmile } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPaperPlane, faSmile } from '@fortawesome/free-solid-svg-icons';
 import {
   Box,
   IconButton,
   InputAdornment,
   Popover,
   TextField,
-} from "@mui/material";
+} from '@mui/material';
 
 interface MessageInputProps {
   /** The URL that points to the backend. */
@@ -26,7 +26,7 @@ interface MessageInputProps {
 export default function MessageInput({ backendURL, id }: MessageInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLButtonElement | null>(
-    null
+    null,
   );
 
   // to force SWR to refetch the messages
@@ -44,15 +44,15 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
     const formData = new FormData(form);
 
     // fetch the message
-    const message = formData.get("message") as string;
+    const message = formData.get('message') as string;
 
     // if a message exists, send it
     if (message) {
       await fetch(`${backendURL}/api/chat/conversation/${id}/message`, {
-        method: "POST",
+        method: 'POST',
         body: new URLSearchParams({ message }),
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        credentials: "include",
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        credentials: 'include',
       });
 
       // refetch the messages
@@ -71,7 +71,7 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
       emojiData.emoji,
       input.selectionStart ?? 0,
       input.selectionEnd ?? 0,
-      "end"
+      'end',
     );
   };
 
@@ -112,12 +112,12 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
         anchorEl={emojiAnchor}
         onClose={() => setEmojiAnchor(null)}
         anchorOrigin={{
-          vertical: "top",
-          horizontal: "center",
+          vertical: 'top',
+          horizontal: 'center',
         }}
         transformOrigin={{
-          vertical: "bottom",
-          horizontal: "right",
+          vertical: 'bottom',
+          horizontal: 'right',
         }}
       >
         <EmojiPicker onEmojiClick={handleEmojiClick} />

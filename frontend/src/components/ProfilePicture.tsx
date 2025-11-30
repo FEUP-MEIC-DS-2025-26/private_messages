@@ -1,4 +1,4 @@
-import { Avatar } from "@mui/material";
+import { Avatar } from '@mui/material';
 
 interface ProfilePictureProps {
   URL: string /** The URL of the profile picture. */;
@@ -17,7 +17,7 @@ export default function ProfilePicture({
   return (
     <Avatar
       src={URL}
-      alt={`${name}'${name.endsWith("s") ? "" : "s"} profile picture`}
+      alt={`${name}'${name.endsWith('s') ? '' : 's'} profile picture`}
       sx={{ width: size, height: size }}
     />
   );
