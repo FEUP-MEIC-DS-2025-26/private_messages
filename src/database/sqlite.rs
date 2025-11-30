@@ -151,6 +151,7 @@ impl UserProfile {
         }
     }
 
+    #[allow(dead_code)]
     pub fn username(&self) -> String {
         self.username.clone()
     }

@@ -216,20 +216,20 @@ async fn run_backend_code(
         use pubsub::priv_msgs_v1::{PrivateMessageSchema, private_message_schema};
         let pubsub_msg = match msg {
             F2BRequestType::NewMessage {
-                sender_name,
-                receiver_name,
                 product_info,
                 uid,
                 timestamp,
                 preview,
+                sender_id,
+                receiver_id,
             } => {
                 let pubsub_msg = private_message_schema::NewMessage {
                     uid,
-                    sender_name,
-                    receiver_name,
                     product_info,
                     timestamp,
                     preview,
+                    sender_id,
+                    receiver_id,
                 };
 
                 let pubsub_msg = PrivateMessageSchema {
@@ -249,8 +249,8 @@ async fn run_backend_code(
             } => {
                 let pubsub_msg = private_message_schema::NewConversation {
                     uid,
-                    seller_name: seller,
-                    buyer_name: buyer,
+                    seller_id: seller,
+                    buyer_id: buyer,
                     product_info,
                 };
 
@@ -294,8 +294,8 @@ enum F2BRequestType {
     #[allow(dead_code)]
     NewMessage {
         uid: i64,
-        sender_name: String,
-        receiver_name: String,
+        sender_id: i64,
+        receiver_id: i64,
         /// jumpseller id
         product_info: i64,
         timestamp: String,
@@ -303,8 +303,8 @@ enum F2BRequestType {
     },
     NewConvo {
         uid: i64,
-        seller: String,
-        buyer: String,
+        seller: i64,
+        buyer: i64,
         /// jumpseller id
         product_info: i64,
     },
@@ -332,8 +332,6 @@ impl BackendInfoUpdater {
         let (sender, message, _) = database.get_message(message_id).await?;
         let receiver = database.get_peer(&sender, convo_id).await?;
 
-        let sender_name = database.get_user_profile(&sender).await?.username();
-        let receiver_name = database.get_user_profile(&receiver).await?.username();
         let product_id = database
             .get_product_id_from_conversation_id(convo_id)
             .await?;
@@ -344,8 +342,8 @@ impl BackendInfoUpdater {
         let message_sum = if divulge { Some(fst_32) } else { None };
 
         let msg_type = F2BRequestType::NewMessage {
-            sender_name,
-            receiver_name,
+            sender_id: sender.0,
+            receiver_id: receiver.0,
             product_info,
             preview: message_sum,
             uid: message_id.0,
@@ -375,9 +373,8 @@ impl BackendInfoUpdater {
             .await?;
         let prod = database.get_product(&prod_id).await?;
         let product_info = prod.product_info();
-        let seller_id = database.get_peer(buyer, convo_id).await?;
-        let buyer = database.get_user_profile(buyer).await?.username();
-        let seller = database.get_user_profile(&seller_id).await?.username();
+        let seller = database.get_peer(buyer, convo_id).await?.0;
+        let buyer = buyer.0;
 
         let msg_type = F2BRequestType::NewConvo {
             uid: convo_id.0,
