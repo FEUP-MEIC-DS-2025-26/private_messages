@@ -1,7 +1,7 @@
 "use client";
 
-import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { useRef, useState } from "react";
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { useSWRConfig } from "swr";
 
 // icons
@@ -27,7 +27,12 @@ interface MessageInputProps {
  */
 export default function MessageInput({ backendURL, id }: MessageInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  //const [showEmojis, setShowEmojis] = useState(false);
+  const [emojiAnchor, setEmojiAnchor] = useState<HTMLButtonElement | null>(
+    null
+  );
+
+  const showEmojis = Boolean(emojiAnchor);
+  const emojiPickerID = showEmojis ? "emoji-picker" : undefined;
 
   // to force SWR to refetch the messages
   const { mutate } = useSWRConfig();
@@ -79,6 +84,7 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
     <Box component="form" onSubmit={sendMessage}>
       {/* input field */}
       <TextField
+        inputRef={inputRef}
         fullWidth
         name="message"
         size="small"
@@ -92,7 +98,10 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
                   <FontAwesomeIcon icon={faPaperPlane} />
                 </IconButton>
                 {/** button to toggle emoji picker */}
-                <IconButton size="small">
+                <IconButton
+                  size="small"
+                  onClick={(e) => setEmojiAnchor(e.currentTarget)}
+                >
                   <FontAwesomeIcon icon={faSmile} />
                 </IconButton>
               </InputAdornment>
@@ -102,6 +111,18 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
       />
 
       {/* emoji picker */}
+      <Popover
+        id={emojiPickerID}
+        open={showEmojis}
+        anchorEl={emojiAnchor}
+        onClose={() => setEmojiAnchor(null)}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "left",
+        }}
+      >
+        <EmojiPicker onEmojiClick={handleEmojiClick} />
+      </Popover>
     </Box>
   );
 }
