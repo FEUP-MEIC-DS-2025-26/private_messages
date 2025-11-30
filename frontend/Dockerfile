@@ -18,5 +18,6 @@ ENV HOST=0.0.0.0
 
 EXPOSE 3001
 
-# TODO: Change to a production server
+ENV PUBLIC_BACKEND_URL="https://backend-private-messages-azzawq6caq-no.a.run.app"
+
 CMD ["pnpm", "preview"]
