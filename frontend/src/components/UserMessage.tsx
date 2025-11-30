@@ -14,8 +14,8 @@ export default function UserMessage({ isFromUser, content }: UserMessageProps) {
   const extraStyles = isFromUser
     ? {
         backgroundColor: "primary.main",
-        ml: "auto",
         borderBottomRightRadius: 2,
+        ml: "auto",
       }
     : { backgroundColor: "grey.500", borderBottomLeftRadius: 2 };
 
