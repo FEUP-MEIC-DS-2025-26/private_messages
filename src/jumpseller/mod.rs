@@ -1,7 +1,7 @@
 use actix_web::http::StatusCode as ActixStatusCode;
 use anyhow::anyhow;
 
-use crate::JumpSellerCredentials;
+use crate::{JumpSellerCredentials, database::sqlite::UserProfile};
 
 pub enum Client {
     Dummy,
@@ -39,14 +39,31 @@ impl actix_web::ResponseError for JumpSellerErr {
 }
 
 #[derive(serde::Deserialize, Debug)]
+pub struct UserRetrieval {
+    fullname: String,
+    email: String,
+}
+
+trait CustomerExtractor {}
+impl CustomerExtractor for UserRetrieval {}
+
+#[derive(serde::Deserialize, Debug)]
+struct CustomerWrapper<T: CustomerExtractor> {
+    customer: T,
+}
+
+#[derive(serde::Deserialize, Debug)]
 pub struct Product {
     pub id: i64,
     pub name: String,
 }
 
+trait ProductExtractor {}
+impl ProductExtractor for Product {}
+
 #[derive(serde::Deserialize)]
-struct ProductWrapper {
-    product: Product,
+struct ProductWrapper<T: ProductExtractor> {
+    product: T,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -82,7 +99,7 @@ impl Client {
         Self::Dummy
     }
 
-    pub fn get_guard(&self) -> Result<ClientGuard<'_>, JumpSellerErr> {
+    fn get_guard(&self) -> Result<ClientGuard<'_>, JumpSellerErr> {
         match self {
             Client::Dummy => Err(JumpSellerErr::IsDummy),
             Client::Client {
@@ -97,7 +114,7 @@ impl Client {
         }
     }
 
-    pub async fn get_product(&self, id: i64) -> anyhow::Result<Product, JumpSellerErr> {
+    pub async fn get_product(&self, id: i64) -> Result<Product, JumpSellerErr> {
         let this = self.get_guard()?;
 
         let response = this
@@ -127,10 +144,55 @@ impl Client {
             ));
         }
 
-        let product = serde_json::from_str::<ProductWrapper>(&body)
+        let product = serde_json::from_str::<ProductWrapper<Product>>(&body)
             .map_err(|err| JumpSellerErr::ResponseErr(err.into(), None))?
             .product;
 
         Ok(product)
+    }
+
+    pub async fn get_user(&self, user_id: i64) -> Result<UserProfile, JumpSellerErr> {
+        let this = self.get_guard()?;
+
+        let response = this
+            .client
+            .get(format!(
+                "https://api.jumpseller.com/v1/customers/{user_id}.json"
+            ))
+            .basic_auth(this.login, Some(&this.token))
+            .send()
+            .await
+            .map_err(JumpSellerErr::RequestErr)?;
+
+        let status = response.status();
+        let body = response
+            .text()
+            .await
+            .map_err(|e| JumpSellerErr::ResponseErr(e.into(), None))?;
+
+        if status != 200 {
+            let json: serde_json::Value = serde_json::from_str(&body)
+                .map_err(|err| JumpSellerErr::ResponseErr(err.into(), None))?;
+            let err_str = json
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Request failed");
+            return Err(JumpSellerErr::ResponseErr(
+                anyhow!(err_str.to_owned()),
+                Some(status),
+            ));
+        }
+        let user = serde_json::from_str::<CustomerWrapper<UserRetrieval>>(&body)
+            .map_err(|err| JumpSellerErr::ResponseErr(err.into(), None))?
+            .customer;
+
+        let username = user
+            .email
+            .split('@')
+            .next()
+            .unwrap_or("anonymous")
+            .to_string();
+
+        Ok(UserProfile::new(user_id, username, user.fullname))
     }
 }
