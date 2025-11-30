@@ -2,6 +2,7 @@ import { createModuleFederationConfig } from "@module-federation/rsbuild-plugin"
 
 export default createModuleFederationConfig({
   name: "mf_chat",
+  filename: 'remoteEntry.js',
   exposes: {
     "./Chat": "./src/components/Chat.tsx",
     "./Inbox": "./src/components/Inbox.tsx",
