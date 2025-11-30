@@ -81,6 +81,7 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
       <TextField
         inputRef={inputRef}
         fullWidth
+        required
         name="message"
         size="small"
         placeholder="Type your message here"

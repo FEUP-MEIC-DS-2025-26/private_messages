@@ -71,7 +71,6 @@ export default function ChatHeader({
 
   return (
     <Box
-      className="flex items-center gap-5 pl-4 pb-4 border-b"
       sx={{
         display: "flex",
         alignItems: "center",

@@ -1,4 +1,4 @@
-import { Badge, Divider, ListItemButton, Typography } from "@mui/material";
+import { Badge, Box, Divider, ListItemButton, Typography } from "@mui/material";
 
 // components
 import ProfilePicture from "./ProfilePicture";
@@ -52,25 +52,31 @@ export default function ChatPreview({
       </Badge>
 
       <div>
-        {/** display name */}
-        <Typography component="strong" variant="body1" fontWeight="bold">
-          {name}
-        </Typography>
-        {/** username */}
-        <Typography
-          component="span"
-          variant="body2"
-          display="inline"
-          ml={1}
-          fontStyle="italic"
-          sx={{
-            "&::before": {
-              content: '"@"',
-            },
-          }}
-        >
-          {username}
-        </Typography>
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          {/** display name */}
+          <Typography component="strong" variant="body1" fontWeight="bold">
+            {name}
+          </Typography>
+          {/** username */}
+          <Typography
+            component="span"
+            variant="body2"
+            display="inline"
+            fontStyle="italic"
+            sx={{
+              "&::before": {
+                content: '"@"',
+              },
+            }}
+          >
+            {username}
+          </Typography>
+          {/** product */}
+          <Divider orientation="vertical" flexItem aria-hidden />
+          <Typography component="span" variant="body2">
+            {product}
+          </Typography>
+        </Box>
         {/** last message */}
         <Typography variant="body2">{lastMessage}</Typography>
       </div>
