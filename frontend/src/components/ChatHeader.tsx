@@ -1,6 +1,4 @@
-"use client";
-
-import { Box, Button, Divider, IconButton, Typography } from "@mui/material";
+import { Box, Divider, IconButton, Typography } from "@mui/material";
 import useSWR from "swr";
 
 // icons
@@ -95,17 +93,19 @@ export default function ChatHeader({
             URL="https://thispersondoesnotexist.com/"
             size={56}
           />
-          <Box display="flex" alignItems="center" gap={1}>
-            {/* display name */}
-            <Typography variant="body1" component="strong" fontWeight="bold">
-              {peer.name}
-            </Typography>
-            <Divider orientation="vertical" flexItem />
+          <Box>
+            <Box display="flex" alignItems="center" gap={1}>
+              {/* display name */}
+              <Typography variant="body1" component="strong" fontWeight="bold">
+                {peer.name}
+              </Typography>
+              <Divider orientation="vertical" flexItem />
 
-            {/* product */}
-            <Typography variant="body1" component="span">
-              {product}
-            </Typography>
+              {/* product */}
+              <Typography variant="body1" component="span">
+                {product}
+              </Typography>
+            </Box>
             {/* username */}
             <Typography
               variant="body2"

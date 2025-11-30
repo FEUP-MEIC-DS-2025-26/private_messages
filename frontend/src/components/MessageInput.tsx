@@ -1,5 +1,3 @@
-"use client";
-
 import { useRef, useState } from "react";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import { useSWRConfig } from "swr";

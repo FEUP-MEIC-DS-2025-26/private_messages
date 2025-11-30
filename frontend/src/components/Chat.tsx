@@ -1,8 +1,6 @@
-"use client";
-
 import { Box } from "@mui/material";
-import useSWR from "swr";
 import { Ref, useLayoutEffect, useRef, useState, useEffect } from "react";
+import useSWR from "swr";
 
 // components
 import ChatHeader from "./ChatHeader";
@@ -139,9 +137,19 @@ export default function Chat({
 
       {/* Chat */}
       {messages ? (
-        <List sx={{ flexGrow: 1, overflowY: "scroll" }}>
+        <List
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            py: "16px",
+            maxHeight: "100%",
+            gap: "8px",
+            flexGrow: 1,
+            overflow: "scroll",
+          }}
+        >
           {messages.map((message: UserMessageProps, index: number) => (
-            <ListItem key={`message-${index}`}>
+            <ListItem key={`message-${index}`} sx={{ py: 0 }}>
               <UserMessage {...message} />
             </ListItem>
           ))}
