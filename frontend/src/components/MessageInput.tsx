@@ -8,38 +8,27 @@ import { useSWRConfig } from "swr";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faSmile } from "@fortawesome/free-solid-svg-icons";
 
-interface MessageInputProps {
-  /** The URL that points to the backend. */
-  backendURL: string;
-  /** The unique chat identifier. */
-  id: number;
-}
-
-/**
- * The input field for sending messages
- */
-export default function MessageInput({ backendURL, id }: MessageInputProps) {
+export default function MessageInput({ backendURL, id, updateMessages } : 
+  { backendURL: string, id: number, updateMessages: (latestMessageId: number) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEmojis, setShowEmojis] = useState(false);
 
   // to force SWR to refetch the messages
   const { mutate } = useSWRConfig();
 
-  /**
-   * A function for sending messages.
-   * @param {FormData} data - the form data containing the message
-   */
   const sendMessage = async (data: FormData) => {
     const message = data.get("message") as string;
 
     // if a message exists, send it
     if (message) {
-      await fetch(`${backendURL}/api/chat/conversation/${id}/message`, {
+      const latestMessageId = await fetch(`${backendURL}/api/chat/conversation/${id}/message`, {
         method: "POST",
         body: new URLSearchParams({ message }),
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         credentials: "include",
-      });
+      }).then(res => res.json());
+
+      await updateMessages(latestMessageId);
 
       // refetch the messages
       mutate(`/api/chat/conversation/${id}`);
