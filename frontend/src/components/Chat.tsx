@@ -1,5 +1,6 @@
 "use client";
 
+import { Box } from "@mui/material";
 import useSWR from "swr";
 import { Ref, useLayoutEffect, useRef, useState, useEffect } from "react";
 
@@ -125,14 +126,20 @@ export default function Chat({
   }, [messages]);
 
   return (
-    <>
-      {/** Header */}
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+      }}
+    >
+      {/* Header */}
       <ChatHeader backendURL={backendURL} id={id} goToInbox={goToInbox} />
       <Divider />
 
-      {/** Chat */}
+      {/* Chat */}
       {messages ? (
-        <List ref={messageListRef}>
+        <List sx={{ flexGrow: 1, overflowY: "scroll" }}>
           {messages.map((message: UserMessageProps, index: number) => (
             <ListItem key={`message-${index}`}>
               <UserMessage {...message} />
@@ -145,6 +152,6 @@ export default function Chat({
 
       {/* Text bar */}
       <MessageInput backendURL={backendURL} id={id} />
-    </>
+    </Box>
   );
 }

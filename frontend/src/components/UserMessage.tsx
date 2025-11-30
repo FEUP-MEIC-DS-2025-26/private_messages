@@ -17,7 +17,7 @@ export default function UserMessage({ isFromUser, content }: UserMessageProps) {
         borderBottomRightRadius: 2,
         ml: "auto",
       }
-    : { backgroundColor: "grey.500", borderBottomLeftRadius: 2 };
+    : { backgroundColor: "grey.400", borderBottomLeftRadius: 2 };
 
   return (
     <Box
