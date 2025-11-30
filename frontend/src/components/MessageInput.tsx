@@ -8,15 +8,8 @@ import { useSWRConfig } from "swr";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faSmile } from "@fortawesome/free-solid-svg-icons";
 
-/*
-interface MessageInputProps {
-  backendURL: string;
-  id: number;
-}
-*/
-
-type fn = (latestMessageId: number) => void;
-export default function MessageInput({ backendURL: string, id: string, updateMessages: fn }) {
+export default function MessageInput({ backendURL, id, updateMessages } : 
+  { backendURL: string, id: number, updateMessages: (latestMessageId: number) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEmojis, setShowEmojis] = useState(false);
 

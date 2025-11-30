@@ -12,7 +12,7 @@ async function fetcher(URL: string) : Promise<any> {
   return await fetch(URL, { credentials: "include" }).then(res => res.json());
 }
 
-async function getMessages(URL: string, username: string) {
+async function getMessages(URL: string, username: string) : Promise<UserMessageProps[] | null> {
   const messages: any[] = await fetcher(`${URL}/recent`).then(({ content }) => content);
   return messages.map(message => ({
     isFromUser: message.sender_username === username,
@@ -20,7 +20,7 @@ async function getMessages(URL: string, username: string) {
   }));
 }
 
-async function pollMessages(backendURL: string, stateMessageId: number, latestMessageId: number) {
+async function pollMessages(backendURL: string, stateMessageId: number, latestMessageId: number) : Promise<UserMessageProps[] | null> {
   const newMessages = [];
   let currentId: number = latestMessageId;
   while (stateMessageId != currentId) {
@@ -37,13 +37,12 @@ async function pollMessages(backendURL: string, stateMessageId: number, latestMe
   return newMessages;
 }
 
-// I don't know how to place this next to goToInbox
-type fn = { (): void };
-export default function Chat({ backendURL: string, id: number, username: string, goToInbox: fn }) {
+export default function Chat({ backendURL, id, username, goToInbox } :
+  { backendURL: string, id: number, username: string, goToInbox: () => void }) {
   const url = `${backendURL}/api/chat/conversation/${id}`;
 
   const [ messageId, setMessageId ] : [ number, (i: number) => void ] = useState(-1);
-  const [ messages, setMessages ] /*: [ UserMessageProps[], (ma: UserMessageProps[]) => void ]*/ = useState([]);
+  const [ messages, setMessages ] : [ UserMessageProps[], (ma: UserMessageProps[]) => void ] = useState([]);
 
   useSWR(url, async (URL: string) => { 
     const messageId: number = await fetcher(`${URL}/latest`);
@@ -57,7 +56,7 @@ export default function Chat({ backendURL: string, id: number, username: string,
 
   // automatically scroll the last message into view
   useLayoutEffect(() => {
-    const messageList: null | HTMLUListElement = messageListRef.current;
+    const messageList: HTMLUListElement | null = messageListRef.current;
 
     if (messageList) {
       setTimeout(() => {
@@ -79,22 +78,6 @@ export default function Chat({ backendURL: string, id: number, username: string,
         if (latestMessageId !== null && latestMessageId !== undefined) {
           const newMessages = await pollMessages(backendURL, messageId, latestMessageId);
 
-          /*
-          const newMessages = [];
-          let currentId = latestMessageId;
-          while (messageId != currentId) {
-
-            const message = await fetcher(`${backendURL}/api/chat/message/${currentId}`); 
-            currentId = message.previous_msg;
-
-            // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
-            newMessages.push({
-              isFromUser: false,
-              content: message.content.msg.contents
-            });
-          }
-          */
-
           if (newMessages.length > 0) {
             /*
              * The first message is the latest one, the second one is the second-to-latest and so on
@@ -106,24 +89,12 @@ export default function Chat({ backendURL: string, id: number, username: string,
           }
         }
       }
-    }, 5000);
+    }, 1000000);
     return () => clearInterval(intervalId);
   }, [messages]);
 
   const updateMessages = async (latestMessageId: number) => {
-    const newMessages  = await pollMessages(backendURL, messageId, latestMessageId);
-    /*
-    const newMessages = [];
-    let currentId = latestMessageId;
-    while (messageId != currentId) {
-      const message = await fetcher(`${backendURL}/api/chat/message/${currentId}`); 
-      currentId = message.previous_msg;
-      newMessages.push({
-        isFromUser: false,
-        content: message.content.msg.contents
-      });
-    }
-    */
+    const newMessages : UserMessageProps[] = await pollMessages(backendURL, messageId, latestMessageId);
     newMessages.reverse();
     setMessageId(latestMessageId);
     setMessages([...messages, ...newMessages]);
