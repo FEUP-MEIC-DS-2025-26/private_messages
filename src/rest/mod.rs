@@ -26,7 +26,7 @@ async fn jumpseller_update_product(
     js: &jumpseller::Client,
     seller_id: &UserId,
     product_id: i64,
-) -> Result<Product, DbJumpError> {
+) -> Result<(), DbError> {
     let p = js.get_product(product_id).await.w();
     match p {
         Ok(ref prod) => {
@@ -44,15 +44,14 @@ async fn jumpseller_update_product(
             log::error!("Failed to get product from Jumpseller: {e}");
         }
     }
-    p.map_err(Into::into)
-        .map(|x| Product::new(x.name, *seller_id, x.id))
+    Ok(())
 }
 
 async fn jumpseller_update_user(
     db: &RwLock<SQLiteDB>,
     js: &jumpseller::Client,
     user_id: i64,
-) -> Result<(), DbJumpError> {
+) -> Result<(), DbError> {
     if let Ok(profile) = js.get_user(user_id).await.w() {
         db.write().await.add_user(&profile).await.w()?;
     }
@@ -180,19 +179,19 @@ where
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Credential {
-    jumpseller_id: i64,
+    id: i64,
 }
 
 #[get("/login")]
 async fn login(
     db: Data<RwLock<SQLiteDB>>,
     js: Data<jumpseller::Client>,
-    name: Query<Credential>,
+    user: Query<Credential>,
     req: HttpRequest,
 ) -> Result<impl Responder> {
     // TODO,FIXME: Add auth (dies inside)
 
-    let user_id = name.jumpseller_id;
+    let user_id = user.id;
     jumpseller_update_user(&db, &js, user_id).await?;
 
     // FIXME: Verify authorization.
@@ -352,23 +351,6 @@ fn parse_cookie<I: AsRef<str>>(identity: I) -> Result<i64, CookieParseError> {
 
 impl ResponseError for CookieParseError {}
 
-#[derive(Debug, thiserror::Error)]
-enum DbJumpError {
-    #[error(transparent)]
-    JumpSeller(#[from] JumpSellerErr),
-    #[error(transparent)]
-    Db(#[from] DbError),
-}
-
-impl ResponseError for DbJumpError {
-    fn status_code(&self) -> actix_web::http::StatusCode {
-        match self {
-            DbJumpError::JumpSeller(jump_seller_err) => jump_seller_err.status_code(),
-            DbJumpError::Db(db_error) => db_error.status_code(),
-        }
-    }
-}
-
 #[post("/conversation")]
 async fn start_conversation(
     utils: Data<BackendInfoUpdater>,
@@ -521,10 +503,15 @@ async fn get_product(
     jumpseller: Data<jumpseller::Client>,
     prod_id: Path<i64>,
 ) -> Result<impl Responder> {
+    let seller_id = data
+        .read()
+        .await
+        .get_product(&ProductId(*prod_id))
+        .await?
+        .seller_id;
+    jumpseller_update_product(&data, &jumpseller, &seller_id, *prod_id).await?;
     let prod = data.read().await.get_product(&ProductId(*prod_id)).await?;
-    let seller_id = prod.seller_id;
-    let upd_prod = jumpseller_update_product(&data, &jumpseller, &seller_id, *prod_id).await?;
-    Ok(Json(upd_prod))
+    Ok(Json(prod))
 }
 
 #[get("/conversation/{convo_id}/product")]
