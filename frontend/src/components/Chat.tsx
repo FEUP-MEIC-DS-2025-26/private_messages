@@ -7,8 +7,10 @@ import { Ref, useLayoutEffect, useRef, useState, useEffect } from "react";
 import ChatHeader from "./ChatHeader";
 import UserMessage, { UserMessageProps } from "./UserMessage";
 import MessageInput from "./MessageInput";
+import { Divider } from "@mui/material";
 
-const fetcher = (URL: string) => fetch(URL, { credentials: "include" }).then(res => res.json());
+const fetcher = (URL: string) =>
+  fetch(URL, { credentials: "include" }).then((res) => res.json());
 
 /**
  * Fetches the chat messages from the backend.
@@ -16,11 +18,13 @@ const fetcher = (URL: string) => fetch(URL, { credentials: "include" }).then(res
  * @param {string} username - the user's username
  */
 const getMessages = async (URL: string, username: string) => {
-  const messages: any[] = await fetcher(`${URL}/recent`).then(({ content }) => content);
+  const messages: any[] = await fetcher(`${URL}/recent`).then(
+    ({ content }) => content
+  );
 
-  return messages.map(message => ({
+  return messages.map((message) => ({
     isFromUser: message.sender_username === username,
-    content: message.msg.contents
+    content: message.msg.contents,
   }));
 };
 
@@ -54,11 +58,11 @@ export default function Chat({
 
   const url = `${backendURL}/api/chat/conversation/${id}`;
 
-  const [ messageId, setMessageId ] = useState(-1);
-  const [ messages, setMessages ] = useState([]);
+  const [messageId, setMessageId] = useState(-1);
+  const [messages, setMessages] = useState([]);
 
   // For some reason, these two need to be in the same function
-  useSWR(url, async (URL) => { 
+  useSWR(url, async (URL) => {
     const messageId = await fetcher(`${URL}/latest`);
     setMessageId(messageId);
 
@@ -75,33 +79,33 @@ export default function Chat({
     if (messageList) {
       setTimeout(() => {
         messageList.scrollTo({
-            top: messageList.scrollHeight,
-            behavior: "smooth",
-          })
-        }, 100);
+          top: messageList.scrollHeight,
+          behavior: "smooth",
+        });
+      }, 100);
     }
   }, [messages]);
 
   useEffect(() => {
     const intervalId = setInterval(async () => {
-    
       // msgId is only -1 when the data hasn't been fetched yet. No matter the result, msgId cannot be -1 afterwards
       if (messageId != -1) {
-
-        const latestMessageId = await fetcher(`${backendURL}/api/chat/conversation/${id}/latest`);
+        const latestMessageId = await fetcher(
+          `${backendURL}/api/chat/conversation/${id}/latest`
+        );
         if (latestMessageId !== null && latestMessageId !== undefined) {
-
           const newMessages = [];
           let currentId = latestMessageId;
           while (messageId != currentId) {
-
-            const message = await fetcher(`${backendURL}/api/chat/message/${currentId}`); 
+            const message = await fetcher(
+              `${backendURL}/api/chat/message/${currentId}`
+            );
             currentId = message.previous_msg;
 
             // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
             newMessages.push({
               isFromUser: false,
-              content: message.content.msg.contents
+              content: message.content.msg.contents,
             });
           }
 
@@ -124,6 +128,7 @@ export default function Chat({
     <>
       {/** Header */}
       <ChatHeader backendURL={backendURL} id={id} goToInbox={goToInbox} />
+      <Divider />
 
       {/** Chat */}
       {messages ? (

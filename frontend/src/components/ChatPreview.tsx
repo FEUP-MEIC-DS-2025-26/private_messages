@@ -1,4 +1,4 @@
-import { Badge, ListItemButton, Typography } from "@mui/material";
+import { Badge, Divider, ListItemButton, Typography } from "@mui/material";
 
 // components
 import ProfilePicture from "./ProfilePicture";
@@ -38,6 +38,7 @@ export default function ChatPreview({
         alignItems: "center",
         gap: "20px",
         width: 1,
+        py: "16px",
       }}
     >
       {/** profile picture with notification counter */}

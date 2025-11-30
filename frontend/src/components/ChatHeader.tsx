@@ -1,5 +1,6 @@
 "use client";
 
+import { Box, Button, Divider, IconButton, Typography } from "@mui/material";
 import useSWR from "swr";
 
 // icons
@@ -37,7 +38,9 @@ const getPeer = async (id: number, backendURL: string) => {
  */
 const getProduct = async (id: number, backendURL: string) => {
   return await fetcher(`${backendURL}/api/chat/conversation/${id}/product`)
-    .then((productId: number) => fetcher(`${backendURL}/api/chat/product/${productId}`))
+    .then((productId: number) =>
+      fetcher(`${backendURL}/api/chat/product/${productId}`)
+    )
     .then((product) => product.name);
 };
 
@@ -69,13 +72,22 @@ export default function ChatHeader({
   );
 
   return (
-    <header className="flex items-center gap-5 pl-4 pb-4 border-b">
-      <button
-        className="inline-flex items-center justify-center w-8 h-8 hover:bg-gray-600 hover:rounded-full transition-all"
-        onClick={goToInbox}
-      >
+    <Box
+      className="flex items-center gap-5 pl-4 pb-4 border-b"
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: "16px",
+        px: "16px",
+        py: "16px",
+      }}
+    >
+      {/** button to navigate to the inbox */}
+      <IconButton onClick={goToInbox} size="small" color="primary">
         <FontAwesomeIcon icon={faArrowLeft} />
-      </button>
+      </IconButton>
+
+      {/** peer information */}
       {peer ? (
         <>
           <ProfilePicture
@@ -83,17 +95,34 @@ export default function ChatHeader({
             URL="https://thispersondoesnotexist.com/"
             size={56}
           />
-          <div>
-            <strong className="text-xl">{peer.name}</strong> |{" "}
-            <span className="text-xl">{product}</span>
-            <p className="text-xs italic before:content-['@']">
+          <Box display="flex" alignItems="center" gap={1}>
+            {/* display name */}
+            <Typography variant="body1" component="strong" fontWeight="bold">
+              {peer.name}
+            </Typography>
+            <Divider orientation="vertical" flexItem />
+
+            {/* product */}
+            <Typography variant="body1" component="span">
+              {product}
+            </Typography>
+            {/* username */}
+            <Typography
+              variant="body2"
+              fontStyle="italic"
+              sx={{
+                "&::before": {
+                  content: '"@"',
+                },
+              }}
+            >
               {peer.username}
-            </p>
-          </div>
+            </Typography>
+          </Box>
         </>
       ) : (
         <div>Loading...</div>
       )}
-    </header>
+    </Box>
   );
 }
