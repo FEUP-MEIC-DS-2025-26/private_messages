@@ -1,4 +1,4 @@
-import { Badge } from "@mui/material";
+import { Badge, Box, Typography } from "@mui/material";
 
 // components
 import ProfilePicture from "./ProfilePicture";
@@ -31,7 +31,15 @@ export default function ChatPreview({
   product,
 }: ChatPreviewProps) {
   return (
-    <div className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors">
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: "20px",
+        width: 1,
+      }}
+    >
+      {/** profile picture with notification counter */}
       <Badge
         badgeContent={unreadMessages}
         max={9}
@@ -40,14 +48,29 @@ export default function ChatPreview({
       >
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
       </Badge>
+
       <div>
-        <strong>{name}</strong>
-        <span className="text-xs ml-2 italic before:content-['@']">
+        <Typography component="strong" variant="body1" fontWeight="bold">
+          {name}
+        </Typography>
+        {/**  */}
+        <Typography
+          component="span"
+          variant="body2"
+          display="inline"
+          ml={1}
+          fontStyle="italic"
+          sx={{
+            "&::before": {
+              content: '"@"',
+            },
+          }}
+        >
           {username}
-        </span>{" "}
-        | <span className="text-xs ml-2">{product}</span>
-        <p>{lastMessage}</p>
+        </Typography>{" "}
+        {/** last message preview */}
+        <Typography variant="body2">{lastMessage}</Typography>
       </div>
-    </div>
+    </Box>
   );
 }

@@ -1,4 +1,7 @@
+import { Button, List, ListItem } from "@mui/material";
 import useSWR from "swr";
+
+// components
 import ChatPreview, { ChatPreviewProps } from "./ChatPreview";
 
 /**
@@ -97,17 +100,12 @@ export default function Inbox({ backendURL, username, goToChat }: InboxProps) {
   }
 
   return (
-    <ul className="flex flex-col overflow-scroll *:not-last:border-b">
+    <List sx={{ width: 1 }}>
       {chats.map((chat: ChatPreviewProps) => (
-        <li key={`chat-${chat.id}`}>
-          <button
-            className="p-0 m-0 w-full text-start"
-            onClick={() => goToChat(chat.id)}
-          >
-            <ChatPreview {...chat} />
-          </button>
-        </li>
+        <ListItem key={`chat-${chat.id}`} onClick={() => goToChat(chat.id)}>
+          <ChatPreview {...chat} />
+        </ListItem>
       ))}
-    </ul>
+    </List>
   );
 }
