@@ -4,6 +4,7 @@ export default createModuleFederationConfig({
   name: "mf_chat",
   filename: 'remoteEntry.js',
   exposes: {
+    "./App": "./src/App.tsx",
     "./Chat": "./src/components/Chat.tsx",
     "./Inbox": "./src/components/Inbox.tsx",
   },
