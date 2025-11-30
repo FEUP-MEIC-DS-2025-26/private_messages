@@ -1,4 +1,4 @@
-import { Badge, Box, Typography } from "@mui/material";
+import { Badge, ListItemButton, Typography } from "@mui/material";
 
 // components
 import ProfilePicture from "./ProfilePicture";
@@ -16,6 +16,7 @@ export interface ChatPreviewProps {
   unreadMessages: number;
   /** The last message sent by the user */
   lastMessage: string;
+  /** The product the conversation pertains to */
   product: string;
 }
 
@@ -31,7 +32,7 @@ export default function ChatPreview({
   product,
 }: ChatPreviewProps) {
   return (
-    <Box
+    <ListItemButton
       sx={{
         display: "flex",
         alignItems: "center",
@@ -50,10 +51,11 @@ export default function ChatPreview({
       </Badge>
 
       <div>
+        {/** display name */}
         <Typography component="strong" variant="body1" fontWeight="bold">
           {name}
         </Typography>
-        {/**  */}
+        {/** username */}
         <Typography
           component="span"
           variant="body2"
@@ -67,10 +69,10 @@ export default function ChatPreview({
           }}
         >
           {username}
-        </Typography>{" "}
-        {/** last message preview */}
+        </Typography>
+        {/** last message */}
         <Typography variant="body2">{lastMessage}</Typography>
       </div>
-    </Box>
+    </ListItemButton>
   );
 }

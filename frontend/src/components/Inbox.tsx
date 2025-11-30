@@ -104,7 +104,11 @@ export default function Inbox({ backendURL, username, goToChat }: InboxProps) {
       {chats.map((chat: ChatPreviewProps, index: number) => (
         <>
           {/** chat preview */}
-          <ListItem key={`chat-${chat.id}`} onClick={() => goToChat(chat.id)}>
+          <ListItem
+            key={`chat-${chat.id}`}
+            onClick={() => goToChat(chat.id)}
+            sx={{ py: 0 }}
+          >
             <ChatPreview {...chat} />
           </ListItem>
 
