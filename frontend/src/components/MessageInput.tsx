@@ -8,27 +8,21 @@ import { useSWRConfig } from "swr";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperPlane, faSmile } from "@fortawesome/free-solid-svg-icons";
 
+/*
 interface MessageInputProps {
-  /** The URL that points to the backend. */
   backendURL: string;
-  /** The unique chat identifier. */
   id: number;
 }
+*/
 
-/**
- * The input field for sending messages
- */
-export default function MessageInput({ backendURL, id, updateMessages }: MessageInputProps) {
+type fn = (latestMessageId: number) => void;
+export default function MessageInput({ backendURL: string, id: string, updateMessages: fn }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEmojis, setShowEmojis] = useState(false);
 
   // to force SWR to refetch the messages
   const { mutate } = useSWRConfig();
 
-  /**
-   * A function for sending messages.
-   * @param {FormData} data - the form data containing the message
-   */
   const sendMessage = async (data: FormData) => {
     const message = data.get("message") as string;
 
