@@ -13,17 +13,8 @@ import {
   TextField,
 } from '@mui/material';
 
-interface MessageInputProps {
-  /** The URL that points to the backend. */
-  backendURL: string;
-  /** The unique chat identifier. */
-  id: number;
-}
-
-/**
- * The input field for sending messages
- */
-export default function MessageInput({ backendURL, id }: MessageInputProps) {
+export default function MessageInput({ backendURL, id, updateMessages } : 
+  { backendURL: string, id: number, updateMessages: (latestMessageId: number) => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLButtonElement | null>(
     null,
@@ -57,9 +48,8 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
 
       // refetch the messages
       mutate(`/api/chat/conversation/${id}`);
+      form.reset();
     }
-
-    form.reset();
   };
 
   // a function for handling emoji clicks
