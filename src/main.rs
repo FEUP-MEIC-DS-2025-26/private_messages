@@ -225,11 +225,11 @@ async fn run_backend_code(
             } => {
                 let pubsub_msg = private_message_schema::NewMessage {
                     uid,
+                    sender_id,
+                    receiver_id,
                     product_info,
                     timestamp,
                     preview,
-                    sender_id,
-                    receiver_id,
                 };
 
                 let pubsub_msg = PrivateMessageSchema {
