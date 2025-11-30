@@ -57,8 +57,9 @@ export default function Chat({
 
   const url = `${backendURL}/api/chat/conversation/${id}`;
 
-  const [messageId, setMessageId] = useState(-1);
-  const [messages, setMessages] = useState([]);
+  const messageListRef: Ref<HTMLUListElement> = useRef(null);
+  const [messageId, setMessageId] = useState<number>(-1);
+  const [messages, setMessages] = useState<UserMessageProps[]>([]);
 
   // For some reason, these two need to be in the same function
   useSWR(url, async (URL) => {
@@ -68,8 +69,6 @@ export default function Chat({
     const msgs = await getMessages(URL, username);
     setMessages(msgs);
   });
-
-  const messageListRef: Ref<HTMLUListElement> = useRef(null);
 
   // automatically scroll the last message into view
   useLayoutEffect(() => {
