@@ -1,4 +1,4 @@
-import { Button, List, ListItem } from "@mui/material";
+import { Button, Divider, List, ListItem } from "@mui/material";
 import useSWR from "swr";
 
 // components
@@ -101,10 +101,18 @@ export default function Inbox({ backendURL, username, goToChat }: InboxProps) {
 
   return (
     <List sx={{ width: 1 }}>
-      {chats.map((chat: ChatPreviewProps) => (
-        <ListItem key={`chat-${chat.id}`} onClick={() => goToChat(chat.id)}>
-          <ChatPreview {...chat} />
-        </ListItem>
+      {chats.map((chat: ChatPreviewProps, index: number) => (
+        <>
+          {/** chat preview */}
+          <ListItem key={`chat-${chat.id}`} onClick={() => goToChat(chat.id)}>
+            <ChatPreview {...chat} />
+          </ListItem>
+
+          {/** divider */}
+          {index + 1 < chats.length && (
+            <Divider variant="middle" component="li" aria-hidden />
+          )}
+        </>
       ))}
     </List>
   );
