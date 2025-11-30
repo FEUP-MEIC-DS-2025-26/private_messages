@@ -31,9 +31,6 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
     null
   );
 
-  const showEmojis = Boolean(emojiAnchor);
-  const emojiPickerID = showEmojis ? "emoji-picker" : undefined;
-
   // to force SWR to refetch the messages
   const { mutate } = useSWRConfig();
 
@@ -112,13 +109,16 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
 
       {/* emoji picker */}
       <Popover
-        id={emojiPickerID}
-        open={showEmojis}
+        open={Boolean(emojiAnchor)}
         anchorEl={emojiAnchor}
         onClose={() => setEmojiAnchor(null)}
         anchorOrigin={{
+          vertical: "top",
+          horizontal: "center",
+        }}
+        transformOrigin={{
           vertical: "bottom",
-          horizontal: "left",
+          horizontal: "right",
         }}
       >
         <EmojiPicker onEmojiClick={handleEmojiClick} />
