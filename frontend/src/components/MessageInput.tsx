@@ -18,7 +18,7 @@ interface MessageInputProps {
 /**
  * The input field for sending messages
  */
-export default function MessageInput({ backendURL, id }: MessageInputProps) {
+export default function MessageInput({ backendURL, id, updateMessages }: MessageInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showEmojis, setShowEmojis] = useState(false);
 
@@ -34,12 +34,14 @@ export default function MessageInput({ backendURL, id }: MessageInputProps) {
 
     // if a message exists, send it
     if (message) {
-      await fetch(`${backendURL}/api/chat/conversation/${id}/message`, {
+      const latestMessageId = await fetch(`${backendURL}/api/chat/conversation/${id}/message`, {
         method: "POST",
         body: new URLSearchParams({ message }),
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         credentials: "include",
-      });
+      }).then(res => res.json());
+
+      await updateMessages(latestMessageId);
 
       // refetch the messages
       mutate(`/api/chat/conversation/${id}`);

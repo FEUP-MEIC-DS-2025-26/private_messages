@@ -24,6 +24,32 @@ const getMessages = async (URL: string, username: string) => {
   }));
 };
 
+async function pollMessages() {
+  const newMessages = [];
+  let currentId = latestMessageId;
+  while (messageId != currentId) {
+
+    const message = await fetcher(`${backendURL}/api/chat/message/${currentId}`); 
+    currentId = message.previous_msg;
+
+    // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
+    newMessages.push({
+      isFromUser: false,
+      content: message.content.msg.contents
+    });
+  }
+
+  if (newMessages.length > 0) {
+    /*
+     * The first message is the latest one, the second one is the second-to-latest and so on
+     * Reversing the array sorts the messages chronologically - no need for timestamps
+     */
+    newMessages.reverse();
+    setMessageId(latestMessageId);
+    setMessages([...messages, ...newMessages]);
+  }
+}
+
 interface ChatProps {
   backendURL: string;
   id: number;
@@ -40,18 +66,6 @@ export default function Chat({
   username,
   goToInbox,
 }: ChatProps) {
-  /*
-  const { data: msgs } = useSWR(
-    `${backendURL}/api/chat/conversation/${id}`,
-    (URL) => getMessages(URL, username)
-  );
-
-  const { data: latestMsgId } = useSWR(
-    `${backendURL}/api/chat/conversation/${id}`,
-    URL => fetcher(`${URL}/latest`).then(({ id }) => id)
-  );
-  */
-
   const url = `${backendURL}/api/chat/conversation/${id}`;
 
   const [ messageId, setMessageId ] = useState(-1);
@@ -120,6 +134,30 @@ export default function Chat({
     return () => clearInterval(intervalId);
   }, [messages]);
 
+  const updateMessages = async (latestMessageId) => {
+    const newMessages = [];
+    let currentId = latestMessageId;
+    while (messageId != currentId) {
+
+      const message = await fetcher(`${backendURL}/api/chat/message/${currentId}`); 
+      currentId = message.previous_msg;
+
+      // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
+      newMessages.push({
+        isFromUser: false,
+        content: message.content.msg.contents
+      });
+    }
+
+    /*
+     * The first message is the latest one, the second one is the second-to-latest and so on
+     * Reversing the array sorts the messages chronologically - no need for timestamps
+     */
+    newMessages.reverse();
+    setMessageId(latestMessageId);
+    setMessages([...messages, ...newMessages]);
+  };
+
   return (
     <>
       {/** Header */}
@@ -142,7 +180,7 @@ export default function Chat({
       )}
 
       {/* Text bar */}
-      <MessageInput backendURL={backendURL} id={id} />
+      <MessageInput backendURL={backendURL} id={id} updateMessages={updateMessages}/>
     </>
   );
 }
