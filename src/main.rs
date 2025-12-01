@@ -148,16 +148,18 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
                     )
                     .build(),
             )
-            // .wrap(
-            //     Cors::default()
-            //         .allowed_origin("https://api.madeinportugal.store")
-            //         .allowed_origin("https://frontend.madeinportugal.store")
-            //         .allowed_origin("https://madeinportugal.store")
-            //         .allowed_origin("http://localhost")
-            //         .allowed_methods(vec!["GET", "POST"])
-            //         .allow_any_header()
-            //         .max_age(3600),
-            // )
+            .wrap(
+                Cors::default()
+                    .allowed_origin("https://api.madeinportugal.store")
+                    .allowed_origin("https://frontend.madeinportugal.store")
+                    .allowed_origin("https://madeinportugal.store")
+                    .allowed_origin("http://localhost")
+                    .allowed_methods(vec!["GET", "POST"])
+                    .allow_any_header()
+                    .supports_credentials()
+                    .block_on_origin_mismatch(false)
+                    .max_age(3600),
+            )
             .wrap(middleware::NormalizePath::trim())
             .wrap(middleware::Logger::default())
     })
