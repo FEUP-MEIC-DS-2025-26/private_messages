@@ -33,7 +33,9 @@ const formatDate = (date: Date): string => {
   }
 
   // format the hour and minutes
-  components.push(`${date.getHours()}:${date.getMinutes()}`);
+  components.push(
+    `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`,
+  );
 
   return components.join(' ');
 };
