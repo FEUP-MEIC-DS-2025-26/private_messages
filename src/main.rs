@@ -10,6 +10,7 @@ use crate::database::{
     crypto::CryptoKey,
     sqlite::{ConversationId, DbError, MessageId, SQLiteDB, UserId},
 };
+use actix_cors::Cors;
 use actix_identity::IdentityMiddleware;
 use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
 use actix_web::{App, HttpServer, middleware, web};
@@ -146,6 +147,15 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
                         PersistentSession::default().session_ttl(Duration::minutes(5)),
                     )
                     .build(),
+            )
+            .wrap(
+                Cors::default()
+                    .allowed_origin("https://api.madeinportugal.store")
+                    .allowed_origin("https://madeinportugal.store")
+                    .allowed_origin("http://localhost")
+                    .allowed_methods(vec!["GET", "POST"])
+                    .allow_any_header()
+                    .max_age(3600),
             )
             .wrap(middleware::NormalizePath::trim())
             .wrap(middleware::Logger::default())

@@ -7,6 +7,7 @@ edition = "2024"
 strip = "symbols"
 
 [dependencies]
+actix-cors = "0.7.1"
 actix-files = "0.6.8"
 actix-identity = "0.9.0"
 actix-session = { version = "0.11.0", features = ["cookie-session"] }
