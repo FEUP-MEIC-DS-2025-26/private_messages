@@ -14,22 +14,22 @@ const fetcher = (URL: string) =>
 /**
  * Fetches the chat messages from the backend.
  * @param {string} URL - the URL
- * @param {string} username - the user's username
+ * @param {string} userID - the user's JumpSeller ID
  */
-const getMessages = async (URL: string, username: string) => {
+const getMessages = async (URL: string, userID: number) => {
   const messages: any[] = await fetcher(`${URL}/recent`).then(
     ({ content }) => content,
   );
 
   return messages.map((message) => ({
-    isFromUser: message.sender_username === username,
+    isFromUser: message.sender_jsid === userID,
     content: message.msg.contents,
   }));
 };
 
 async function pollMessages(
   backendURL: string,
-  username: string,
+  userID: number,
   stateMessageId: number,
   latestMessageId: number,
 ): Promise<UserMessageProps[] | null> {
@@ -45,7 +45,7 @@ async function pollMessages(
 
     // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
     newMessages.push({
-      isFromUser: messageContent.sender_username === username,
+      isFromUser: messageContent.sender_jsid === userID,
       content: messageContent.msg.contents,
     });
   }
@@ -55,19 +55,14 @@ async function pollMessages(
 interface ChatProps {
   backendURL: string;
   id: number;
-  username: string;
+  userID: number;
   goToInbox: () => void;
 }
 
 /**
  * A private conversation between two users.
  */
-export default function Chat({
-  backendURL,
-  id,
-  username,
-  goToInbox,
-}: ChatProps) {
+export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
   const url = `${backendURL}/api/chat/conversation/${id}`;
 
   const messageListRef: Ref<HTMLUListElement> = useRef(null);
@@ -79,7 +74,7 @@ export default function Chat({
     const messageId: number = await fetcher(`${URL}/latest`);
     setMessageId(messageId);
 
-    const msgs: UserMessageProps[] = await getMessages(URL, username);
+    const msgs: UserMessageProps[] = await getMessages(URL, userID);
     setMessages(msgs);
   });
 
@@ -107,7 +102,7 @@ export default function Chat({
         if (latestMessageId !== null && latestMessageId !== undefined) {
           const newMessages = await pollMessages(
             backendURL,
-            username,
+            userID,
             messageId,
             latestMessageId,
           );
@@ -130,7 +125,7 @@ export default function Chat({
   const updateMessages = async (latestMessageId: number) => {
     const newMessages: UserMessageProps[] = await pollMessages(
       backendURL,
-      username,
+      userID,
       messageId,
       latestMessageId,
     );

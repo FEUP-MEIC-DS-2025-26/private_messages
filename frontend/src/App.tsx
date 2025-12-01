@@ -5,7 +5,7 @@ import Inbox from './components/Inbox';
 import Chat from './components/Chat';
 
 // hard-coded user (only for the prototype)
-const USERNAME = 'john';
+const USER_ID = 1;
 
 /**
  * The user's inbox.
@@ -20,14 +20,14 @@ export default function App() {
       {chatID ? (
         <Chat
           backendURL={backendURL}
-          username={USERNAME}
+          userID={USER_ID}
           id={chatID}
           goToInbox={() => setChatID(null)}
         />
       ) : (
         <Inbox
           backendURL={backendURL}
-          username={USERNAME}
+          userID={USER_ID}
           goToChat={(id) => setChatID(id)}
         />
       )}

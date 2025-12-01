@@ -9,7 +9,7 @@ export interface ChatPreviewProps {
   /** The display name of the user. */
   name: string;
   /** The user's username. */
-  username: string;
+  //username: string;
   /** The URL of the user's profile picture. */
   profilePictureURL: string;
   /** The number of unread messages from the user. */
@@ -25,7 +25,7 @@ export interface ChatPreviewProps {
  */
 export default function ChatPreview({
   name,
-  username,
+  //username,
   profilePictureURL,
   unreadMessages,
   lastMessage,
@@ -56,20 +56,6 @@ export default function ChatPreview({
           {/** display name */}
           <Typography component="strong" variant="body1" fontWeight="bold">
             {name}
-          </Typography>
-          {/** username */}
-          <Typography
-            component="span"
-            variant="body2"
-            display="inline"
-            fontStyle="italic"
-            sx={{
-              '&::before': {
-                content: '"@"',
-              },
-            }}
-          >
-            {username}
           </Typography>
           {/** product */}
           <Divider orientation="vertical" flexItem aria-hidden />
