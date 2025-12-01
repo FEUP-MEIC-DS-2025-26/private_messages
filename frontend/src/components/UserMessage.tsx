@@ -54,9 +54,9 @@ export default function UserMessage({
         color: 'primary.contrastText',
       }
     : {
-        backgroundColor: 'grey.400',
+        backgroundColor: 'secondary.main',
         borderBottomLeftRadius: 2,
-        color: 'text.primary',
+        color: 'secondary.contrastText',
       };
 
   return (
