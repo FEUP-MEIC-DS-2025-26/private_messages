@@ -1,14 +1,15 @@
-"use client";
-
-import useSWR from "swr";
-import { Ref, useLayoutEffect, useRef, useState, useEffect } from "react";
+import { Box } from '@mui/material';
+import { Ref, useLayoutEffect, useRef, useState, useEffect } from 'react';
+import useSWR from 'swr';
 
 // components
-import ChatHeader from "./ChatHeader";
-import UserMessage, { UserMessageProps } from "./UserMessage";
-import MessageInput from "./MessageInput";
+import ChatHeader from './ChatHeader';
+import UserMessage, { UserMessageProps } from './UserMessage';
+import MessageInput from './MessageInput';
+import { Divider, List, ListItem } from '@mui/material';
 
-const fetcher = (URL: string) => fetch(URL, { credentials: "include" }).then(res => res.json());
+const fetcher = (URL: string) =>
+  fetch(URL, { credentials: 'include' }).then((res) => res.json());
 
 /**
  * Fetches the chat messages from the backend.
@@ -16,13 +17,40 @@ const fetcher = (URL: string) => fetch(URL, { credentials: "include" }).then(res
  * @param {string} username - the user's username
  */
 const getMessages = async (URL: string, username: string) => {
-  const messages: any[] = await fetcher(`${URL}/recent`).then(({ content }) => content);
+  const messages: any[] = await fetcher(`${URL}/recent`).then(
+    ({ content }) => content,
+  );
 
-  return messages.map(message => ({
+  return messages.map((message) => ({
     isFromUser: message.sender_username === username,
-    content: message.msg.contents
+    content: message.msg.contents,
   }));
 };
+
+async function pollMessages(
+  backendURL: string,
+  username: string,
+  stateMessageId: number,
+  latestMessageId: number,
+): Promise<UserMessageProps[] | null> {
+  const newMessages = [];
+  let currentId: number = latestMessageId;
+  while (stateMessageId != currentId) {
+    const message: any = await fetcher(
+      `${backendURL}/api/chat/message/${currentId}`,
+    );
+
+    currentId = message.previous_msg;
+    const messageContent = message.content;
+
+    // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
+    newMessages.push({
+      isFromUser: messageContent.sender_username === username,
+      content: messageContent.msg.contents,
+    });
+  }
+  return newMessages;
+}
 
 interface ChatProps {
   backendURL: string;
@@ -40,33 +68,20 @@ export default function Chat({
   username,
   goToInbox,
 }: ChatProps) {
-  /*
-  const { data: msgs } = useSWR(
-    `${backendURL}/api/chat/conversation/${id}`,
-    (URL) => getMessages(URL, username)
-  );
-
-  const { data: latestMsgId } = useSWR(
-    `${backendURL}/api/chat/conversation/${id}`,
-    URL => fetcher(`${URL}/latest`).then(({ id }) => id)
-  );
-  */
-
   const url = `${backendURL}/api/chat/conversation/${id}`;
 
-  const [ messageId, setMessageId ] = useState(-1);
-  const [ messages, setMessages ] = useState([]);
+  const messageListRef: Ref<HTMLUListElement> = useRef(null);
+  const [messageId, setMessageId] = useState<number>(-1);
+  const [messages, setMessages] = useState<UserMessageProps[]>([]);
 
   // For some reason, these two need to be in the same function
-  useSWR(url, async (URL) => { 
-    const messageId = await fetcher(`${URL}/latest`);
+  useSWR(url, async (URL: string) => {
+    const messageId: number = await fetcher(`${URL}/latest`);
     setMessageId(messageId);
 
-    const msgs = await getMessages(URL, username);
+    const msgs: UserMessageProps[] = await getMessages(URL, username);
     setMessages(msgs);
   });
-
-  const messageListRef: Ref<HTMLUListElement> = useRef(null);
 
   // automatically scroll the last message into view
   useLayoutEffect(() => {
@@ -75,35 +90,27 @@ export default function Chat({
     if (messageList) {
       setTimeout(() => {
         messageList.scrollTo({
-            top: messageList.scrollHeight,
-            behavior: "smooth",
-          })
-        }, 100);
+          top: messageList.scrollHeight,
+          behavior: 'smooth',
+        });
+      }, 100);
     }
   }, [messages]);
 
   useEffect(() => {
     const intervalId = setInterval(async () => {
-    
       // msgId is only -1 when the data hasn't been fetched yet. No matter the result, msgId cannot be -1 afterwards
       if (messageId != -1) {
-
-        const latestMessageId = await fetcher(`${backendURL}/api/chat/conversation/${id}/latest`);
+        const latestMessageId: number = await fetcher(
+          `${backendURL}/api/chat/conversation/${id}/latest`,
+        );
         if (latestMessageId !== null && latestMessageId !== undefined) {
-
-          const newMessages = [];
-          let currentId = latestMessageId;
-          while (messageId != currentId) {
-
-            const message = await fetcher(`${backendURL}/api/chat/message/${currentId}`); 
-            currentId = message.previous_msg;
-
-            // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
-            newMessages.push({
-              isFromUser: false,
-              content: message.content.msg.contents
-            });
-          }
+          const newMessages = await pollMessages(
+            backendURL,
+            username,
+            messageId,
+            latestMessageId,
+          );
 
           if (newMessages.length > 0) {
             /*
@@ -120,29 +127,60 @@ export default function Chat({
     return () => clearInterval(intervalId);
   }, [messages]);
 
-  return (
-    <>
-      {/** Header */}
-      <ChatHeader backendURL={backendURL} id={id} goToInbox={goToInbox} />
+  const updateMessages = async (latestMessageId: number) => {
+    const newMessages: UserMessageProps[] = await pollMessages(
+      backendURL,
+      username,
+      messageId,
+      latestMessageId,
+    );
+    newMessages.reverse();
+    setMessageId(latestMessageId);
+    setMessages([...messages, ...newMessages]);
+  };
 
-      {/** Chat */}
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+      }}
+    >
+      {/* Header */}
+      <ChatHeader backendURL={backendURL} id={id} goToInbox={goToInbox} />
+      <Divider />
+
+      {/* Chat */}
       {messages ? (
-        <ul
-          className="grow overflow-scroll flex flex-col gap-3 px-3"
+        <List
           ref={messageListRef}
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            py: '16px',
+            maxHeight: '100%',
+            gap: '8px',
+            flexGrow: 1,
+            overflow: 'scroll',
+          }}
         >
           {messages.map((message: UserMessageProps, index: number) => (
-            <li key={`message-${index}`}>
+            <ListItem key={`message-${index}`} sx={{ py: 0 }}>
               <UserMessage {...message} />
-            </li>
+            </ListItem>
           ))}
-        </ul>
+        </List>
       ) : (
         <div>Loading...</div>
       )}
 
       {/* Text bar */}
-      <MessageInput backendURL={backendURL} id={id} />
-    </>
+      <MessageInput
+        backendURL={backendURL}
+        id={id}
+        updateMessages={updateMessages}
+      />
+    </Box>
   );
 }

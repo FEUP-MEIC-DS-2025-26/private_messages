@@ -1,3 +1,5 @@
+import { Box } from '@mui/material';
+
 export interface UserMessageProps {
   /** Indicates if the user sent the message. */
   isFromUser: boolean;
@@ -10,14 +12,24 @@ export interface UserMessageProps {
  */
 export default function UserMessage({ isFromUser, content }: UserMessageProps) {
   const extraStyles = isFromUser
-    ? 'ml-auto rounded-br-sm bg-biloba-flower-500'
-    : 'rounded-bl-sm bg-zinc-500';
+    ? {
+        backgroundColor: 'primary.main',
+        borderBottomRightRadius: 2,
+        ml: 'auto',
+      }
+    : { backgroundColor: 'grey.400', borderBottomLeftRadius: 2 };
 
   return (
-    <div
-      className={`w-fit max-w-4/5 p-3 rounded-3xl text-justify wrap-break-word ${extraStyles}`}
+    <Box
+      sx={{
+        padding: '12px',
+        maxWidth: '75%',
+        borderRadius: 6,
+        color: 'text.primary',
+        ...extraStyles,
+      }}
     >
       {content}
-    </div>
+    </Box>
   );
 }
