@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n               SELECT id as \"id!\"\n               FROM product\n               WHERE js_id = ? \n            ",
+  "query": "\n               SELECT id as \"id!\"\n               FROM product\n               WHERE id = ? \n            ",
   "describe": {
     "columns": [
       {
@@ -13,8 +13,8 @@
       "Right": 1
     },
     "nullable": [
-      true
+      false
     ]
   },
-  "hash": "17b2c1de77a222310f929ee881dd942082d34e0c4fbd294ffee421fd2fd302da"
+  "hash": "70183a444bb41cfb95a4110ce0ec41b104b2276d27fca8c21dab558a36a7665f"
 }

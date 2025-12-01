@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS user (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INTEGER PRIMARY KEY,
     username TEXT UNIQUE,
     name TEXT
 );
@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS message (
     sender_id INTEGER NOT NULL,
     conversation_id INTEGER NOT NULL,
     content BLOB,
-    salt BLOB,
+    salt BLOB NOT NULL,
+    timestamp DATETIME NOT NULL,
     previous_message_id INTEGER,
     FOREIGN KEY(sender_id) REFERENCES user(id),
     FOREIGN KEY(conversation_id) REFERENCES conversation(id),
@@ -31,8 +32,7 @@ CREATE TABLE IF NOT EXISTS message (
 );
 
 CREATE TABLE IF NOT EXISTS product (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    js_id INTEGER NOT NULL UNIQUE,
+    id INTEGER PRIMARY KEY,
     seller_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     FOREIGN KEY(seller_id) REFERENCES user(id)

@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm install -g pnpm && pnpm install
 
 # Copy source code
 COPY . .
@@ -18,5 +18,8 @@ ENV HOST=0.0.0.0
 
 EXPOSE 3001
 
-# TODO: Change to a production server
-CMD ["npm", "run", "dev"]
+ENV PUBLIC_BACKEND_URL="https://api.madeinportugal.store"
+
+RUN pnpm build
+
+CMD ["pnpm", "preview"]

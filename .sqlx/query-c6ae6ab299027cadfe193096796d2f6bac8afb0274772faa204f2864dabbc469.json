@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT id as \"id!\"\n            FROM user\n            WHERE username = ?;\n        ",
+  "query": "\n            SELECT id as \"id!\"\n            FROM user\n            WHERE id = ?;\n        ",
   "describe": {
     "columns": [
       {
@@ -13,8 +13,8 @@
       "Right": 1
     },
     "nullable": [
-      true
+      false
     ]
   },
-  "hash": "ea2029f14c34438a4c6fa9a61d720939344e1f492b7410b542ea8fe1149d3d56"
+  "hash": "c6ae6ab299027cadfe193096796d2f6bac8afb0274772faa204f2864dabbc469"
 }

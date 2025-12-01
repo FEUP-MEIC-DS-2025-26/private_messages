@@ -1,10 +1,18 @@
+use std::num::ParseIntError;
+
 use crate::{
     BackendInfoUpdater,
-    database::{Database, sqlite::*},
+    database::{
+        Database,
+        sqlite::{
+            ConversationId, DbError, Message, MessageId, Product, ProductId, SQLiteDB, UserId,
+        },
+    },
+    jumpseller::{self, JumpSellerErr},
 };
 use actix_identity::Identity;
 use actix_web::{
-    HttpMessage, HttpRequest, HttpResponse, Responder, Result,
+    HttpMessage, HttpRequest, HttpResponse, Responder, ResponseError, Result,
     error::ErrorInternalServerError,
     get, post,
     web::{Data, Form, Json, Path, Query},
@@ -12,6 +20,43 @@ use actix_web::{
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
+
+async fn jumpseller_update_product(
+    db: &RwLock<SQLiteDB>,
+    js: &jumpseller::Client,
+    seller_id: &UserId,
+    product_id: i64,
+) -> Result<(), DbError> {
+    let p = js.get_product(product_id).await.w();
+    match p {
+        Ok(ref prod) => {
+            db.write()
+                .await
+                .add_product(&Product::new(prod.name.clone(), *seller_id, prod.id))
+                .await
+                .w()?;
+        }
+        Err(JumpSellerErr::ResponseErr(_, Some(reqwest::StatusCode::NOT_FOUND))) => {
+            log::warn!("Jumpseller has no product with ID {product_id}.");
+            // TODO: delete products that don't exist anymore, if no more conversations mentioning it exist.
+        }
+        Err(ref e) => {
+            log::error!("Failed to get product from Jumpseller: {e}");
+        }
+    }
+    Ok(())
+}
+
+async fn jumpseller_update_user(
+    db: &RwLock<SQLiteDB>,
+    js: &jumpseller::Client,
+    user_id: i64,
+) -> Result<(), DbError> {
+    if let Ok(profile) = js.get_user(user_id).await.w() {
+        db.write().await.add_user(&profile).await.w()?;
+    }
+    Ok(())
+}
 
 pub fn create_services() -> actix_web::Scope {
     info!("Installing REST API services...");
@@ -74,13 +119,13 @@ async fn default_service() -> impl Responder {
                     /api/chat
                              |- /login                              ---> Enables internal cookie.
                              |- /conversation                       ---> (GET) Lists conversations a user is in. (POST) Starts a conversation.
-                                             |- /{convo_id}/peer    ---> Gets the username of the peer.
+                                             |- /{convo_id}/peer    ---> Gets the jumpseller_id of the peer.
                                              |- /{convo_id}/latest  ---> Gets the latest message.
                                              |- /{convo_id}/recent  ---> Gets the 32 most recent messages.
                                              |- /{convo_id}/product ---> Gets the product associated with the conversation.
                                              |- /{convo_id}/message ---> Posts a new message into the chat.
                              |- /message/{msg_id}                   ---> Gets the message with ID 'msg_id'.
-                             |- /user/{username}                    ---> Gets the profile of user with username 'username'.
+                             |- /user/{js_id}                       ---> Gets the profile of user with id 'js_id'.
                              |- /product                            ---> Posts a new product into the database.
                              |- /product/{prod_id}                  ---> Gets the product with id 'prod_id'.
                 </textarea>
@@ -103,6 +148,7 @@ impl<T, E> EasyLog<E> for Result<T, E> {
     }
 }
 
+#[allow(dead_code)]
 trait LogShort<E>: EasyLog<E>
 where
     E: std::fmt::Display,
@@ -132,47 +178,42 @@ where
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Username {
-    username: String,
+struct Credential {
+    id: i64,
 }
 
 #[get("/login")]
 async fn login(
-    data: Data<RwLock<SQLiteDB>>,
-    name: Query<Username>,
+    db: Data<RwLock<SQLiteDB>>,
+    js: Data<jumpseller::Client>,
+    user: Query<Credential>,
     req: HttpRequest,
 ) -> Result<impl Responder> {
     // TODO,FIXME: Add auth (dies inside)
 
-    let username = name.username.clone();
+    let user_id = user.id;
+    jumpseller_update_user(&db, &js, user_id).await?;
 
-    // FIXME: This forbids new users from login, basically.
-    data.read()
-        .await
-        .get_user_id_from_username(&username)
-        .await
-        .log(|e| warn!("Error: '{e}'; Possibly this user is unregistered?"))?;
+    // FIXME: Verify authorization.
 
     // Attach identity
-    Identity::login(&req.extensions(), username)?;
+    Identity::login(&req.extensions(), format!("{user_id}"))?;
 
     Ok(HttpResponse::Ok())
 }
 
 // FIXME: usr_id needs be usr_token
 #[get("/conversation")]
-async fn get_conversations(user: Identity, data: Data<RwLock<SQLiteDB>>) -> Result<impl Responder> {
-    let username = user.id()?;
-    let usr_id = data
+async fn get_conversations(user: Identity, db: Data<RwLock<SQLiteDB>>) -> Result<impl Responder> {
+    // SAFETY: No need to refetch info, it is about ourselves.
+    let user_id = parse_cookie(user.id()?)?;
+
+    let user_id = UserId(user_id);
+
+    let res = db
         .read()
         .await
-        .get_user_id_from_username(&username)
-        .await
-        .w()?;
-    let res = data
-        .read()
-        .await
-        .get_conversations(&usr_id)
+        .get_conversations(&user_id)
         .await
         .map(Json)
         .w()?;
@@ -186,39 +227,36 @@ async fn get_peer(
     user: Identity,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let username = user.id()?;
-    let usr_id = data
-        .read()
-        .await
-        .get_user_id_from_username(&username)
-        .await
-        .w()?;
+    let user_id = user.id().map(parse_cookie)??;
+    let user_id = UserId(user_id);
+
     let convo_id = ConversationId(*convo_id);
     data.read()
         .await
-        .belongs_to_conversation(&usr_id, &convo_id)
+        .belongs_to_conversation(&user_id, &convo_id)
         .await
         .w()?;
-    let peer_id = data.read().await.get_peer(&usr_id, &convo_id).await?;
-    let username = data.read().await.get_user_profile(&peer_id).await?;
-    Ok(Json(username.username()))
+    let peer_id = data.read().await.get_peer(&user_id, &convo_id).await?;
+    let profile = data.read().await.get_user_profile(&peer_id).await?;
+    // SAFETY: no need to update the peer, as we are only getting their id
+
+    let profile = Credential { id: profile.id().0 };
+
+    Ok(Json(profile))
 }
 
-#[get("/user/{username}")]
+#[get("/user/{user_id}")]
 async fn get_user_profile(
-    data: Data<RwLock<SQLiteDB>>,
-    username: Path<String>,
+    db: Data<RwLock<SQLiteDB>>,
+    user_id: Path<i64>,
+    js: Data<jumpseller::Client>,
 ) -> Result<impl Responder> {
-    let usr_id = data
+    let user_id = UserId(*user_id);
+    jumpseller_update_user(&db, &js, user_id.0).await?;
+    let res = db
         .read()
         .await
-        .get_user_id_from_username(&username)
-        .await
-        .w()?;
-    let res = data
-        .read()
-        .await
-        .get_user_profile(&usr_id)
+        .get_user_profile(&user_id)
         .await
         .map(Json)
         .w()?;
@@ -227,7 +265,7 @@ async fn get_user_profile(
 
 #[derive(Debug, Serialize, Deserialize)]
 struct MessageContent {
-    sender_username: String,
+    sender_jsid: i64,
     msg: Message,
 }
 
@@ -246,11 +284,8 @@ struct MessageFormat {
 }
 
 impl MessageContent {
-    fn new(sender_username: String, msg: Message) -> Self {
-        Self {
-            sender_username,
-            msg,
-        }
+    fn new(sender_jsid: i64, msg: Message) -> Self {
+        Self { sender_jsid, msg }
     }
 }
 
@@ -276,13 +311,7 @@ async fn get_message(
     user: Identity,
     msg_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let username = user.id()?;
-    let usr_id = data
-        .read()
-        .await
-        .get_user_id_from_username(&username)
-        .await
-        .w()?;
+    let user_id = user.id().map(parse_cookie)?.map(UserId)?;
     let msg_id = MessageId(*msg_id);
     let convo_id = data
         .read()
@@ -292,18 +321,11 @@ async fn get_message(
         .w()?;
     data.read()
         .await
-        .belongs_to_conversation(&usr_id, &convo_id)
+        .belongs_to_conversation(&user_id, &convo_id)
         .await
         .log(|e| warn!("{e}"))?;
     let (sender_id, msg, prev_id) = data.read().await.get_message(&msg_id).await.w()?;
-    let sender_username = data
-        .read()
-        .await
-        .get_user_profile(&sender_id)
-        .await
-        .w()?
-        .username();
-    let msg = MessageContent::new(sender_username, msg);
+    let msg = MessageContent::new(sender_id.0, msg);
     Ok(Json(MessageFormat::one(msg, prev_id)))
 }
 
@@ -317,44 +339,76 @@ async fn get_message(
 // }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[allow(dead_code)]
 struct ConversationForm {
-    their_username: String,
-    product_id: i64,
+    their_userid: i64,
+    product_jumpseller_id: i64,
 }
+
+#[derive(Debug, thiserror::Error)]
+#[error("Parsing error: {0}")]
+struct CookieParseError(#[from] ParseIntError);
+
+fn parse_cookie<I: AsRef<str>>(identity: I) -> Result<i64, CookieParseError> {
+    identity.as_ref().parse::<i64>().map_err(CookieParseError)
+}
+
+impl ResponseError for CookieParseError {}
 
 #[post("/conversation")]
 async fn start_conversation(
+    utils: Data<BackendInfoUpdater>,
     data: Data<RwLock<SQLiteDB>>,
+    jumpseller: Data<jumpseller::Client>,
     user: Identity,
     form: Form<ConversationForm>,
 ) -> Result<impl Responder> {
-    let username = user.id()?;
-    let usr_id = data
-        .read()
-        .await
-        .get_user_id_from_username(&username)
-        .await
-        .w()?;
-    let their_id = data
-        .read()
-        .await
-        .get_user_id_from_username(&form.their_username)
-        .await
-        .w()?;
+    let user_id = user.id().map(parse_cookie)?.map(UserId)?;
+    let their_id = form.their_userid;
+
+    jumpseller_update_user(&data, &jumpseller, user_id.0).await?;
+    jumpseller_update_user(&data, &jumpseller, their_id).await?;
+    jumpseller_update_product(
+        &data,
+        &jumpseller,
+        &UserId(their_id),
+        form.product_jumpseller_id,
+    )
+    .await?;
+
+    let their_id = UserId(their_id);
+
     data.read()
         .await
-        .belongs_to_seller(&their_id, &form.product_id.into())
+        .belongs_to_seller(&their_id, &form.product_jumpseller_id.into())
         .await
         .w()?;
     let res = data
         .write()
         .await
-        .start_conversation(&usr_id, &their_id, &form.product_id.into())
+        .start_conversation(&user_id, &their_id, &form.product_jumpseller_id.into())
         .await
-        .map(Json)
         .w()?;
-    Ok(res)
+
+    // Don't divulge for now.
+    let callback = utils.new_convo(&*data.read().await, &res, &user_id).await?;
+
+    match callback.await.map_err(ErrorInternalServerError)? {
+        crate::F2BResponse::Ok => {}
+        crate::F2BResponse::GoogleCloud(error) => {
+            log::error!("Failed to publish message: {error}.");
+        }
+        crate::F2BResponse::Unrecoverable(error) => {
+            log::error!("Failed to publish message: {error}.");
+        }
+    }
+
+    #[derive(Serialize)]
+    struct ConversationIdWrapper {
+        id: i64,
+    }
+    let res = ConversationIdWrapper { id: res.0 };
+
+    Ok(Json(res))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -371,32 +425,27 @@ async fn post_msg(
     conversation: Path<i64>,
     form: Form<MessageForm>,
 ) -> Result<impl Responder> {
-    let username = user.id()?;
-    let usr_id = data
-        .read()
-        .await
-        .get_user_id_from_username(&username)
-        .await
-        .w()?;
+    let user_id = user.id().map(parse_cookie)?.map(UserId)?;
     let convo_id = ConversationId(conversation.into_inner());
-    let msg = Message(form.into_inner().message);
     data.read()
         .await
-        .belongs_to_conversation(&usr_id, &convo_id)
+        .belongs_to_conversation(&user_id, &convo_id)
         .await
         .w()?;
+    let msg = Message::from(form.into_inner().message.as_str());
     let res = data
         .write()
         .await
-        .post_msg(msg, &usr_id, &convo_id)
+        .post_msg(msg, &user_id, &convo_id)
         .await
         .w()?;
 
+    // Don't divulge for now.
     let callback = utils
-        .new_message(&*data.read().await, &res, &convo_id)
+        .new_message(&*data.read().await, &res, &convo_id, false)
         .await?;
 
-    match callback.await.map_err(|e| ErrorInternalServerError(e))? {
+    match callback.await.map_err(ErrorInternalServerError)? {
         crate::F2BResponse::Ok => {}
         crate::F2BResponse::GoogleCloud(error) => {
             log::error!("Failed to publish message: {error}.");
@@ -405,6 +454,13 @@ async fn post_msg(
             log::error!("Failed to publish message: {error}.");
         }
     }
+
+    #[derive(Serialize)]
+    struct MessageIdWrapper {
+        id: i64,
+    }
+
+    let res = MessageIdWrapper { id: res.0 };
 
     Ok(Json(res))
 }
@@ -415,26 +471,25 @@ async fn get_latest_message(
     user: Identity,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let username = user.id()?;
-    let usr_id = data
-        .read()
-        .await
-        .get_user_id_from_username(&username)
-        .await
-        .w()?;
+    let user_id = user.id().map(parse_cookie)?.map(UserId)?;
     let convo_id = ConversationId(*convo_id);
     data.read()
         .await
-        .belongs_to_conversation(&usr_id, &convo_id)
+        .belongs_to_conversation(&user_id, &convo_id)
         .await
         .w()?;
-    let db_handle = data.read().await;
-    let res = db_handle
-        .get_latest_message(&convo_id)
-        .await
-        .map(Json)
-        .w()?;
-    Ok(res)
+    let res = data.read().await.get_latest_message(&convo_id).await.w()?;
+
+    #[derive(Serialize)]
+    struct MaybeMsgIdWrapper {
+        id: Option<i64>,
+    }
+
+    let res = MaybeMsgIdWrapper {
+        id: res.map(|x| x.0),
+    };
+
+    Ok(Json(res))
 }
 
 #[get("/conversation/{convo_id}/recent")]
@@ -443,46 +498,40 @@ async fn get_most_recent_messages(
     user: Identity,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
-    let username = user.id()?;
-    let usr_id = data
-        .read()
-        .await
-        .get_user_id_from_username(&username)
-        .await
-        .w()?;
+    let user_id = user.id().map(parse_cookie)?.map(UserId)?;
     let convo_id = ConversationId(*convo_id);
     data.read()
         .await
-        .belongs_to_conversation(&usr_id, &convo_id)
+        .belongs_to_conversation(&user_id, &convo_id)
         .await
         .w()?;
-    let db_handle = data.read().await;
-    let (messages, prev_id) = db_handle.get_most_recent_messages(&convo_id).await.w()?;
+    let (messages, prev_id) = data
+        .read()
+        .await
+        .get_most_recent_messages(&convo_id)
+        .await
+        .w()?;
     let mut msgs = Vec::new();
     for (sender_id, msg) in messages {
-        let sender_username = data
-            .read()
-            .await
-            .get_user_profile(&sender_id)
-            .await
-            .w()?
-            .username();
-        msgs.push(MessageContent {
-            sender_username,
-            msg,
-        })
+        msgs.push(MessageContent::new(sender_id.0, msg));
     }
     Ok(Json(MessageFormat::many(msgs, prev_id)))
 }
 
 #[get("/product/{prod_id}")]
-async fn get_product(data: Data<RwLock<SQLiteDB>>, prod_id: Path<i64>) -> Result<impl Responder> {
-    let prod = data
+async fn get_product(
+    data: Data<RwLock<SQLiteDB>>,
+    jumpseller: Data<jumpseller::Client>,
+    prod_id: Path<i64>,
+) -> Result<impl Responder> {
+    let seller_id = data
         .read()
         .await
         .get_product(&ProductId(*prod_id))
-        .await
-        .w()?;
+        .await?
+        .seller_id;
+    jumpseller_update_product(&data, &jumpseller, &seller_id, *prod_id).await?;
+    let prod = data.read().await.get_product(&ProductId(*prod_id)).await?;
     Ok(Json(prod))
 }
 
@@ -492,16 +541,10 @@ async fn get_product_in_conversation(
     convo_id: Path<i64>,
     user: Identity,
 ) -> Result<impl Responder> {
-    let username = user.id()?;
-    let usr_id = data
-        .read()
-        .await
-        .get_user_id_from_username(&username)
-        .await
-        .w()?;
+    let user_id = user.id().map(parse_cookie)?.map(UserId)?;
     data.read()
         .await
-        .belongs_to_conversation(&usr_id, &ConversationId(*convo_id))
+        .belongs_to_conversation(&user_id, &ConversationId(*convo_id))
         .await
         .w()?;
     let prod = data
@@ -510,6 +553,13 @@ async fn get_product_in_conversation(
         .get_product_id_from_conversation_id(&ConversationId(*convo_id))
         .await
         .w()?;
+
+    #[derive(Serialize)]
+    struct ProductIdWrapper {
+        id: i64,
+    }
+    let prod = ProductIdWrapper { id: prod.0 };
+
     Ok(Json(prod))
 }
 

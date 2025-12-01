@@ -1,3 +1,5 @@
+import { Badge, Box, Divider, ListItemButton, Typography } from '@mui/material';
+
 // components
 import ProfilePicture from './ProfilePicture';
 
@@ -14,6 +16,7 @@ export interface ChatPreviewProps {
   unreadMessages: number;
   /** The last message sent by the user */
   lastMessage: string;
+  /** The product the conversation pertains to */
   product: string;
 }
 
@@ -28,22 +31,55 @@ export default function ChatPreview({
   lastMessage,
   product,
 }: ChatPreviewProps) {
-  const notificationText = unreadMessages > 9 ? '9+' : `${unreadMessages}`;
-
   return (
-    <div className="flex items-center gap-5 w-full px-4 py-6 hover:bg-biloba-flower-500 transition-colors">
-      <div className="relative">
+    <ListItemButton
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '20px',
+        width: 1,
+        py: '16px',
+      }}
+    >
+      {/** profile picture with notification counter */}
+      <Badge
+        badgeContent={unreadMessages}
+        max={9}
+        color="primary"
+        overlap="circular"
+      >
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
-        {unreadMessages > 0 && (
-          <span className="inline-flex w-5 h-5 items-center justify-center text-xs bg-red-600 rounded-full absolute top-0 right-0">
-            {notificationText}
-          </span>
-        )}
-      </div>
-      <div>
-        <strong>{name}</strong><span className="text-xs ml-2 italic before:content-['@']">{username}</span> | <span className="text-xs ml-2">{product}</span>
-        <p>{lastMessage}</p>
-      </div>
-    </div>
+      </Badge>
+
+      <Box>
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+          {/** display name */}
+          <Typography component="strong" variant="body1" fontWeight="bold">
+            {name}
+          </Typography>
+          {/** username */}
+          <Typography
+            component="span"
+            variant="body2"
+            display="inline"
+            fontStyle="italic"
+            sx={{
+              '&::before': {
+                content: '"@"',
+              },
+            }}
+          >
+            {username}
+          </Typography>
+          {/** product */}
+          <Divider orientation="vertical" flexItem aria-hidden />
+          <Typography component="span" variant="body2">
+            {product}
+          </Typography>
+        </Box>
+        {/** last message */}
+        <Typography variant="body2">{lastMessage}</Typography>
+      </Box>
+    </ListItemButton>
   );
 }

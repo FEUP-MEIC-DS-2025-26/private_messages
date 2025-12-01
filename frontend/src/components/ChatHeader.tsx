@@ -1,33 +1,32 @@
-"use client";
-
-import useSWR from "swr";
+import { Box, Divider, IconButton, Typography } from '@mui/material';
+import useSWR from 'swr';
 
 // icons
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 // components
-import ProfilePicture from "./ProfilePicture";
+import ProfilePicture from './ProfilePicture';
 
 /**
  * A function for fetching data from the backend.
  * @param {string} URL - the URL
  */
 const fetcher = (URL: string) =>
-  fetch(URL, { credentials: "include" }).then((res) => res.json());
+  fetch(URL, { credentials: 'include' }).then((res) => res.json());
 
 /**
  * Fetches information regarding the peer.
  * @param {number} id - the unique chat identifier
  */
 const getPeer = async (id: number, backendURL: string) => {
-  // fetch the peer's username
-  const username: string = await fetcher(
-    `${backendURL}/api/chat/conversation/${id}/peer`
-  );
+  // fetch the peer's JumpSeller ID
+  const userID: number = await fetcher(
+    `${backendURL}/api/chat/conversation/${id}/peer`,
+  ).then(peer => peer.id);
 
   // fetch the peer's information
-  return await fetcher(`${backendURL}/api/chat/user/${username}`);
+  return await fetcher(`${backendURL}/api/chat/user/${userID}`);
 };
 
 /**
@@ -37,7 +36,10 @@ const getPeer = async (id: number, backendURL: string) => {
  */
 const getProduct = async (id: number, backendURL: string) => {
   return await fetcher(`${backendURL}/api/chat/conversation/${id}/product`)
-    .then((productId: number) => fetcher(`${backendURL}/api/chat/product/${productId}`))
+    .then(x => x.id)
+    .then((productId: number) =>
+      fetcher(`${backendURL}/api/chat/product/${productId}`),
+    )
     .then((product) => product.name);
 };
 
@@ -60,22 +62,30 @@ export default function ChatHeader({
 }: ChatHeaderProps) {
   const { data: peer } = useSWR(
     `${backendURL}/api/chat/conversation/${id}/peer`,
-    () => getPeer(id, backendURL)
+    () => getPeer(id, backendURL),
   );
 
   const { data: product } = useSWR(
     `${backendURL}/api/chat/conversation/${id}/product`,
-    () => getProduct(id, backendURL)
+    () => getProduct(id, backendURL),
   );
 
   return (
-    <header className="flex items-center gap-5 pl-4 pb-4 border-b">
-      <button
-        className="inline-flex items-center justify-center w-8 h-8 hover:bg-gray-600 hover:rounded-full transition-all"
-        onClick={goToInbox}
-      >
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        px: '16px',
+        py: '16px',
+      }}
+    >
+      {/** button to navigate to the inbox */}
+      <IconButton onClick={goToInbox} size="small" color="primary">
         <FontAwesomeIcon icon={faArrowLeft} />
-      </button>
+      </IconButton>
+
+      {/** peer information */}
       {peer ? (
         <>
           <ProfilePicture
@@ -83,17 +93,36 @@ export default function ChatHeader({
             URL="https://thispersondoesnotexist.com/"
             size={56}
           />
-          <div>
-            <strong className="text-xl">{peer.name}</strong> |{" "}
-            <span className="text-xl">{product}</span>
-            <p className="text-xs italic before:content-['@']">
+          <Box>
+            <Box display="flex" alignItems="center" gap={1}>
+              {/* display name */}
+              <Typography variant="body1" component="strong" fontWeight="bold">
+                {peer.name}
+              </Typography>
+              <Divider orientation="vertical" flexItem />
+
+              {/* product */}
+              <Typography variant="body1" component="span">
+                {product}
+              </Typography>
+            </Box>
+            {/* username */}
+            <Typography
+              variant="body2"
+              fontStyle="italic"
+              sx={{
+                '&::before': {
+                  content: '"@"',
+                },
+              }}
+            >
               {peer.username}
-            </p>
-          </div>
+            </Typography>
+          </Box>
         </>
       ) : (
         <div>Loading...</div>
       )}
-    </header>
+    </Box>
   );
 }
