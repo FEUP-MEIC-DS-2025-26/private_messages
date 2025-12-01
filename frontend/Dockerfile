@@ -20,4 +20,6 @@ EXPOSE 3001
 
 ENV PUBLIC_BACKEND_URL="https://backend-private-messages-azzawq6caq-no.a.run.app"
 
+RUN pnpm build
+
 CMD ["pnpm", "preview"]
