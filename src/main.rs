@@ -10,6 +10,7 @@ use crate::database::{
     crypto::CryptoKey,
     sqlite::{ConversationId, DbError, MessageId, SQLiteDB, UserId},
 };
+use actix_cors::Cors;
 use actix_identity::IdentityMiddleware;
 use actix_session::{SessionMiddleware, config::PersistentSession, storage::CookieSessionStore};
 use actix_web::{App, HttpServer, middleware, web};
@@ -20,10 +21,12 @@ use gcloud_googleapis::pubsub::v1::PubsubMessage;
 use gcloud_pubsub::client::{Client, ClientConfig};
 use log::info;
 use prost::Message;
-use std::{fmt::Debug, path::PathBuf};
+use serde::{Deserialize, Serialize};
+use std::{ffi::OsString, fmt::Debug, path::PathBuf};
 use tokio::sync::RwLock;
 
 mod database;
+mod jumpseller;
 mod pubsub;
 mod rest;
 
@@ -44,6 +47,7 @@ impl Cli {
                 password: _,
                 salt: _,
                 db_url: _,
+                jumpseller_cred_file: _,
             } => "Production",
         };
         let port = self.port;
@@ -61,31 +65,65 @@ enum Commands {
         password: PathBuf,
         /// File containing the hash
         salt: PathBuf,
+        /// File containing json for the `JumpSeller` credentials.
+        #[arg(default_value = OsString::from("local/jumpseller_cred.json"))]
+        jumpseller_cred_file: PathBuf,
         /// Path to sqlite db
         #[arg(short, long, default_value_t = String::from("sqlite:.sqlite3"))]
         db_url: String,
     },
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JumpSellerCredentials {
+    pub(crate) login: String,
+    pub(crate) token: String,
+}
+
+fn get_jumpseller_credentials(path: PathBuf) -> Option<JumpSellerCredentials> {
+    std::fs::read_to_string(path)
+        .inspect_err(|e| log::error!("Failed to read jumpseller credentials: {e}"))
+        .ok()
+        .and_then(|x| {
+            serde_json::from_str(&x)
+                .inspect_err(|e| log::error!("Failed to parse jumpseller credentials: {e}"))
+                .ok()
+        })
+}
+
 async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Result<()> {
-    let db = match cli.command {
+    let (db, js_cred) = match cli.command {
         Commands::Kiosk => {
             let suite = CryptoKey::new("demonstration_password", "demonstration_salt")
                 .map_err(|e| anyhow!("Error: {e}"))?;
-            SQLiteDB::kiosk(suite).await?
+            (
+                SQLiteDB::kiosk(suite).await?,
+                get_jumpseller_credentials("local/jumpseller_cred.json".into()),
+            )
         }
         Commands::Run {
             password,
             salt,
             db_url,
+            jumpseller_cred_file,
         } => {
             let p = std::fs::read_to_string(password)?;
             let s = std::fs::read_to_string(salt)?;
             let suite = CryptoKey::new(p.trim(), s.trim()).map_err(|e| anyhow!("Error: {e}"))?;
+            let js_f = get_jumpseller_credentials(jumpseller_cred_file);
 
-            SQLiteDB::new(&db_url, suite).await?
+            (SQLiteDB::new(&db_url, suite).await?, js_f)
         }
     };
+
+    let js_client = if let Some(s) = js_cred {
+        jumpseller::Client::from(s)
+    } else {
+        log::warn!("Running without jumpseller client");
+        jumpseller::Client::dummy()
+    };
+
+    let jsc = web::Data::new(js_client);
 
     let wd = web::Data::new(RwLock::new(db));
 
@@ -97,6 +135,7 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
         App::new()
             .app_data(utils.clone())
             .app_data(wd.clone())
+            .app_data(jsc.clone())
             .service(rest::create_services())
             // .service(Files::new("/", "frontend/dist").index_file("index.html"))
             .wrap(IdentityMiddleware::default())
@@ -108,6 +147,16 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
                         PersistentSession::default().session_ttl(Duration::minutes(5)),
                     )
                     .build(),
+            )
+            .wrap(
+                Cors::default()
+                    .allowed_origin("https://api.madeinportugal.store")
+                    .allowed_origin("https://frontend.madeinportugal.store")
+                    .allowed_origin("https://madeinportugal.store")
+                    .allowed_origin("http://localhost")
+                    .allowed_methods(vec!["GET", "POST"])
+                    .allow_any_header()
+                    .max_age(3600),
             )
             .wrap(middleware::NormalizePath::trim())
             .wrap(middleware::Logger::default())
@@ -178,17 +227,17 @@ async fn run_backend_code(
         use pubsub::priv_msgs_v1::{PrivateMessageSchema, private_message_schema};
         let pubsub_msg = match msg {
             F2BRequestType::NewMessage {
-                sender_name,
-                receiver_name,
                 product_info,
                 uid,
                 timestamp,
                 preview,
+                sender_id,
+                receiver_id,
             } => {
                 let pubsub_msg = private_message_schema::NewMessage {
                     uid,
-                    sender_name,
-                    receiver_name,
+                    sender_id,
+                    receiver_id,
                     product_info,
                     timestamp,
                     preview,
@@ -211,8 +260,8 @@ async fn run_backend_code(
             } => {
                 let pubsub_msg = private_message_schema::NewConversation {
                     uid,
-                    seller_name: seller,
-                    buyer_name: buyer,
+                    seller_id: seller,
+                    buyer_id: buyer,
                     product_info,
                 };
 
@@ -256,8 +305,8 @@ enum F2BRequestType {
     #[allow(dead_code)]
     NewMessage {
         uid: i64,
-        sender_name: String,
-        receiver_name: String,
+        sender_id: i64,
+        receiver_id: i64,
         /// jumpseller id
         product_info: i64,
         timestamp: String,
@@ -265,8 +314,8 @@ enum F2BRequestType {
     },
     NewConvo {
         uid: i64,
-        seller: String,
-        buyer: String,
+        seller: i64,
+        buyer: i64,
         /// jumpseller id
         product_info: i64,
     },
@@ -294,8 +343,6 @@ impl BackendInfoUpdater {
         let (sender, message, _) = database.get_message(message_id).await?;
         let receiver = database.get_peer(&sender, convo_id).await?;
 
-        let sender_name = database.get_user_profile(&sender).await?.username();
-        let receiver_name = database.get_user_profile(&receiver).await?.username();
         let product_id = database
             .get_product_id_from_conversation_id(convo_id)
             .await?;
@@ -306,8 +353,8 @@ impl BackendInfoUpdater {
         let message_sum = if divulge { Some(fst_32) } else { None };
 
         let msg_type = F2BRequestType::NewMessage {
-            sender_name,
-            receiver_name,
+            sender_id: sender.0,
+            receiver_id: receiver.0,
             product_info,
             preview: message_sum,
             uid: message_id.0,
@@ -337,9 +384,8 @@ impl BackendInfoUpdater {
             .await?;
         let prod = database.get_product(&prod_id).await?;
         let product_info = prod.product_info();
-        let seller_id = database.get_peer(buyer, convo_id).await?;
-        let buyer = database.get_user_profile(buyer).await?.username();
-        let seller = database.get_user_profile(&seller_id).await?.username();
+        let seller = database.get_peer(buyer, convo_id).await?.0;
+        let buyer = buyer.0;
 
         let msg_type = F2BRequestType::NewConvo {
             uid: convo_id.0,

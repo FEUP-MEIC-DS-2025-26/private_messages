@@ -66,16 +66,16 @@ impl SQLiteDB {
 
     fn kiosk_users() -> Vec<UserProfile> {
         vec![
-            UserProfile::new_clone("john", "John Doe"),
-            UserProfile::new_clone("jane", "Jane Doe"),
-            UserProfile::new_clone("fred", "Fred Nerk"),
+            UserProfile::new_clone(1, "john", "John Doe"),
+            UserProfile::new_clone(2, "jane", "Jane Doe"),
+            UserProfile::new_clone(3, "fred", "Fred Nerk"),
         ]
     }
 
     fn kiosk_conversations() -> Vec<(UserId, UserId, ProductId)> {
         vec![
-            (UserId(1), UserId(2), ProductId(1)),
-            (UserId(1), UserId(3), ProductId(2)),
+            (UserId(1), UserId(2), ProductId(9_347_673)),
+            (UserId(3), UserId(1), ProductId(9_347_699)),
         ]
     }
 
@@ -128,25 +128,36 @@ pub struct UserId(pub i64);
 
 #[derive(Debug, sqlx::Type, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UserProfile {
+    id: i64,
     username: String,
     name: String,
 }
 
 impl UserProfile {
     #[allow(dead_code)]
-    pub fn new(username: String, name: String) -> Self {
-        Self { username, name }
-    }
-
-    pub fn new_clone(username: &str, name: &str) -> Self {
+    pub fn new(jumpseller_id: i64, username: String, name: String) -> Self {
         Self {
-            username: username.to_owned(),
-            name: name.to_owned(),
+            username,
+            name,
+            id: jumpseller_id,
         }
     }
 
+    pub fn new_clone(id: i64, username: &str, name: &str) -> Self {
+        Self {
+            username: username.to_owned(),
+            name: name.to_owned(),
+            id,
+        }
+    }
+
+    #[allow(dead_code)]
     pub fn username(&self) -> String {
         self.username.clone()
+    }
+
+    pub fn id(&self) -> UserId {
+        self.id.into()
     }
 
     #[allow(dead_code)]
@@ -200,9 +211,9 @@ pub struct ProductId(pub i64);
 
 #[derive(Debug, sqlx::Type, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Product {
-    name: String,
-    seller_id: UserId,
-    jumpseller_id: i64,
+    pub(crate) name: String,
+    pub(crate) seller_id: UserId,
+    pub(crate) jumpseller_id: i64,
 }
 
 impl Product {
@@ -378,7 +389,7 @@ impl Database for SQLiteDB {
         sqlx::query_as!(
             UserProfile,
             r#"
-            SELECT username as "username!", name as "name!"
+            SELECT username as "username!", name as "name!", id as "id!"
             FROM user
             WHERE id = ?
         "#,
@@ -477,23 +488,36 @@ impl Database for SQLiteDB {
             r#"
             SELECT id as "id!"
             FROM user
-            WHERE username = ?;
+            WHERE id = ?;
         "#,
-            profile.username
+            profile.id
         )
         .fetch_optional(&mut *transaction)
         .await?;
 
         if let Some(user) = record {
+            sqlx::query!(
+                r#"
+                UPDATE user
+                SET username = ?, name = ?
+                WHERE id = ?;
+            "#,
+                profile.username,
+                profile.name,
+                user.id
+            )
+            .execute(&mut *transaction)
+            .await?;
             return Ok(UserId(user.id));
         }
 
         let record = sqlx::query!(
             r#"
-            INSERT INTO user (username, name)
-            VALUES (?, ?)
+            INSERT INTO user (id, username, name)
+            VALUES (?, ?, ?)
             RETURNING id as "id!"
         "#,
+            profile.id,
             profile.username,
             profile.name
         )
@@ -686,7 +710,7 @@ impl Database for SQLiteDB {
         Ok(sqlx::query_as!(
             Product,
             r#"
-                SELECT name as "name!", js_id as "jumpseller_id!", seller_id as "seller_id!" 
+                SELECT name as "name!", id as "jumpseller_id!", seller_id as "seller_id!" 
                 FROM product
                 WHERE product.id = ?
             "#,
@@ -723,7 +747,7 @@ impl Database for SQLiteDB {
             r#"
                SELECT id as "id!"
                FROM product
-               WHERE js_id = ? 
+               WHERE id = ? 
             "#,
             product.jumpseller_id,
         )
@@ -747,7 +771,7 @@ impl Database for SQLiteDB {
         } else {
             let r = sqlx::query!(
                 r#"
-                    INSERT INTO product(name, js_id, seller_id)
+                    INSERT INTO product(name, id, seller_id)
                     VALUES(?,?,?)
                     RETURNING id as "id!"
                 "#,
@@ -799,11 +823,13 @@ mod test {
     #[tokio::test]
     async fn test_sqlite() -> anyhow::Result<()> {
         let alice = UserProfile {
+            id: 1,
             username: "alice_11".to_owned(),
             name: "Alice Arnold".to_owned(),
         };
 
         let bob = UserProfile {
+            id: 2,
             username: "bobert22".to_owned(),
             name: "Bob Bellows".to_owned(),
         };
@@ -899,11 +925,13 @@ mod test {
     async fn test_conversation_pointer() -> anyhow::Result<()> {
         // Preparation
         let alice = UserProfile {
+            id: 1,
             username: "alice_11".to_owned(),
             name: "Alice Arnold".to_owned(),
         };
 
         let bob = UserProfile {
+            id: 2,
             username: "bobert22".to_owned(),
             name: "Bob Bellows".to_owned(),
         };

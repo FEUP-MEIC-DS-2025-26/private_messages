@@ -1,19 +1,20 @@
-import { createModuleFederationConfig } from '@module-federation/rsbuild-plugin';
+import { createModuleFederationConfig } from "@module-federation/rsbuild-plugin";
 
 export default createModuleFederationConfig({
-  name: 'mf_chat',
+  name: "mf_chat",
+  filename: 'remoteEntry.js',
   exposes: {
-    './Chat': './src/components/Chat.tsx',
-    './Inbox': './src/components/Inbox.tsx',
+    "./Chat": "./src/components/Chat.tsx",
+    "./Inbox": "./src/components/Inbox.tsx",
   },
   shared: {
     react: {
       singleton: true,
-      requiredVersion: '^18.0.0',
+      requiredVersion: "^18.0.0",
     },
-    'react-dom': {
+    "react-dom": {
       singleton: true,
-      requiredVersion: '^18.0.0',
+      requiredVersion: "^18.0.0",
     },
   },
 });

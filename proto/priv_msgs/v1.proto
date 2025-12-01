@@ -12,10 +12,10 @@ message PrivateMessageSchema {
     /// UID for this msg
     int64 uid = 1;
    
-    /// Username of the sender
-    string sender_name = 2;
-    /// Username of the receiver
-    string receiver_name = 3;
+    /// `JumpSeller` ID of the sender
+    int64 sender_id = 2;
+    /// `JumpSeller` ID of the receiver
+    int64 receiver_id = 3;
 
     /// `JumpSeller` Id for the product
     int64 product_info = 4;
@@ -32,10 +32,10 @@ message PrivateMessageSchema {
     /// UID for this broadcast
     int64 uid = 1;
 
-    /// Username of the sender
-    string seller_name = 2;
-    /// Username of the receiver
-    string buyer_name = 3;
+    /// `JumpSeller` ID of the seller
+    int64 seller_id = 2;
+    /// `JumpSeller` ID of the buyer
+    int64 buyer_id = 3;
   
     /// `JumpSeller` Id for the product
     int64 product_info = 4;

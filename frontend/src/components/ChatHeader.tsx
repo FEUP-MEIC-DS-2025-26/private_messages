@@ -20,13 +20,13 @@ const fetcher = (URL: string) =>
  * @param {number} id - the unique chat identifier
  */
 const getPeer = async (id: number, backendURL: string) => {
-  // fetch the peer's username
-  const username: string = await fetcher(
+  // fetch the peer's JumpSeller ID
+  const userID: number = await fetcher(
     `${backendURL}/api/chat/conversation/${id}/peer`,
   );
 
   // fetch the peer's information
-  return await fetcher(`${backendURL}/api/chat/user/${username}`);
+  return await fetcher(`${backendURL}/api/chat/user/${userID}`);
 };
 
 /**
@@ -92,30 +92,16 @@ export default function ChatHeader({
             URL="https://thispersondoesnotexist.com/"
             size={56}
           />
-          <Box>
-            <Box display="flex" alignItems="center" gap={1}>
-              {/* display name */}
-              <Typography variant="body1" component="strong" fontWeight="bold">
-                {peer.name}
-              </Typography>
-              <Divider orientation="vertical" flexItem />
+          <Box display="flex" alignItems="center" gap={1}>
+            {/* display name */}
+            <Typography variant="body1" component="strong" fontWeight="bold">
+              {peer.name}
+            </Typography>
+            <Divider orientation="vertical" flexItem />
 
-              {/* product */}
-              <Typography variant="body1" component="span">
-                {product}
-              </Typography>
-            </Box>
-            {/* username */}
-            <Typography
-              variant="body2"
-              fontStyle="italic"
-              sx={{
-                '&::before': {
-                  content: '"@"',
-                },
-              }}
-            >
-              {peer.username}
+            {/* product */}
+            <Typography variant="body1" component="span">
+              {product}
             </Typography>
           </Box>
         </>

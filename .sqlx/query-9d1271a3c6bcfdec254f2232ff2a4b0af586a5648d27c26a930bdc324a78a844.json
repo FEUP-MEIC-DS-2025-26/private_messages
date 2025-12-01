@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT username as \"username!\", name as \"name!\", id as \"id!\"\n            FROM user\n            WHERE id = ?\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "username!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "name!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "id!",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "9d1271a3c6bcfdec254f2232ff2a4b0af586a5648d27c26a930bdc324a78a844"
+}

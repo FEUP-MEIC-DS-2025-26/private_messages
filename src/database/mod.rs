@@ -25,6 +25,7 @@ pub trait Database {
         conversation: &Self::ConversationId,
     ) -> Result<Self::UserId, Self::Error>;
 
+    #[allow(dead_code)]
     async fn get_user_id_from_username(&self, username: &str) -> Result<Self::UserId, Self::Error>;
 
     async fn get_user_profile(
