@@ -29,22 +29,24 @@ const getMessages = async (URL: string, username: string) => {
 
 async function pollMessages(
   backendURL: string,
+  username: string,
   stateMessageId: number,
   latestMessageId: number,
 ): Promise<UserMessageProps[] | null> {
   const newMessages = [];
   let currentId: number = latestMessageId;
   while (stateMessageId != currentId) {
-    // The type is too cumbersome
     const message: any = await fetcher(
       `${backendURL}/api/chat/message/${currentId}`,
     );
+
     currentId = message.previous_msg;
+    const messageContent = message.content;
 
     // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
     newMessages.push({
-      isFromUser: false,
-      content: message.content.msg.contents,
+      isFromUser: messageContent.sender_username === username,
+      content: messageContent.msg.contents,
     });
   }
   return newMessages;
@@ -105,6 +107,7 @@ export default function Chat({
         if (latestMessageId !== null && latestMessageId !== undefined) {
           const newMessages = await pollMessages(
             backendURL,
+            username,
             messageId,
             latestMessageId,
           );
@@ -127,6 +130,7 @@ export default function Chat({
   const updateMessages = async (latestMessageId: number) => {
     const newMessages: UserMessageProps[] = await pollMessages(
       backendURL,
+      username,
       messageId,
       latestMessageId,
     );
@@ -150,6 +154,7 @@ export default function Chat({
       {/* Chat */}
       {messages ? (
         <List
+          ref={messageListRef}
           sx={{
             display: 'flex',
             flexDirection: 'column',
