@@ -52,7 +52,11 @@ export default function UserMessage({
         borderBottomRightRadius: 2,
         marginLeft: 'auto',
       }
-    : { backgroundColor: 'grey.400', borderBottomLeftRadius: 2 };
+    : {
+        backgroundColor: 'grey.400',
+        borderBottomLeftRadius: 2,
+        color: 'text.primary',
+      };
 
   return (
     <Box
@@ -63,7 +67,6 @@ export default function UserMessage({
         padding: '12px',
         maxWidth: '75%',
         borderRadius: 6,
-        color: 'text.primary',
         ...extraStyles,
       }}
     >
