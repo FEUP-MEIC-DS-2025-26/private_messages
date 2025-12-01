@@ -1,4 +1,4 @@
-import { Button, Divider, List, ListItem } from '@mui/material';
+import { Divider, List, ListItem } from '@mui/material';
 import useSWR from 'swr';
 
 // components
@@ -35,10 +35,13 @@ const getChats = async (URL: string, userID: number) => {
     ),
   );
 
-  // fetch the peers' display names
-  const fullNames: string[] = await Promise.all(
+  // fetch the peers' usernames and display names
+  const names: { username: string; name: string }[] = await Promise.all(
     userIDs.map((id: number) =>
-      fetcher(`${URL}/user/${id}`).then((user) => user.name),
+      fetcher(`${URL}/user/${id}`).then((user) => ({
+        username: user.username,
+        name: user.name,
+      })),
     ),
   );
 
@@ -63,7 +66,7 @@ const getChats = async (URL: string, userID: number) => {
   return conversationIDs.map((id: number, index: number) => ({
     id,
     userID: userIDs[index],
-    name: fullNames[index],
+    ...names[index],
     lastMessage: lastMessages[index],
     profilePictureURL: 'https://thispersondoesnotexist.com/',
     unreadMessages: Math.floor(Math.random() * 10),
@@ -91,7 +94,6 @@ export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
     `${backendURL}/api/chat/conversation`,
     () => getChats(`${backendURL}/api/chat`, userID),
   );
-  // const chats = await getChats(`${backendURL}/api/chat`, username);
 
   if (isLoading || !chats) {
     return <div>Loading...</div>;
