@@ -65,6 +65,7 @@
               rust-analyzer
               watchexec
               protobuf
+              protox
 
               # NodeJS (NextJS)
               node2nix
@@ -86,6 +87,7 @@
               RUST_SRC_PATH = "${pkgs.rustToolchain}/lib/rustlib/src/rust/library";
               CARGO = "${pkgs.rustToolchain}/bin/cargo";
               LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [pkgs.openssl];
+              PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
             };
           };
         }
