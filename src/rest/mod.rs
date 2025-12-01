@@ -401,6 +401,13 @@ async fn start_conversation(
             log::error!("Failed to publish message: {error}.");
         }
     }
+
+    #[derive(Serialize)]
+    struct ConversationIdWrapper {
+        id: i64,
+    }
+    let res = ConversationIdWrapper { id: res.0 };
+
     Ok(Json(res))
 }
 
@@ -448,6 +455,13 @@ async fn post_msg(
         }
     }
 
+    #[derive(Serialize)]
+    struct MessageIdWrapper {
+        id: i64,
+    }
+
+    let res = MessageIdWrapper { id: res.0 };
+
     Ok(Json(res))
 }
 
@@ -464,14 +478,18 @@ async fn get_latest_message(
         .belongs_to_conversation(&user_id, &convo_id)
         .await
         .w()?;
-    let res = data
-        .read()
-        .await
-        .get_latest_message(&convo_id)
-        .await
-        .map(Json)
-        .w()?;
-    Ok(res)
+    let res = data.read().await.get_latest_message(&convo_id).await.w()?;
+
+    #[derive(Serialize)]
+    struct MaybeMsgIdWrapper {
+        id: Option<i64>,
+    }
+
+    let res = MaybeMsgIdWrapper {
+        id: res.map(|x| x.0),
+    };
+
+    Ok(Json(res))
 }
 
 #[get("/conversation/{convo_id}/recent")]
@@ -535,6 +553,13 @@ async fn get_product_in_conversation(
         .get_product_id_from_conversation_id(&ConversationId(*convo_id))
         .await
         .w()?;
+
+    #[derive(Serialize)]
+    struct ProductIdWrapper {
+        id: i64,
+    }
+    let prod = ProductIdWrapper { id: prod.0 };
+
     Ok(Json(prod))
 }
 

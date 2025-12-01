@@ -74,7 +74,7 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
 
   // For some reason, these two need to be in the same function
   useSWR(url, async (URL: string) => {
-    const messageId: number = await fetcher(`${URL}/latest`);
+    const messageId: number = await fetcher(`${URL}/latest`).then(x => x.id);
     setMessageId(messageId);
 
     const msgs: UserMessageProps[] = await getMessages(URL, userID);
@@ -101,7 +101,7 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
       if (messageId != -1) {
         const latestMessageId: number = await fetcher(
           `${backendURL}/api/chat/conversation/${id}/latest`,
-        );
+        ).then(x => x.id);
         if (latestMessageId !== null && latestMessageId !== undefined) {
           const newMessages = await pollMessages(
             backendURL,

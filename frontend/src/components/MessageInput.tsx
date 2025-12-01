@@ -61,7 +61,7 @@ export default function MessageInput({
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           credentials: 'include',
         },
-      ).then((res) => res.json());
+      ).then((res) => res.json()).then(x => x.id);
 
       await updateMessages(latestMessageId);
 

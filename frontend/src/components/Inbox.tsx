@@ -50,6 +50,7 @@ const getChats = async (URL: string, userID: number) => {
   const lastMessages: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/latest`)
+        .then(msgId => msgId.id)
         .then((messageID: number) => fetcher(`${URL}/message/${messageID}`))
         .then((message) => message.content.msg.contents),
     ),
@@ -58,6 +59,7 @@ const getChats = async (URL: string, userID: number) => {
   const products: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/product`)
+        .then(productId => productId.id)
         .then((productId: number) => fetcher(`${URL}/product/${productId}`))
         .then((product) => product.name),
     ),
