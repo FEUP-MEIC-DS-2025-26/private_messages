@@ -24,6 +24,7 @@ const getMessages = async (URL: string, userID: number) => {
   return messages.map((message) => ({
     isFromUser: message.sender_jsid === userID,
     content: message.msg.contents,
+    timestamp: new Date(message.msg.timestamp),
   }));
 };
 
@@ -47,8 +48,10 @@ async function pollMessages(
     newMessages.push({
       isFromUser: messageContent.sender_jsid === userID,
       content: messageContent.msg.contents,
+      timestamp: new Date(messageContent.msg.timestamp),
     });
   }
+
   return newMessages;
 }
 
