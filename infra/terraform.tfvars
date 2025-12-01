@@ -1,5 +1,5 @@
 project_id     = "ds-2025-g51-private-messages"
 frontend_name  = "frontend-private-messages"
-frontend_image = "europe-southwest1-docker.pkg.dev/ds-2025-g51-private-messages/frontend/production"
+// frontend_image = "europe-southwest1-docker.pkg.dev/ds-2025-g51-private-messages/frontend/production"
 backend_name   = "backend-private-messages"
-backend_image  = "europe-southwest1-docker.pkg.dev/ds-2025-g51-private-messages/backend/production"
+// backend_image  = "europe-southwest1-docker.pkg.dev/ds-2025-g51-private-messages/backend/production"
