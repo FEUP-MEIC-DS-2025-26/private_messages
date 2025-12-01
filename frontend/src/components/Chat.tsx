@@ -27,6 +27,29 @@ const getMessages = async (URL: string, username: string) => {
   }));
 };
 
+async function pollMessages(
+  backendURL: string,
+  stateMessageId: number,
+  latestMessageId: number,
+): Promise<UserMessageProps[] | null> {
+  const newMessages = [];
+  let currentId: number = latestMessageId;
+  while (stateMessageId != currentId) {
+    // The type is too cumbersome
+    const message: any = await fetcher(
+      `${backendURL}/api/chat/message/${currentId}`,
+    );
+    currentId = message.previous_msg;
+
+    // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
+    newMessages.push({
+      isFromUser: false,
+      content: message.content.msg.contents,
+    });
+  }
+  return newMessages;
+}
+
 interface ChatProps {
   backendURL: string;
   id: number;
@@ -43,18 +66,6 @@ export default function Chat({
   username,
   goToInbox,
 }: ChatProps) {
-  /*
-  const { data: msgs } = useSWR(
-    `${backendURL}/api/chat/conversation/${id}`,
-    (URL) => getMessages(URL, username)
-  );
-
-  const { data: latestMsgId } = useSWR(
-    `${backendURL}/api/chat/conversation/${id}`,
-    URL => fetcher(`${URL}/latest`).then(({ id }) => id)
-  );
-  */
-
   const url = `${backendURL}/api/chat/conversation/${id}`;
 
   const messageListRef: Ref<HTMLUListElement> = useRef(null);
@@ -62,11 +73,11 @@ export default function Chat({
   const [messages, setMessages] = useState<UserMessageProps[]>([]);
 
   // For some reason, these two need to be in the same function
-  useSWR(url, async (URL) => {
-    const messageId = await fetcher(`${URL}/latest`);
+  useSWR(url, async (URL: string) => {
+    const messageId: number = await fetcher(`${URL}/latest`);
     setMessageId(messageId);
 
-    const msgs = await getMessages(URL, username);
+    const msgs: UserMessageProps[] = await getMessages(URL, username);
     setMessages(msgs);
   });
 
@@ -88,24 +99,15 @@ export default function Chat({
     const intervalId = setInterval(async () => {
       // msgId is only -1 when the data hasn't been fetched yet. No matter the result, msgId cannot be -1 afterwards
       if (messageId != -1) {
-        const latestMessageId = await fetcher(
+        const latestMessageId: number = await fetcher(
           `${backendURL}/api/chat/conversation/${id}/latest`,
         );
         if (latestMessageId !== null && latestMessageId !== undefined) {
-          const newMessages = [];
-          let currentId = latestMessageId;
-          while (messageId != currentId) {
-            const message = await fetcher(
-              `${backendURL}/api/chat/message/${currentId}`,
-            );
-            currentId = message.previous_msg;
-
-            // This will also fetch messages this user sent, which is necessary to make sure they are displayed chronologically
-            newMessages.push({
-              isFromUser: false,
-              content: message.content.msg.contents,
-            });
-          }
+          const newMessages = await pollMessages(
+            backendURL,
+            messageId,
+            latestMessageId,
+          );
 
           if (newMessages.length > 0) {
             /*
@@ -121,6 +123,17 @@ export default function Chat({
     }, 5000);
     return () => clearInterval(intervalId);
   }, [messages]);
+
+  const updateMessages = async (latestMessageId: number) => {
+    const newMessages: UserMessageProps[] = await pollMessages(
+      backendURL,
+      messageId,
+      latestMessageId,
+    );
+    newMessages.reverse();
+    setMessageId(latestMessageId);
+    setMessages([...messages, ...newMessages]);
+  };
 
   return (
     <Box
@@ -158,7 +171,11 @@ export default function Chat({
       )}
 
       {/* Text bar */}
-      <MessageInput backendURL={backendURL} id={id} />
+      <MessageInput
+        backendURL={backendURL}
+        id={id}
+        updateMessages={updateMessages}
+      />
     </Box>
   );
 }
