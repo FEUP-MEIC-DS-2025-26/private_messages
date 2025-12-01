@@ -5,7 +5,7 @@ RUN apk update && \
     apk add --no-cache lld mold musl musl-dev libc-dev cmake clang clang-dev openssl file \
     libressl-dev git make build-base bash curl wget zip gnupg coreutils gcc g++ zstd binutils ca-certificates upx
 WORKDIR /app
-COPY Cargo.toml Cargo.lock .env ./
+COPY Cargo.toml Cargo.lock build.rs .env ./
 COPY src ./src
 COPY .sqlx ./.sqlx
 ENV RUSTFLAGS="-C target-cpu=x86-64-v2"
