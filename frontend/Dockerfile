@@ -18,7 +18,7 @@ ENV HOST=0.0.0.0
 
 EXPOSE 3001
 
-ENV PUBLIC_BACKEND_URL="https://backend-private-messages-azzawq6caq-no.a.run.app"
+ENV PUBLIC_BACKEND_URL="https://api.madeinportugal.store"
 
 RUN pnpm build
 
