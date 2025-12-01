@@ -9,6 +9,7 @@ RUN apk update && \
 COPY Cargo.toml Cargo.lock build.rs .env ./
 COPY src ./src
 COPY .sqlx ./.sqlx
+COPY proto ./proto
 ENV RUSTFLAGS="-C target-cpu=x86-64-v2"
 RUN cargo build --release
 
