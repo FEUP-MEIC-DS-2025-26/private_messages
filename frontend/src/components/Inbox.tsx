@@ -1,4 +1,5 @@
 import { Divider, List, ListItem } from '@mui/material';
+import { Fragment } from 'react/jsx-runtime';
 import useSWR from 'swr';
 
 // components
@@ -102,13 +103,9 @@ export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
   return (
     <List sx={{ width: 1 }}>
       {chats.map((chat: ChatPreviewProps, index: number) => (
-        <>
+        <Fragment key={`chat-${chat.id}`}>
           {/** chat preview */}
-          <ListItem
-            key={`chat-${chat.id}`}
-            onClick={() => goToChat(chat.id)}
-            sx={{ py: 0 }}
-          >
+          <ListItem onClick={() => goToChat(chat.id)} sx={{ py: 0 }}>
             <ChatPreview {...chat} />
           </ListItem>
 
@@ -116,7 +113,7 @@ export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
           {index + 1 < chats.length && (
             <Divider variant="middle" component="li" aria-hidden />
           )}
-        </>
+        </Fragment>
       ))}
     </List>
   );
