@@ -98,7 +98,7 @@ jobs:
         run: terraform init
 
       - name: Terraform Plan
-        run: terraform plan -input=false -var "frontend_image=${{ env.FRONTEND_IMAGE }}, backend_image=${{ env.BACKEND_IMAGE }}"
+        run: terraform plan -input=false -var "frontend_image=${{ env.FRONTEND_IMAGE }}" -var "backend_image=${{ env.BACKEND_IMAGE }}"
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false -var "frontend_image=${{ env.FRONTEND_IMAGE }}, backend_image=${{ env.BACKEND_IMAGE }}"
+        run: terraform apply -auto-approve -input=false -var "frontend_image=${{ env.FRONTEND_IMAGE }}" -var "backend_image=${{ env.BACKEND_IMAGE }}"
