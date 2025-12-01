@@ -15,10 +15,12 @@ RUN cargo build --release
 
 FROM scratch
 WORKDIR /app
+COPY local ./local
 # COPY credentials ./credentials
 COPY --from=backend /app/target/release/ds-prototype /app/ds-prototype
 
 EXPOSE 8080
 ENV RUST_LOG="off"
+ENV GOOGLE_APPLICATION_CREDENTIALS="./local/pubsub.json"
 # CMD ["./ds-prototype", "-p", "8080", "run", "./credentials/password.txt", "./credentials/salt.txt", "-d", "sqlite:.sqlite3"]
 CMD ["./ds-prototype", "-p", "8080", "kiosk"]
