@@ -67,7 +67,7 @@ export default function UserMessage({
         ...extraStyles,
       }}
     >
-      <Typography>{content}</Typography>
+      <Typography variant="body1">{content}</Typography>
       <Typography
         variant="caption"
         sx={{ marginLeft: isFromUser ? 0 : 'auto' }}

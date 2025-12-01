@@ -61,7 +61,9 @@ export default function MessageInput({
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           credentials: 'include',
         },
-      ).then((res) => res.json()).then(x => x.id);
+      )
+        .then((res) => res.json())
+        .then((x) => x.id);
 
       await updateMessages(latestMessageId);
 
@@ -92,6 +94,7 @@ export default function MessageInput({
         inputRef={inputRef}
         fullWidth
         required
+        autoComplete="off"
         name="message"
         size="small"
         placeholder="Type your message here"
