@@ -32,7 +32,7 @@ const getChats = async (URL: string, userID: number) => {
   // fetch the peers' usernames
   const userIDs: number[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetcher(`${URL}/conversation/${id}/peer`),
+      fetcher(`${URL}/conversation/${id}/peer`).then(peer => peer.id),
     ),
   );
 

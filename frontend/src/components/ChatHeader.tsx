@@ -23,7 +23,7 @@ const getPeer = async (id: number, backendURL: string) => {
   // fetch the peer's JumpSeller ID
   const userID: number = await fetcher(
     `${backendURL}/api/chat/conversation/${id}/peer`,
-  );
+  ).then(peer => peer.id);
 
   // fetch the peer's information
   return await fetcher(`${backendURL}/api/chat/user/${userID}`);

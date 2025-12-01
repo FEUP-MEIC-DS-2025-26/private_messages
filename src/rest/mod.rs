@@ -239,7 +239,10 @@ async fn get_peer(
     let peer_id = data.read().await.get_peer(&user_id, &convo_id).await?;
     let profile = data.read().await.get_user_profile(&peer_id).await?;
     // SAFETY: no need to update the peer, as we are only getting their id
-    Ok(Json(profile.id()))
+
+    let profile = Credential { id: profile.id().0 };
+
+    Ok(Json(profile))
 }
 
 #[get("/user/{user_id}")]
