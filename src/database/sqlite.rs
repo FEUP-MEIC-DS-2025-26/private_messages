@@ -29,7 +29,11 @@ impl SQLiteDB {
     }
 
     pub async fn kiosk(suite: CryptoKey) -> anyhow::Result<Self> {
-        let pool = SqlitePoolOptions::new().connect_lazy("sqlite::memory:")?;
+        let pool = SqlitePoolOptions::new()
+            .max_lifetime(None)
+            .idle_timeout(None)
+            .min_connections(1)
+            .connect_lazy("sqlite::memory:")?;
         let rng = StdRng::from_os_rng();
         let mut db = Self { pool, suite, rng };
         db.set_schema().await?;
