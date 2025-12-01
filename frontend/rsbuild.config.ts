@@ -9,6 +9,8 @@ export default defineConfig({
     port: 3001,
   },
   output: {
-    assetPrefix: 'auto',
+    // Ensure CSS is inlined with JS for Module Federation
+    injectStyles: true,
+    assetPrefix: 'auto'
   },
 });

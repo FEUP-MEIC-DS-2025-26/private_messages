@@ -34,8 +34,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
-      - name: Build
-        run: cargo build --verbose
-        
+      - name: Install dependencies
+        run: sudo apt update -y && sudo apt upgrade -y && sudo apt install protobuf-compiler
+      
+      - name: Check if any best practice was violated
+        run: cargo clippy
+     
       - name: Run tests
         run: cargo test --verbose

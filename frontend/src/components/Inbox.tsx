@@ -1,70 +1,71 @@
-import useSWR from "swr";
-import ChatPreview, { ChatPreviewProps } from "./ChatPreview";
+import { Button, Divider, List, ListItem } from '@mui/material';
+import useSWR from 'swr';
+
+// components
+import ChatPreview, { ChatPreviewProps } from './ChatPreview';
 
 /**
  * A function for fetching data from the backend.
  * @param {string} URL - the URL
  */
 const fetcher = (URL: string) =>
-  fetch(URL, { credentials: "include" }).then((res) => res.json());
+  fetch(URL, { credentials: 'include' }).then((res) => res.json());
 
 /**
  * A function for fetching the user's conversations from the server.
  * @param {string} URL - the URL
- * @param {string} username - the user's username
+ * @param {string} userID - the user's JumpSeller ID
  * @returns the user's conversations
  */
-const getChats = async (URL: string, username: string) => {
+const getChats = async (URL: string, userID: number) => {
   // login
-  await fetch(`${URL}/login?username=${username}`, {
-    credentials: "include",
-  }).then(console.log);
+  await fetch(`${URL}/login?id=${userID}`, {
+    credentials: 'include',
+  });
 
   // fetch the conversations
   const conversationIDs: number[] = await fetch(`${URL}/conversation`, {
-    credentials: "include",
+    credentials: 'include',
   }).then((res) => res.json());
 
-  // fetch the usernames of the peers with whom we are conversing
-  const usernames: string[] = await Promise.all(
+  // fetch the peers' usernames
+  const userIDs: number[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetch(`${URL}/conversation/${id}/peer`, { credentials: "include" }).then(
-        (res) => res.json()
-      )
-    )
+      fetcher(`${URL}/conversation/${id}/peer`),
+    ),
   );
 
   // fetch the peers' display names
   const fullNames: string[] = await Promise.all(
-    usernames.map((username: string) =>
-      fetcher(`${URL}/user/${username}`).then((user) => user.name)
-    )
+    userIDs.map((id: number) =>
+      fetcher(`${URL}/user/${id}`).then((user) => user.name),
+    ),
   );
 
   // fetch the last message from each conversation
   const lastMessages: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/latest`)
-        .then((id: number) => fetcher(`${URL}/message/${id}`))
-        .then((message) => message.content.msg)
-    )
+        .then((messageID: number) => fetcher(`${URL}/message/${messageID}`))
+        .then((message) => message.content.msg.contents),
+    ),
   );
 
   const products: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/product`)
         .then((productId: number) => fetcher(`${URL}/product/${productId}`))
-        .then((product) => product.name)
-    )
+        .then((product) => product.name),
+    ),
   );
 
   // create an array with the conversations
   return conversationIDs.map((id: number, index: number) => ({
     id,
-    username: usernames[index],
+    userID: userIDs[index],
     name: fullNames[index],
     lastMessage: lastMessages[index],
-    profilePictureURL: "https://thispersondoesnotexist.com/",
+    profilePictureURL: 'https://thispersondoesnotexist.com/',
     unreadMessages: Math.floor(Math.random() * 10),
     product: products[index],
   }));
@@ -73,8 +74,8 @@ const getChats = async (URL: string, username: string) => {
 interface InboxProps {
   /** The URL that points to the backend. */
   backendURL: string;
-  /** The user's username. */
-  username: string;
+  /** The user's JumpSeller ID. */
+  userID: number;
   /**
    * A function for navigating to a chat.
    * @param {number} id - the unique chat identifier
@@ -85,10 +86,10 @@ interface InboxProps {
 /**
  * The user's inbox.
  */
-export default function Inbox({ backendURL, username, goToChat }: InboxProps) {
+export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
   const { data: chats, isLoading } = useSWR(
     `${backendURL}/api/chat/conversation`,
-    () => getChats(`${backendURL}/api/chat`, username)
+    () => getChats(`${backendURL}/api/chat`, userID),
   );
   // const chats = await getChats(`${backendURL}/api/chat`, username);
 
@@ -97,17 +98,24 @@ export default function Inbox({ backendURL, username, goToChat }: InboxProps) {
   }
 
   return (
-    <ul className="flex flex-col overflow-scroll *:not-last:border-b">
-      {chats.map((chat: ChatPreviewProps) => (
-        <li key={`chat-${chat.id}`}>
-          <button
-            className="p-0 m-0 w-full text-start"
+    <List sx={{ width: 1 }}>
+      {chats.map((chat: ChatPreviewProps, index: number) => (
+        <>
+          {/** chat preview */}
+          <ListItem
+            key={`chat-${chat.id}`}
             onClick={() => goToChat(chat.id)}
+            sx={{ py: 0 }}
           >
             <ChatPreview {...chat} />
-          </button>
-        </li>
+          </ListItem>
+
+          {/** divider */}
+          {index + 1 < chats.length && (
+            <Divider variant="middle" component="li" aria-hidden />
+          )}
+        </>
       ))}
-    </ul>
+    </List>
   );
 }

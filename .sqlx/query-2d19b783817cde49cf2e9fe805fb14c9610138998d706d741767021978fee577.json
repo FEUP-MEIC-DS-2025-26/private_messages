@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "CREATE TABLE IF NOT EXISTS user (\n    id INTEGER PRIMARY KEY,\n    username TEXT UNIQUE,\n    name TEXT\n);\n\nCREATE TABLE IF NOT EXISTS conversation (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    client_id INTEGER NOT NULL,\n    seller_id INTEGER NOT NULL,\n    product_id INTEGER NOT NULL,\n    last_message_id INTEGER,\n    unread_for_sender INTEGER,\n    unread_for_receiver INTEGER,\n    FOREIGN KEY(client_id) REFERENCES user(id),\n    FOREIGN KEY(seller_id) REFERENCES user(id),\n    FOREIGN KEY(product_id) REFERENCES product(id),\n    FOREIGN KEY(last_message_id) REFERENCES message(id)\n);\n\nCREATE TABLE IF NOT EXISTS message (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    sender_id INTEGER NOT NULL,\n    conversation_id INTEGER NOT NULL,\n    content BLOB,\n    salt BLOB NOT NULL,\n    timestamp DATETIME NOT NULL,\n    previous_message_id INTEGER,\n    FOREIGN KEY(sender_id) REFERENCES user(id),\n    FOREIGN KEY(conversation_id) REFERENCES conversation(id),\n    FOREIGN KEY(previous_message_id) REFERENCES message(id)\n);\n\nCREATE TABLE IF NOT EXISTS product (\n    id INTEGER PRIMARY KEY,\n    seller_id INTEGER NOT NULL,\n    name TEXT NOT NULL,\n    FOREIGN KEY(seller_id) REFERENCES user(id)\n);\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "2d19b783817cde49cf2e9fe805fb14c9610138998d706d741767021978fee577"
+}
