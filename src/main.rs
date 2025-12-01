@@ -151,6 +151,7 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
             .wrap(
                 Cors::default()
                     .allowed_origin("https://api.madeinportugal.store")
+                    .allowed_origin("https://frontend.madeinportugal.store")
                     .allowed_origin("https://madeinportugal.store")
                     .allowed_origin("http://localhost")
                     .allowed_methods(vec!["GET", "POST"])
