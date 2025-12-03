@@ -16,7 +16,7 @@ export default function App() {
   const [chatID, setChatID] = useState<number | null>(null);
 
   return (
-    <div style={{ height: '100vh' }}>
+    <div style={{ height: '80vh' }}>
       {chatID ? (
         <Chat
           backendURL={backendURL}
