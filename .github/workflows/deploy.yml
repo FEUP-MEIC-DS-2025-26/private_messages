@@ -65,7 +65,7 @@ jobs:
 
       - name: Build and Push Docker image
         run: |
-          docker build -t "$IMAGE_URI" .
+          docker build --secret id=JUMPSELLER,env=${{ secrets.JUMPSELLER }} --secret id=PUBSUB,env=${{ secrets.PUBSUB }} -t "$IMAGE_URI" .
           docker push "$IMAGE_URI"
 
   terraform:
