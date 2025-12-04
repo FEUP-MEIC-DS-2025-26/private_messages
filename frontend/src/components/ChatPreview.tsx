@@ -51,7 +51,7 @@ export default function ChatPreview({
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
       </Badge>
 
-      <Box>
+      <Box sx={{ minWidth: 0 }}>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           {/** display name */}
           <Typography component="strong" variant="body1" fontWeight="bold">
@@ -78,7 +78,16 @@ export default function ChatPreview({
           </Typography>
         </Box>
         {/** last message */}
-        <Typography variant="body2">{lastMessage}</Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {lastMessage}
+        </Typography>
       </Box>
     </ListItemButton>
   );
