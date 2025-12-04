@@ -4,45 +4,33 @@ import useSWR from 'swr';
 
 // components
 import ChatPreview, { ChatPreviewProps } from './ChatPreview';
+import PeerSearch from './PeerSearch';
 
-/**
- * A function for fetching data from the backend.
- * @param {string} URL - the URL
- */
-const fetcher = (URL: string) =>
-  fetch(URL, { credentials: 'include' }).then((res) => res.json());
+const fetcher = (URL: string) => fetch(URL, { credentials: "include" }).then(res => res.json());
 
-/**
- * A function for fetching the user's conversations from the server.
- * @param {string} URL - the URL
- * @param {string} userID - the user's JumpSeller ID
- * @returns the user's conversations
- */
 const getChats = async (URL: string, userID: number) => {
   // login
-  await fetch(`${URL}/login?id=${userID}`, {
-    credentials: 'include',
-  });
+  const response = await fetch(`${URL}/login?id=${userID}`, { credentials: "include" });
+  if (!response.ok) {
+    console.error("Error when logging in");
+    return;
+  }
 
-  // fetch the conversations
-  const conversationIDs: number[] = await fetch(`${URL}/conversation`, {
-    credentials: 'include',
-  }).then((res) => res.json());
 
-  // fetch the peers' usernames
+  // fetch conversations
+  const conversationIDs: number[] = await fetcher(`${URL}/conversation`);
+
+  // fetch peers' usernames
   const userIDs: number[] = await Promise.all(
-    conversationIDs.map((id: number) =>
-      fetcher(`${URL}/conversation/${id}/peer`).then(peer => peer.id),
-    ),
+    conversationIDs.map(
+      (id: number) => fetcher(`${URL}/conversation/${id}/peer`).then(({ id }) => id)
+    )
   );
 
-  // fetch the peers' usernames and display names
+  // fetch peers' usernames and display names
   const names: { username: string; name: string }[] = await Promise.all(
     userIDs.map((id: number) =>
-      fetcher(`${URL}/user/${id}`).then((user) => ({
-        username: user.username,
-        name: user.name,
-      })),
+      fetcher(`${URL}/user/${id}`).then(({ username, name }) => ({ username, name }))
     ),
   );
 
@@ -50,19 +38,19 @@ const getChats = async (URL: string, userID: number) => {
   const lastMessages: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/latest`)
-        .then(msgId => msgId.id)
+        .then(({ id }) => id)
         .then((messageID: number) => fetcher(`${URL}/message/${messageID}`))
-        .then((message) => message.content.msg.contents),
-    ),
+        .then(message => message.content.msg.contents),
+    )
   );
 
   const products: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/product`)
-        .then(productId => productId.id)
+        .then(({ id }) => id)
         .then((productId: number) => fetcher(`${URL}/product/${productId}`))
-        .then((product) => product.name),
-    ),
+        .then(({ name }) => name)
+    )
   );
 
   // create an array with the conversations
@@ -74,6 +62,7 @@ const getChats = async (URL: string, userID: number) => {
     profilePictureURL: 'https://thispersondoesnotexist.com/',
     unreadMessages: Math.floor(Math.random() * 10),
     product: products[index],
+    visible: true
   }));
 };
 
@@ -93,7 +82,7 @@ interface InboxProps {
  * The user's inbox.
  */
 export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
-  const { data: chats, isLoading } = useSWR(
+  const { data: chats, isLoading, mutate } = useSWR(
     `${backendURL}/api/chat/conversation`,
     () => getChats(`${backendURL}/api/chat`, userID),
   );
@@ -102,21 +91,28 @@ export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
     return <div>Loading...</div>;
   }
 
-  return (
-    <List sx={{ width: 1 }}>
-      {chats.map((chat: ChatPreviewProps, index: number) => (
-        <Fragment key={`chat-${chat.id}`}>
-          {/** chat preview */}
-          <ListItem onClick={() => goToChat(chat.id)} sx={{ py: 0 }}>
-            <ChatPreview {...chat} />
-          </ListItem>
+  const filterChats = text => {
+    mutate(chats.map(chat => ({...chat, visible: chat.name.includes(text) || chat.username.includes(text) })));
+  };
 
-          {/** divider */}
-          {index + 1 < chats.length && (
-            <Divider variant="middle" component="li" aria-hidden />
-          )}
-        </Fragment>
-      ))}
-    </List>
+  return (
+    <>
+      <PeerSearch filter={filterChats}/>
+      <List sx={{ width: 1 }}>
+        {chats.filter(({ visible }) => visible).map((chat: ChatPreviewProps, index: number) => (
+          <Fragment key={`chat-${chat.id}`}>
+            {/** chat preview */}
+            <ListItem onClick={() => goToChat(chat.id)} sx={{ py: 0 }}>
+              <ChatPreview {...chat} />
+            </ListItem>
+
+            {/** divider */}
+            {index + 1 < chats.length && (
+              <Divider variant="middle" component="li" aria-hidden />
+            )}
+          </Fragment>
+        ))}
+      </List>
+    </>
   );
 }
