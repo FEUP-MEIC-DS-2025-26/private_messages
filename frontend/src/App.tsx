@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import { Box } from '@mui/material';
 
 // components
 import Inbox from './components/Inbox';
@@ -15,15 +16,17 @@ export default function App() {
     import.meta.env.PUBLIC_BACKEND_URL ?? 'http://localhost:8080';
 
   return (
-    <Routes>
-      <Route
-        index
-        element={<Inbox backendURL={backendURL} userID={USER_ID} />}
-      />
-      <Route
-        path=":id"
-        element={<Chat backendURL={backendURL} userID={USER_ID} />}
-      />
-    </Routes>
+    <Box sx={{ height: '80vh' }}>
+      <Routes>
+        <Route
+          index
+          element={<Inbox backendURL={backendURL} userID={USER_ID} />}
+        />
+        <Route
+          path=":id"
+          element={<Chat backendURL={backendURL} userID={USER_ID} />}
+        />
+      </Routes>
+    </Box>
   );
 }

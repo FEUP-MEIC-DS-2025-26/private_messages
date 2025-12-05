@@ -153,21 +153,21 @@ export default function Chat({ backendURL, userID }: ChatProps) {
         height: '100%',
       }}
     >
-      {/* Header */}
+      {/* header */}
       <ChatHeader backendURL={backendURL} id={id} />
       <Divider />
 
-      {/* Chat */}
+      {/* chat */}
       {messages ? (
         <List
           ref={messageListRef}
           sx={{
+            flexGrow: 1,
             display: 'flex',
             flexDirection: 'column',
             py: '16px',
             maxHeight: '100%',
             gap: '8px',
-            flexGrow: 1,
             overflow: 'auto',
           }}
         >
@@ -181,7 +181,7 @@ export default function Chat({ backendURL, userID }: ChatProps) {
         <div>Loading...</div>
       )}
 
-      {/* Text bar */}
+      {/* text bar */}
       <MessageInput
         backendURL={backendURL}
         id={id}
