@@ -1,12 +1,10 @@
 import { Box, Typography } from '@mui/material';
 
 export interface UserMessageProps {
-  /** Indicates if the user sent the message. */
   isFromUser: boolean;
-  /** The content of the message. */
   content: string;
-  /** The date when the message was sent */
   timestamp: Date;
+  visible: boolean;
 }
 
 /**
