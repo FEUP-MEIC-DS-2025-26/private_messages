@@ -1,5 +1,6 @@
 import { Box } from '@mui/material';
 import { Ref, useLayoutEffect, useRef, useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import useSWR from 'swr';
 
 // components
@@ -56,18 +57,25 @@ async function pollMessages(
 }
 
 interface ChatProps {
+  /** The URL that points to the backend. */
   backendURL: string;
-  id: number;
+  /** The user's JumpSeller ID. */
   userID: number;
-  goToInbox: () => void;
 }
 
 /**
  * A private conversation between two users.
  */
-export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
+export default function Chat({ backendURL, userID }: ChatProps) {
+  // fetch the route parameters
+  const { id } = useParams();
   const url = `${backendURL}/api/chat/conversation/${id}`;
 
+  if (!id) {
+    return <div>Loading...</div>;
+  }
+
+  // variables for the messages
   const messageListRef: Ref<HTMLUListElement> = useRef(null);
   const [messageId, setMessageId] = useState<number>(-1);
   const [messages, setMessages] = useState<UserMessageProps[]>([]);
@@ -145,21 +153,21 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
         height: '100%',
       }}
     >
-      {/* Header */}
-      <ChatHeader backendURL={backendURL} id={id} goToInbox={goToInbox} />
+      {/* header */}
+      <ChatHeader backendURL={backendURL} id={id} />
       <Divider />
 
-      {/* Chat */}
+      {/* chat */}
       {messages ? (
         <List
           ref={messageListRef}
           sx={{
+            flexGrow: 1,
             display: 'flex',
             flexDirection: 'column',
             py: '16px',
             maxHeight: '100%',
             gap: '8px',
-            flexGrow: 1,
             overflow: 'auto',
           }}
         >
@@ -173,7 +181,7 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
         <div>Loading...</div>
       )}
 
-      {/* Text bar */}
+      {/* text bar */}
       <MessageInput
         backendURL={backendURL}
         id={id}

@@ -1,4 +1,5 @@
 import { Box, Divider, IconButton, Typography } from '@mui/material';
+import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 
 // icons
@@ -19,11 +20,11 @@ const fetcher = (URL: string) =>
  * Fetches information regarding the peer.
  * @param {number} id - the unique chat identifier
  */
-const getPeer = async (id: number, backendURL: string) => {
+const getPeer = async (id: string, backendURL: string) => {
   // fetch the peer's JumpSeller ID
   const userID: number = await fetcher(
     `${backendURL}/api/chat/conversation/${id}/peer`,
-  ).then(peer => peer.id);
+  ).then((peer) => peer.id);
 
   // fetch the peer's information
   return await fetcher(`${backendURL}/api/chat/user/${userID}`);
@@ -34,9 +35,9 @@ const getPeer = async (id: number, backendURL: string) => {
  * @param id - The unique chat identifier
  * @param backendURL - The URL that points to the backend server.
  */
-const getProduct = async (id: number, backendURL: string) => {
+const getProduct = async (id: string, backendURL: string) => {
   return await fetcher(`${backendURL}/api/chat/conversation/${id}/product`)
-    .then(x => x.id)
+    .then((x) => x.id)
     .then((productId: number) =>
       fetcher(`${backendURL}/api/chat/product/${productId}`),
     )
@@ -47,19 +48,13 @@ interface ChatHeaderProps {
   /** The URL that points to the backend server. */
   backendURL: string;
   /** The unique chat identifier. */
-  id: number;
-  /** A function for navigating to the inbox. */
-  goToInbox: () => void;
+  id: string;
 }
 
 /**
  * The header of the chat, which displays information about the peer.
  */
-export default function ChatHeader({
-  backendURL,
-  id,
-  goToInbox,
-}: ChatHeaderProps) {
+export default function ChatHeader({ backendURL, id }: ChatHeaderProps) {
   const { data: peer } = useSWR(
     `${backendURL}/api/chat/conversation/${id}/peer`,
     () => getPeer(id, backendURL),
@@ -81,7 +76,7 @@ export default function ChatHeader({
       }}
     >
       {/** button to navigate to the inbox */}
-      <IconButton onClick={goToInbox} size="small" color="primary">
+      <IconButton component={Link} to=".." size="small" color="primary">
         <FontAwesomeIcon icon={faArrowLeft} />
       </IconButton>
 

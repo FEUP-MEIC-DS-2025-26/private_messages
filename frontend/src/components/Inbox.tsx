@@ -4,6 +4,7 @@ import useSWR from 'swr';
 
 // components
 import ChatPreview, { ChatPreviewProps } from './ChatPreview';
+import { UserMessageProps } from './UserMessage';
 
 /**
  * A function for fetching data from the backend.
@@ -32,7 +33,7 @@ const getChats = async (URL: string, userID: number) => {
   // fetch the peers' usernames
   const userIDs: number[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetcher(`${URL}/conversation/${id}/peer`).then(peer => peer.id),
+      fetcher(`${URL}/conversation/${id}/peer`).then((peer) => peer.id),
     ),
   );
 
@@ -47,19 +48,28 @@ const getChats = async (URL: string, userID: number) => {
   );
 
   // fetch the last message from each conversation
-  const lastMessages: string[] = await Promise.all(
+  const lastMessages: UserMessageProps[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/latest`)
-        .then(msgId => msgId.id)
+        .then((msgId) => msgId.id)
         .then((messageID: number) => fetcher(`${URL}/message/${messageID}`))
-        .then((message) => message.content.msg.contents),
+        .then((message) => message.content)
+        .then((content) => {
+          const message = content.msg;
+
+          return {
+            isFromUser: content.sender_jsid === userID,
+            content: message.contents,
+            timestamp: new Date(message.timestamp),
+          };
+        }),
     ),
   );
 
   const products: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/product`)
-        .then(productId => productId.id)
+        .then((productId) => productId.id)
         .then((productId: number) => fetcher(`${URL}/product/${productId}`))
         .then((product) => product.name),
     ),
@@ -82,17 +92,12 @@ interface InboxProps {
   backendURL: string;
   /** The user's JumpSeller ID. */
   userID: number;
-  /**
-   * A function for navigating to a chat.
-   * @param {number} id - the unique chat identifier
-   */
-  goToChat: (id: number) => void;
 }
 
 /**
  * The user's inbox.
  */
-export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
+export default function Inbox({ backendURL, userID }: InboxProps) {
   const { data: chats, isLoading } = useSWR(
     `${backendURL}/api/chat/conversation`,
     () => getChats(`${backendURL}/api/chat`, userID),
@@ -107,7 +112,7 @@ export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
       {chats.map((chat: ChatPreviewProps, index: number) => (
         <Fragment key={`chat-${chat.id}`}>
           {/** chat preview */}
-          <ListItem onClick={() => goToChat(chat.id)} sx={{ py: 0 }}>
+          <ListItem sx={{ py: 0 }}>
             <ChatPreview {...chat} />
           </ListItem>
 
