@@ -58,7 +58,7 @@ const getChats = async (URL: string, userID: number) => {
           const message = content.msg;
 
           return {
-            isFromUser: content.sender_jsid !== userID,
+            isFromUser: content.sender_jsid === userID,
             content: message.contents,
             timestamp: new Date(message.timestamp),
           };
