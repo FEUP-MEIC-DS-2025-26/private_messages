@@ -4,6 +4,7 @@ import useSWR from 'swr';
 
 // components
 import ChatPreview, { ChatPreviewProps } from './ChatPreview';
+import { UserMessageProps } from './UserMessage';
 
 /**
  * A function for fetching data from the backend.
@@ -32,7 +33,7 @@ const getChats = async (URL: string, userID: number) => {
   // fetch the peers' usernames
   const userIDs: number[] = await Promise.all(
     conversationIDs.map((id: number) =>
-      fetcher(`${URL}/conversation/${id}/peer`).then(peer => peer.id),
+      fetcher(`${URL}/conversation/${id}/peer`).then((peer) => peer.id),
     ),
   );
 
@@ -47,19 +48,28 @@ const getChats = async (URL: string, userID: number) => {
   );
 
   // fetch the last message from each conversation
-  const lastMessages: string[] = await Promise.all(
+  const lastMessages: UserMessageProps[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/latest`)
-        .then(msgId => msgId.id)
+        .then((msgId) => msgId.id)
         .then((messageID: number) => fetcher(`${URL}/message/${messageID}`))
-        .then((message) => message.content.msg.contents),
+        .then((message) => message.content)
+        .then((content) => {
+          const message = content.msg;
+
+          return {
+            isFromUser: content.sender_jsid !== userID,
+            content: message.contents,
+            timestamp: new Date(message.timestamp),
+          };
+        }),
     ),
   );
 
   const products: string[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/product`)
-        .then(productId => productId.id)
+        .then((productId) => productId.id)
         .then((productId: number) => fetcher(`${URL}/product/${productId}`))
         .then((product) => product.name),
     ),
