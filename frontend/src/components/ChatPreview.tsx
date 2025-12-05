@@ -2,6 +2,8 @@ import { Badge, Box, Divider, ListItemButton, Typography } from '@mui/material';
 
 // components
 import ProfilePicture from './ProfilePicture';
+import { UserMessageProps } from './UserMessage';
+import { formatDate } from '../utils';
 
 export interface ChatPreviewProps {
   /** The unique identifier of the conversation. */
@@ -15,7 +17,7 @@ export interface ChatPreviewProps {
   /** The number of unread messages from the user. */
   unreadMessages: number;
   /** The last message sent by the user */
-  lastMessage: string;
+  lastMessage: UserMessageProps;
   /** The product the conversation pertains to */
   product: string;
 }
@@ -51,7 +53,7 @@ export default function ChatPreview({
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
       </Badge>
 
-      <Box>
+      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           {/** display name */}
           <Typography component="strong" variant="body1" fontWeight="bold">
@@ -77,8 +79,40 @@ export default function ChatPreview({
             {product}
           </Typography>
         </Box>
-        {/** last message */}
-        <Typography variant="body2">{lastMessage}</Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 3,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          {/** last message */}
+          <Typography
+            variant="body2"
+            sx={{
+              flexGrow: 1,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              fontStyle: lastMessage.isFromUser ? 'italic' : 'normal',
+            }}
+          >
+            {lastMessage.content}
+          </Typography>
+          {/** last message timestamp */}
+          <Typography
+            variant="caption"
+            sx={{
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {formatDate(lastMessage.timestamp)}
+          </Typography>
+        </Box>
       </Box>
     </ListItemButton>
   );
