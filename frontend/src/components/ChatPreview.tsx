@@ -1,4 +1,5 @@
 import { Badge, Box, Divider, ListItemButton, Typography } from '@mui/material';
+import { Link } from 'react-router-dom';
 
 // components
 import ProfilePicture from './ProfilePicture';
@@ -26,6 +27,7 @@ export interface ChatPreviewProps {
  * A preview of the chat with a given user.
  */
 export default function ChatPreview({
+  id,
   name,
   username,
   profilePictureURL,
@@ -35,6 +37,8 @@ export default function ChatPreview({
 }: ChatPreviewProps) {
   return (
     <ListItemButton
+      component={Link}
+      to={String(id)}
       sx={{
         display: 'flex',
         alignItems: 'center',

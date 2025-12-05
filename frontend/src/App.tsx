@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
 
 // components
 import Inbox from './components/Inbox';
@@ -13,24 +14,17 @@ const USER_ID = 1;
 export default function App() {
   const backendURL =
     import.meta.env.PUBLIC_BACKEND_URL ?? 'http://localhost:8080';
-  const [chatID, setChatID] = useState<number | null>(null);
 
   return (
-    <div style={{ height: '80vh' }}>
-      {chatID ? (
-        <Chat
-          backendURL={backendURL}
-          userID={USER_ID}
-          id={chatID}
-          goToInbox={() => setChatID(null)}
-        />
-      ) : (
-        <Inbox
-          backendURL={backendURL}
-          userID={USER_ID}
-          goToChat={(id) => setChatID(id)}
-        />
-      )}
-    </div>
+    <Routes>
+      <Route
+        index
+        element={<Inbox backendURL={backendURL} userID={USER_ID} />}
+      />
+      <Route
+        path=":id"
+        element={<Chat backendURL={backendURL} userID={USER_ID} />}
+      />
+    </Routes>
   );
 }

@@ -92,17 +92,12 @@ interface InboxProps {
   backendURL: string;
   /** The user's JumpSeller ID. */
   userID: number;
-  /**
-   * A function for navigating to a chat.
-   * @param {number} id - the unique chat identifier
-   */
-  goToChat: (id: number) => void;
 }
 
 /**
  * The user's inbox.
  */
-export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
+export default function Inbox({ backendURL, userID }: InboxProps) {
   const { data: chats, isLoading } = useSWR(
     `${backendURL}/api/chat/conversation`,
     () => getChats(`${backendURL}/api/chat`, userID),
@@ -117,7 +112,7 @@ export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
       {chats.map((chat: ChatPreviewProps, index: number) => (
         <Fragment key={`chat-${chat.id}`}>
           {/** chat preview */}
-          <ListItem onClick={() => goToChat(chat.id)} sx={{ py: 0 }}>
+          <ListItem sx={{ py: 0 }}>
             <ChatPreview {...chat} />
           </ListItem>
 
