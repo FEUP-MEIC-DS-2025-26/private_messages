@@ -1,7 +1,7 @@
 use std::num::ParseIntError;
 
 use crate::{
-    BackendInfoUpdater,
+    BackendInfoUpdater, IsProd,
     database::{
         Database,
         sqlite::{
@@ -180,21 +180,38 @@ where
 #[derive(Debug, Serialize, Deserialize)]
 struct Credential {
     id: i64,
+    auth_service_user_id: Option<i64>,
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("Running in production and missing authorization is not a valid configuration.")]
+struct ProductionAuthMissing;
+
+impl ResponseError for ProductionAuthMissing {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        actix_web::http::StatusCode::UNAUTHORIZED
+    }
 }
 
 #[get("/login")]
 async fn login(
     db: Data<RwLock<SQLiteDB>>,
     js: Data<jumpseller::Client>,
+    prod: Data<IsProd>,
     user: Query<Credential>,
     req: HttpRequest,
 ) -> Result<impl Responder> {
-    // TODO,FIXME: Add auth (dies inside)
-
-    let user_id = user.id;
-    jumpseller_update_user(&db, &js, user_id).await?;
-
-    // FIXME: Verify authorization.
+    let user_id = if let Some(user_id) = user.auth_service_user_id {
+        jumpseller_update_user(&db, &js, user_id).await?;
+        user_id
+    } else {
+        if prod.is_prod() {
+            return Err(ProductionAuthMissing.into());
+        }
+        let user_id = user.id;
+        jumpseller_update_user(&db, &js, user_id).await?;
+        user_id
+    };
 
     // Attach identity
     Identity::login(&req.extensions(), format!("{user_id}"))?;
@@ -227,6 +244,11 @@ async fn get_peer(
     user: Identity,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
+    #[derive(Serialize)]
+    struct UserIdWrapper {
+        id: i64,
+    }
+
     let user_id = user.id().map(parse_cookie)??;
     let user_id = UserId(user_id);
 
@@ -240,7 +262,7 @@ async fn get_peer(
     let profile = data.read().await.get_user_profile(&peer_id).await?;
     // SAFETY: no need to update the peer, as we are only getting their id
 
-    let profile = Credential { id: profile.id().0 };
+    let profile = UserIdWrapper { id: profile.id().0 };
 
     Ok(Json(profile))
 }
