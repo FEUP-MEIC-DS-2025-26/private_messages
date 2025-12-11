@@ -2,9 +2,9 @@ import { Divider, List, ListItem } from '@mui/material';
 import { Fragment } from 'react/jsx-runtime';
 import { useState } from 'react';
 
-// components
-import ChatPreview from './ChatPreview';
+import ChatPreview, { ChatPreviewProps } from './ChatPreview';
 import SearchBar from './SearchBar';
+import { UserMessageProps } from './UserMessage';
 
 interface InboxProps {
   backendURL: string;
@@ -12,21 +12,9 @@ interface InboxProps {
   goToChat: (id: number) => void;
 }
 
-interface ChatStateProps {
-  id: number;
-  userID: number;
-  name: string;
-  username: string;
-  lastMessage: string;
-  profilePictureURL: string;
-  unreadMessages: number;
-  product: string;
-  visible: boolean;
-}
-
 const fetcher = (URL: string) => fetch(URL, { credentials: "include" }).then(res => res.json());
 
-async function getChats(URL: string, userID: number) : Promise<ChatStateProps[]> {
+async function getChats(URL: string, userID: number) : Promise<ChatPreviewProps[]> {
   // login
   const response = await fetch(`${URL}/login?id=${userID}`, { credentials: "include" });
   if (!response.ok) {
@@ -52,13 +40,23 @@ async function getChats(URL: string, userID: number) : Promise<ChatStateProps[]>
   );
 
   // fetch the last message from each conversation
-  const lastMessages: string[] = await Promise.all(
+  const lastMessages: UserMessageProps[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/latest`)
         .then(({ id }) => id)
         .then((messageID: number) => fetcher(`${URL}/message/${messageID}`))
-        .then(message => message.content.msg.contents),
-    )
+        .then(({ content }) => content)
+        .then(content => {
+          const message = content.msg;
+
+          return {
+            isFromUser: content.sender_jsid === userID,
+            content: message.contents,
+            timestamp: new Date(message.timestamp),
+            visible: true
+          };
+        }),
+    ),
   );
 
   const products: string[] = await Promise.all(
@@ -84,7 +82,7 @@ async function getChats(URL: string, userID: number) : Promise<ChatStateProps[]>
 };
 
 export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
-  const [ chats, setChats ] = useState<ChatStateProps[]>([]); 
+  const [ chats, setChats ] = useState<ChatPreviewProps[]>([]); 
 
   if (chats.length == 0) {
     getChats(`${backendURL}/api/chat`, userID).then(chacha20_poly1305 => { setChats(chacha20_poly1305); });
@@ -98,7 +96,7 @@ export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
     <>
       <SearchBar filter={filterChats}/>
       <List sx={{ width: 1 }}>
-        {chats.filter(({ visible }) => visible).map((chat: ChatStateProps, index: number) => (
+        {chats.filter(({ visible }) => visible).map((chat: ChatPreviewProps, index: number) => (
           <Fragment key={`chat-${chat.id}`}>
             <ListItem onClick={() => goToChat(chat.id)} sx={{ py: 0 }}>
               <ChatPreview {...chat} />
