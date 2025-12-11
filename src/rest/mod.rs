@@ -180,6 +180,10 @@ where
 #[derive(Debug, Serialize, Deserialize)]
 struct Credential {
     id: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct AuthService {
     auth_service_user_id: Option<i64>,
 }
 
@@ -198,10 +202,11 @@ async fn login(
     db: Data<RwLock<SQLiteDB>>,
     js: Data<jumpseller::Client>,
     prod: Data<IsProd>,
+    auth: Query<AuthService>,
     user: Query<Credential>,
     req: HttpRequest,
 ) -> Result<impl Responder> {
-    let user_id = if let Some(user_id) = user.auth_service_user_id {
+    let user_id = if let Some(user_id) = auth.auth_service_user_id {
         jumpseller_update_user(&db, &js, user_id).await?;
         user_id
     } else {
@@ -221,9 +226,21 @@ async fn login(
 
 // FIXME: usr_id needs be usr_token
 #[get("/conversation")]
-async fn get_conversations(user: Identity, db: Data<RwLock<SQLiteDB>>) -> Result<impl Responder> {
+async fn get_conversations(
+    user: Identity,
+    db: Data<RwLock<SQLiteDB>>,
+    auth: Query<AuthService>,
+    prod: Data<IsProd>,
+) -> Result<impl Responder> {
     // SAFETY: No need to refetch info, it is about ourselves.
     let user_id = parse_cookie(user.id()?)?;
+
+    if prod.is_prod()
+        && let Some(authid) = auth.auth_service_user_id
+        && authid != user_id
+    {
+        return Err(ProductionAuthMissing.into());
+    }
 
     let user_id = UserId(user_id);
 
@@ -243,6 +260,8 @@ async fn get_peer(
     data: Data<RwLock<SQLiteDB>>,
     user: Identity,
     convo_id: Path<i64>,
+    auth: Query<AuthService>,
+    prod: Data<IsProd>,
 ) -> Result<impl Responder> {
     #[derive(Serialize)]
     struct UserIdWrapper {
@@ -250,6 +269,14 @@ async fn get_peer(
     }
 
     let user_id = user.id().map(parse_cookie)??;
+
+    if prod.is_prod()
+        && let Some(authid) = auth.auth_service_user_id
+        && authid != user_id
+    {
+        return Err(ProductionAuthMissing.into());
+    }
+
     let user_id = UserId(user_id);
 
     let convo_id = ConversationId(*convo_id);
@@ -332,8 +359,17 @@ async fn get_message(
     data: Data<RwLock<SQLiteDB>>,
     user: Identity,
     msg_id: Path<i64>,
+    auth: Query<AuthService>,
+    prod: Data<IsProd>,
 ) -> Result<impl Responder> {
     let user_id = user.id().map(parse_cookie)?.map(UserId)?;
+    if prod.is_prod()
+        && let Some(authid) = auth.auth_service_user_id
+        && authid != user_id.0
+    {
+        return Err(ProductionAuthMissing.into());
+    }
+
     let msg_id = MessageId(*msg_id);
     let convo_id = data
         .read()
@@ -491,12 +527,21 @@ async fn get_latest_message(
     data: Data<RwLock<SQLiteDB>>,
     user: Identity,
     convo_id: Path<i64>,
+    auth: Query<AuthService>,
+    prod: Data<IsProd>,
 ) -> Result<impl Responder> {
     #[derive(Serialize)]
     struct MaybeMsgIdWrapper {
         id: Option<i64>,
     }
     let user_id = user.id().map(parse_cookie)?.map(UserId)?;
+    if prod.is_prod()
+        && let Some(authid) = auth.auth_service_user_id
+        && authid != user_id.0
+    {
+        return Err(ProductionAuthMissing.into());
+    }
+
     let convo_id = ConversationId(*convo_id);
     data.read()
         .await
@@ -517,8 +562,17 @@ async fn get_most_recent_messages(
     data: Data<RwLock<SQLiteDB>>,
     user: Identity,
     convo_id: Path<i64>,
+    auth: Query<AuthService>,
+    prod: Data<IsProd>,
 ) -> Result<impl Responder> {
     let user_id = user.id().map(parse_cookie)?.map(UserId)?;
+    if prod.is_prod()
+        && let Some(authid) = auth.auth_service_user_id
+        && authid != user_id.0
+    {
+        return Err(ProductionAuthMissing.into());
+    }
+
     let convo_id = ConversationId(*convo_id);
     data.read()
         .await
@@ -560,12 +614,21 @@ async fn get_product_in_conversation(
     data: Data<RwLock<SQLiteDB>>,
     convo_id: Path<i64>,
     user: Identity,
+    auth: Query<AuthService>,
+    prod: Data<IsProd>,
 ) -> Result<impl Responder> {
     #[derive(Serialize)]
     struct ProductIdWrapper {
         id: i64,
     }
     let user_id = user.id().map(parse_cookie)?.map(UserId)?;
+    if prod.is_prod()
+        && let Some(authid) = auth.auth_service_user_id
+        && authid != user_id.0
+    {
+        return Err(ProductionAuthMissing.into());
+    }
+
     data.read()
         .await
         .belongs_to_conversation(&user_id, &ConversationId(*convo_id))
