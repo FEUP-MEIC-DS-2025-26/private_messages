@@ -9,6 +9,11 @@ resource "google_cloud_run_v2_service" "backend" {
       ports {
         container_port = 8080
       }
+      
+      env {
+        name = "GOOGLE_APPLICATION_CREDENTIALS"
+        value = "./local/pubsub.json"
+      }
     }
   }
 }

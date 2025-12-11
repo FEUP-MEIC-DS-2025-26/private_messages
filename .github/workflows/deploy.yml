@@ -42,6 +42,8 @@ jobs:
     permissions:
       contents: read
     env:
+      JUMPSELLER: ${{ secrets.JUMPSELLER }}
+      PUBSUB: ${{ secrets.PUBSUB }}
       IMAGE_TAG: ${{ github.sha }}
       IMAGE_URI: europe-southwest1-docker.pkg.dev/ds-2025-g51-private-messages/backend/production:${{ github.sha }}
 
@@ -65,7 +67,7 @@ jobs:
 
       - name: Build and Push Docker image
         run: |
-          docker build -t "$IMAGE_URI" .
+          docker build --secret id=JUMPSELLER --secret id=PUBSUB -t "$IMAGE_URI" .
           docker push "$IMAGE_URI"
 
   terraform:
