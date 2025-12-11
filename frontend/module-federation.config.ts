@@ -5,8 +5,6 @@ export default createModuleFederationConfig({
   filename: 'remoteEntry.js',
   exposes: {
     './App': './src/App.tsx',
-    './Chat': './src/components/Chat.tsx',
-    './Inbox': './src/components/Inbox.tsx',
   },
   shared: {
     '@emotion/react': {
