@@ -362,6 +362,10 @@ async fn start_conversation(
     user: Identity,
     form: Form<ConversationForm>,
 ) -> Result<impl Responder> {
+    #[derive(Serialize)]
+    struct ConversationIdWrapper {
+        id: i64,
+    }
     let user_id = user.id().map(parse_cookie)?.map(UserId)?;
     let their_id = form.their_userid;
 
@@ -402,10 +406,6 @@ async fn start_conversation(
         }
     }
 
-    #[derive(Serialize)]
-    struct ConversationIdWrapper {
-        id: i64,
-    }
     let res = ConversationIdWrapper { id: res.0 };
 
     Ok(Json(res))
@@ -425,6 +425,10 @@ async fn post_msg(
     conversation: Path<i64>,
     form: Form<MessageForm>,
 ) -> Result<impl Responder> {
+    #[derive(Serialize)]
+    struct MessageIdWrapper {
+        id: i64,
+    }
     let user_id = user.id().map(parse_cookie)?.map(UserId)?;
     let convo_id = ConversationId(conversation.into_inner());
     data.read()
@@ -455,11 +459,6 @@ async fn post_msg(
         }
     }
 
-    #[derive(Serialize)]
-    struct MessageIdWrapper {
-        id: i64,
-    }
-
     let res = MessageIdWrapper { id: res.0 };
 
     Ok(Json(res))
@@ -471,6 +470,10 @@ async fn get_latest_message(
     user: Identity,
     convo_id: Path<i64>,
 ) -> Result<impl Responder> {
+    #[derive(Serialize)]
+    struct MaybeMsgIdWrapper {
+        id: Option<i64>,
+    }
     let user_id = user.id().map(parse_cookie)?.map(UserId)?;
     let convo_id = ConversationId(*convo_id);
     data.read()
@@ -479,11 +482,6 @@ async fn get_latest_message(
         .await
         .w()?;
     let res = data.read().await.get_latest_message(&convo_id).await.w()?;
-
-    #[derive(Serialize)]
-    struct MaybeMsgIdWrapper {
-        id: Option<i64>,
-    }
 
     let res = MaybeMsgIdWrapper {
         id: res.map(|x| x.0),
@@ -541,6 +539,10 @@ async fn get_product_in_conversation(
     convo_id: Path<i64>,
     user: Identity,
 ) -> Result<impl Responder> {
+    #[derive(Serialize)]
+    struct ProductIdWrapper {
+        id: i64,
+    }
     let user_id = user.id().map(parse_cookie)?.map(UserId)?;
     data.read()
         .await
@@ -554,10 +556,6 @@ async fn get_product_in_conversation(
         .await
         .w()?;
 
-    #[derive(Serialize)]
-    struct ProductIdWrapper {
-        id: i64,
-    }
     let prod = ProductIdWrapper { id: prod.0 };
 
     Ok(Json(prod))
