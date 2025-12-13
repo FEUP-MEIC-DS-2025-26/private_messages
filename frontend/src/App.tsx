@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // components
 import Inbox from './components/Inbox';
 import Chat from './components/Chat';
+import { login, me } from './utils';
+import ErrorPage from './components/ErrorPage';
 
 // hard-coded user (only for the prototype)
-const USER_ID = 1;
+const DEFAULT_USER_ID = 1;
 
 /**
  * The user's inbox.
@@ -14,20 +16,50 @@ export default function App() {
   const backendURL =
     import.meta.env.PUBLIC_BACKEND_URL ?? 'http://localhost:8080';
   const [chatID, setChatID] = useState<number | null>(null);
+  const [userID, setUserID] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (userID == null || userID == -1) {
+      const login_fetch_data = async () => {
+        try {
+          await login(backendURL + '/api/chat', DEFAULT_USER_ID);
+          const my_id = await me(backendURL + '/api/chat');
+          setUserID(my_id);
+        } catch (error) {
+          setUserID(-1);
+        }
+      };
+      login_fetch_data();
+    }
+  }, []);
+
+  if (userID == null) {
+    return <div>Loading...</div>;
+  }
+
+  if (userID == -1) {
+    return (
+      <ErrorPage
+        message={'The user is not logged in. Please click login in the navbar. Redirecting in 5 seconds...'}
+        error={undefined}
+        redirectURL={'/auth'}
+      />
+    );
+  }
 
   return (
     <div style={{ height: '80vh' }}>
       {chatID ? (
         <Chat
           backendURL={backendURL}
-          userID={USER_ID}
+          userID={userID}
           id={chatID}
           goToInbox={() => setChatID(null)}
         />
       ) : (
         <Inbox
           backendURL={backendURL}
-          userID={USER_ID}
+          userID={userID}
           goToChat={(id) => setChatID(id)}
         />
       )}

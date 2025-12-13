@@ -9,6 +9,11 @@ variable "region" {
   default     = "europe-southwest1"
 }
 
+variable "bucket_name" {
+  description = "The name for the Google Storage Bucket where the database is deployed."
+  type        = string
+}
+
 variable "frontend_name" {
   description = "The name for the frontend Cloud Run service."
   type        = string

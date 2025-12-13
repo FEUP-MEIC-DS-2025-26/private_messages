@@ -91,14 +91,24 @@ fn get_jumpseller_credentials(path: PathBuf) -> Option<JumpSellerCredentials> {
         })
 }
 
+pub struct IsProd(bool);
+
+impl IsProd {
+    #[must_use]
+    pub fn is_prod(&self) -> bool {
+        self.0
+    }
+}
+
 async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Result<()> {
-    let (db, js_cred) = match cli.command {
+    let (db, js_cred, is_prod) = match cli.command {
         Commands::Kiosk => {
             let suite = CryptoKey::new("demonstration_password", "demonstration_salt")
                 .map_err(|e| anyhow!("Error: {e}"))?;
             (
                 SQLiteDB::kiosk(suite).await?,
                 get_jumpseller_credentials("local/jumpseller_cred.json".into()),
+                IsProd(false),
             )
         }
         Commands::Run {
@@ -112,7 +122,7 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
             let suite = CryptoKey::new(p.trim(), s.trim()).map_err(|e| anyhow!("Error: {e}"))?;
             let js_f = get_jumpseller_credentials(jumpseller_cred_file);
 
-            (SQLiteDB::new(&db_url, suite).await?, js_f)
+            (SQLiteDB::new(&db_url, suite).await?, js_f, IsProd(true))
         }
     };
 
@@ -131,11 +141,14 @@ async fn run_user_facing_code(cli: Cli, utils: BackendInfoUpdater) -> anyhow::Re
 
     let secret_key = Key::generate();
 
+    let is_prod = web::Data::new(is_prod);
+
     HttpServer::new(move || {
         App::new()
             .app_data(utils.clone())
             .app_data(wd.clone())
             .app_data(jsc.clone())
+            .app_data(is_prod.clone())
             .service(rest::create_services())
             // .service(Files::new("/", "frontend/dist").index_file("index.html"))
             .wrap(IdentityMiddleware::default())
