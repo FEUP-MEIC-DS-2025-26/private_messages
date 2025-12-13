@@ -9,7 +9,7 @@ export default function ErrorPage({
   error: any;
   redirectURL: string;
 }) {
-  setTimeout(() => window.location.replace(redirectURL), 500000);
+  setTimeout(() => window.location.replace(redirectURL), 5000);
 
   return (
     <Box
@@ -22,7 +22,7 @@ export default function ErrorPage({
       }}
     >
       <Typography variant="h4">{message}</Typography>
-      <Typography variant="h5">{error.message}</Typography>
+      {error ? <Typography variant="h5">{error.message}</Typography> : <></>}
     </Box>
   );
 }

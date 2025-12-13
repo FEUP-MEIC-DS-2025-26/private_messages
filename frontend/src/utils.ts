@@ -14,7 +14,7 @@ export const fetcher = async (URL: string) => {
 
 /**
  * A function for logging the user into the system.
- * @param URL - the backend URL
+ * @param URL - the API root URL (root = "$BACKEND_URL" + "/api/chat")
  * @param userID - the user's JumpSeller ID
  */
 export const login = async (URL: string, userID: number) => {
@@ -24,6 +24,23 @@ export const login = async (URL: string, userID: number) => {
 
   if (!response.ok) {
     throw new Error(await response.text());
+  }
+};
+
+/**
+ * A function to get the user ID from the cookie
+ * @param URL - the API root URL (root = "$BACKEND_URL" + "/api/chat")
+ */
+export const me = async (URL: string) => {
+  const response = await fetch(`${URL}/me`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  } else {
+    const { id }: { id: number } = await response.json();
+    return id;
   }
 };
 
