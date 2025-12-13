@@ -7,13 +7,7 @@ import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 // components
 import ProfilePicture from './ProfilePicture';
-
-/**
- * A function for fetching data from the backend.
- * @param {string} URL - the URL
- */
-const fetcher = (URL: string) =>
-  fetch(URL, { credentials: 'include' }).then((res) => res.json());
+import { fetcher } from '../utils';
 
 /**
  * Fetches information regarding the peer.
@@ -23,7 +17,7 @@ const getPeer = async (id: number, backendURL: string) => {
   // fetch the peer's JumpSeller ID
   const userID: number = await fetcher(
     `${backendURL}/api/chat/conversation/${id}/peer`,
-  ).then(peer => peer.id);
+  ).then((peer) => peer.id);
 
   // fetch the peer's information
   return await fetcher(`${backendURL}/api/chat/user/${userID}`);
@@ -36,7 +30,7 @@ const getPeer = async (id: number, backendURL: string) => {
  */
 const getProduct = async (id: number, backendURL: string) => {
   return await fetcher(`${backendURL}/api/chat/conversation/${id}/product`)
-    .then(x => x.id)
+    .then((x) => x.id)
     .then((productId: number) =>
       fetcher(`${backendURL}/api/chat/product/${productId}`),
     )
