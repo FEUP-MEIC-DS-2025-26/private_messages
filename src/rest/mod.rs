@@ -188,7 +188,7 @@ struct AuthService {
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("Running in production and missing authorization is not a valid configuration.")]
+#[error("The current authentication state does not allow you to access this content.")]
 struct ProductionAuthMissing;
 
 impl ResponseError for ProductionAuthMissing {
