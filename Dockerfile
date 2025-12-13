@@ -5,11 +5,12 @@ WORKDIR /app
 RUN mkdir ./local
 RUN --mount=type=secret,id=JUMPSELLER \
     --mount=type=secret,id=PUBSUB \
+    --mount=type=secret,id=PASSWORD \
+    --mount=type=secret,id=SALT \
     cat /run/secrets/JUMPSELLER > /app/local/jumpseller_cred.json && \
-    cat /run/secrets/PUBSUB > /app/local/pubsub.json
-
-RUN cat /app/local/jumpseller_cred.json
-RUN cat /app/local/pubsub.json
+    cat /run/secrets/PUBSUB > /app/local/pubsub.json && \
+    cat /run/secrets/PASSWORD > /app/local/password.txt && \
+    cat /run/secrets/SALT > /app/local/salt.txt
 
 RUN apk update && \
     apk upgrade --no-cache && \
@@ -26,14 +27,12 @@ RUN cargo build --release
 
 FROM scratch
 WORKDIR /app
-# COPY credentials ./credentials
 
 COPY --from=backend /app/target/release/ds-prototype /app/ds-prototype
-COPY --from=backend /app/local/jumpseller_cred.json /app/local/jumpseller_cred.json
-COPY --from=backend /app/local/pubsub.json /app/local/pubsub.json
+COPY --from=backend /app/local /app/local
 
 EXPOSE 8080
 ENV RUST_LOG="off"
 ENV GOOGLE_APPLICATION_CREDENTIALS="./local/pubsub.json"
-# CMD ["./ds-prototype", "-p", "8080", "run", "./credentials/password.txt", "./credentials/salt.txt", "-d", "sqlite:.sqlite3"]
-CMD ["./ds-prototype", "-p", "8080", "kiosk"]
+CMD ["./ds-prototype", "-p", "8080", "run", "/app/local/password.txt", "/app/local/salt.txt", "-d", "sqlite:/mnt/database/.sqlite3"]
+# CMD ["./ds-prototype", "-p", "8080", "kiosk"]
