@@ -1,4 +1,33 @@
 /**
+ * A function for fetching data from the backend.
+ * @param {string} URL - the URL to fetch data from
+ */
+export const fetcher = async (URL: string) => {
+  const response = await fetch(URL, { credentials: 'include' });
+
+  if (response.ok) {
+    return response.json();
+  }
+
+  throw new Error(await response.text());
+};
+
+/**
+ * A function for logging the user into the system.
+ * @param URL - the backend URL
+ * @param userID - the user's JumpSeller ID
+ */
+export const login = async (URL: string, userID: number) => {
+  const response = await fetch(`${URL}/login?id=${userID}`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+};
+
+/**
  * Formats a date as a string.
  * @param date - the date to format
  * @returns a string representing the date

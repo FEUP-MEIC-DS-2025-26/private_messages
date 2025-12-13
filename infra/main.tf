@@ -1,3 +1,8 @@
+resource "google_storage_bucket" "database" {
+  name = var.bucket_name
+  location = var.region
+}
+
 resource "google_cloud_run_v2_service" "backend" {
   name     = var.backend_name
   location = var.region
@@ -8,6 +13,25 @@ resource "google_cloud_run_v2_service" "backend" {
       
       ports {
         container_port = 8080
+      }
+      
+      env {
+        name = "GOOGLE_APPLICATION_CREDENTIALS"
+        value = "./local/pubsub.json"
+      }
+      
+      volume_mounts {
+        name = var.bucket_name
+        mount_path = "/mnt/database"
+      }
+    }
+    
+    volumes {
+      name = var.bucket_name
+      gcs {
+        bucket = var.bucket_name
+        read_only = false
+        // mount_options = ???
       }
     }
   }
