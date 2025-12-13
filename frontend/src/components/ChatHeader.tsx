@@ -7,19 +7,7 @@ import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 // components
 import ProfilePicture from './ProfilePicture';
-
-/**
- * A function for fetching data from the backend.
- * @param {string} URL - the URL
- */
-const fetcher = (URL: string) =>
-  fetch(URL, { credentials: 'include' }).then((res) => {
-    if (res.ok) {
-      return res.json();
-    }
-
-    throw res.text();
-  });
+import { fetcher } from '../utils';
 
 /**
  * Fetches information regarding the peer.

@@ -28,3 +28,15 @@ export function formatDate(date: Date): string {
 
   return components.join(' ');
 }
+
+/**
+ * A function for fetching data from the backend.
+ * @param {string} URL - the URL
+ */
+export const fetcher = (URL: string) =>
+  fetch(URL, { credentials: 'include' }).then(async (res) => {
+    if (res.ok) {
+      return res.json();
+    }
+    throw new Error(await res.text());
+  });

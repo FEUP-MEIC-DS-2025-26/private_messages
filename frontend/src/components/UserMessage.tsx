@@ -4,17 +4,12 @@ import { Box, Typography } from '@mui/material';
 import { formatDate } from '../utils';
 
 export interface UserMessageProps {
-  /** Indicates if the user sent the message. */
   isFromUser: boolean;
-  /** The content of the message. */
   content: string;
-  /** The date when the message was sent */
   timestamp: Date;
+  visible: boolean;
 }
 
-/**
- * A user message from a private conversation.
- */
 export default function UserMessage({
   isFromUser,
   content,

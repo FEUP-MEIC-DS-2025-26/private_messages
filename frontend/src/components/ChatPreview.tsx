@@ -6,25 +6,17 @@ import { UserMessageProps } from './UserMessage';
 import { formatDate } from '../utils';
 
 export interface ChatPreviewProps {
-  /** The unique identifier of the conversation. */
   id: number;
-  /** The display name of the user. */
+  userID: number;
   name: string;
-  /** The user's username. */
   username: string;
-  /** The URL of the user's profile picture. */
-  profilePictureURL: string;
-  /** The number of unread messages from the user. */
-  unreadMessages: number;
-  /** The last message sent by the user */
   lastMessage: UserMessageProps;
-  /** The product the conversation pertains to */
+  profilePictureURL: string;
+  unreadMessages: number;
   product: string;
+  visible: boolean;
 }
 
-/**
- * A preview of the chat with a given user.
- */
 export default function ChatPreview({
   name,
   username,
