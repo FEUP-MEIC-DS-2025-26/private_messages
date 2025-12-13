@@ -103,21 +103,25 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
     useEffect(() => {
       const intervalId = setInterval(async () => {
         // msgId is only -1 when the data hasn't been fetched yet. No matter the result, msgId cannot be -1 afterwards
-        if (messageId != -1) {
-          const latestMessageId: number = await fetcher(`${backendURL}/api/chat/conversation/${id}/latest`).then(({ id }) => id);
-          if (latestMessageId !== null && latestMessageId !== undefined) {
-            const newMessages: UserMessageProps[] = await pollMessages(backendURL, userID, messageId, latestMessageId);
+        try {
+          if (messageId != -1) {
+            const latestMessageId: number = await fetcher(`${backendURL}/api/chat/conversation/${id}/latest`).then(({ id }) => id);
+            if (latestMessageId !== null && latestMessageId !== undefined) {
+              const newMessages: UserMessageProps[] = await pollMessages(backendURL, userID, messageId, latestMessageId);
 
-            if (newMessages && newMessages.length > 0) {
-              /*
-               * The first message is the latest one, the second one is the second-to-latest and so on
-               * Reversing the array sorts the messages chronologically - no need for timestamps
-               */
-              newMessages.reverse();
-              setMessageId(latestMessageId);
-              setMessages([...messages, ...newMessages]);
+              if (newMessages && newMessages.length > 0) {
+                /*
+                 * The first message is the latest one, the second one is the second-to-latest and so on
+                 * Reversing the array sorts the messages chronologically - no need for timestamps
+                 */
+                newMessages.reverse();
+                setMessageId(latestMessageId);
+                setMessages([...messages, ...newMessages]);
+              }
             }
           }
+        } catch (e) {
+          await login(`${backendURL}/api/chat`, userID);
         }
       }, 5000);
       return () => clearInterval(intervalId);
