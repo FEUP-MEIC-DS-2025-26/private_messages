@@ -67,6 +67,11 @@ resource "google_cloud_run_v2_service" "frontend" {
         name  = "PUBLIC_BACKEND_URL"
         value = "https://api.madeinportugal.store"
       }
+      
+      env {
+        name  = "NODE_ENV"
+        value = "production"
+      }
     }
   }
 }
