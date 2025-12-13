@@ -5,13 +5,20 @@ import useSWR from 'swr';
 // components
 import ChatPreview, { ChatPreviewProps } from './ChatPreview';
 import { UserMessageProps } from './UserMessage';
+import ErrorPage from './ErrorPage';
 
 /**
  * A function for fetching data from the backend.
  * @param {string} URL - the URL
  */
 const fetcher = (URL: string) =>
-  fetch(URL, { credentials: 'include' }).then((res) => res.json());
+  fetch(URL, { credentials: 'include' }).then((res) => {
+    if (res.ok) {
+      return res.json();
+    }
+
+    throw res.text();
+  });
 
 /**
  * A function for fetching the user's conversations from the server.
@@ -21,14 +28,10 @@ const fetcher = (URL: string) =>
  */
 const getChats = async (URL: string, userID: number) => {
   // login
-  await fetch(`${URL}/login?id=${userID}`, {
-    credentials: 'include',
-  });
+  await fetcher(`${URL}/login?id=${userID}`);
 
   // fetch the conversations
-  const conversationIDs: number[] = await fetch(`${URL}/conversation`, {
-    credentials: 'include',
-  }).then((res) => res.json());
+  const conversationIDs: number[] = await fetcher(`${URL}/conversation`);
 
   // fetch the peers' usernames
   const userIDs: number[] = await Promise.all(
@@ -103,10 +106,23 @@ interface InboxProps {
  * The user's inbox.
  */
 export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
-  const { data: chats, isLoading } = useSWR(
-    `${backendURL}/api/chat/conversation`,
-    () => getChats(`${backendURL}/api/chat`, userID),
+  const {
+    data: chats,
+    isLoading,
+    error,
+  } = useSWR(`${backendURL}/api/chat/conversation`, () =>
+    getChats(`${backendURL}/api/chat`, userID),
   );
+
+  if (error) {
+    return (
+      <ErrorPage
+        message="It seems you are not supposed to see this..."
+        error={error}
+        redirectURL={`${backendURL}/auth`}
+      />
+    );
+  }
 
   if (isLoading || !chats) {
     return <div>Loading...</div>;

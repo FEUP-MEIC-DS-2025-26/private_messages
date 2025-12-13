@@ -8,8 +8,18 @@ import UserMessage, { UserMessageProps } from './UserMessage';
 import MessageInput from './MessageInput';
 import { Divider, List, ListItem } from '@mui/material';
 
+/**
+ * A function for fetching data from the backend.
+ * @param {string} URL - the URL
+ */
 const fetcher = (URL: string) =>
-  fetch(URL, { credentials: 'include' }).then((res) => res.json());
+  fetch(URL, { credentials: 'include' }).then((res) => {
+    if (res.ok) {
+      return res.json();
+    }
+
+    throw res.text();
+  });
 
 /**
  * Fetches the chat messages from the backend.
