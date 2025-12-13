@@ -12,12 +12,12 @@ import ErrorPage from './ErrorPage';
  * @param {string} URL - the URL
  */
 const fetcher = (URL: string) =>
-  fetch(URL, { credentials: 'include' }).then((res) => {
+  fetch(URL, { credentials: 'include' }).then(async (res) => {
     if (res.ok) {
       return res.json();
     }
 
-    throw res.text();
+    throw new Error(await res.text());
   });
 
 /**
@@ -28,7 +28,7 @@ const fetcher = (URL: string) =>
  */
 const getChats = async (URL: string, userID: number) => {
   // login
-  await fetcher(`${URL}/login?id=${userID}`);
+  await fetch(`${URL}/login?id=${userID}`, { credentials: 'include' });
 
   // fetch the conversations
   const conversationIDs: number[] = await fetcher(`${URL}/conversation`);

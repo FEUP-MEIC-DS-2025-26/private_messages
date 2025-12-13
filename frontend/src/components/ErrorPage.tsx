@@ -10,7 +10,6 @@ export default function ErrorPage({
   redirectURL: string;
 }) {
   setTimeout(() => window.location.replace(redirectURL), 500000);
-  console.log(error);
 
   return (
     <Box
