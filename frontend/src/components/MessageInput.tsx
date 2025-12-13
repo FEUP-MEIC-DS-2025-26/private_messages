@@ -18,7 +18,7 @@ interface MessageInputProps {
   /** The URL that points to the backend. */
   backendURL: string;
   /** The unique chat identifier. */
-  id: number;
+  id: string;
   updateMessages: (latestMessageID: number) => void;
 }
 

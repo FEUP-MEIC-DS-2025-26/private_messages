@@ -5,10 +5,12 @@ export default createModuleFederationConfig({
   filename: 'remoteEntry.js',
   exposes: {
     './App': './src/App.tsx',
-    './Chat': './src/components/Chat.tsx',
-    './Inbox': './src/components/Inbox.tsx',
   },
   shared: {
+    '@emotion/react': {
+      singleton: true,
+      requiredVersion: '^11.0.0',
+    },
     react: {
       singleton: true,
       requiredVersion: '^18.0.0',
@@ -17,9 +19,9 @@ export default createModuleFederationConfig({
       singleton: true,
       requiredVersion: '^18.0.0',
     },
-    '@emotion/react': {
+    'react-router-dom': {
       singleton: true,
-      requiredVersion: '^11.0.0',
+      requiredVersion: '^6.0.0',
     },
   },
 });
