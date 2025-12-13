@@ -277,6 +277,10 @@ async fn get_peer(
         return Err(ProductionAuthMissing.into());
     }
 
+    if prod.is_prod() && auth.auth_service_user_id.is_none() {
+        return Err(ProductionAuthMissing.into());
+    }
+
     let user_id = UserId(user_id);
 
     let convo_id = ConversationId(*convo_id);
@@ -367,6 +371,9 @@ async fn get_message(
         && let Some(authid) = auth.auth_service_user_id
         && authid != user_id.0
     {
+        return Err(ProductionAuthMissing.into());
+    }
+    if prod.is_prod() && auth.auth_service_user_id.is_none() {
         return Err(ProductionAuthMissing.into());
     }
 
@@ -541,6 +548,9 @@ async fn get_latest_message(
     {
         return Err(ProductionAuthMissing.into());
     }
+    if prod.is_prod() && auth.auth_service_user_id.is_none() {
+        return Err(ProductionAuthMissing.into());
+    }
 
     let convo_id = ConversationId(*convo_id);
     data.read()
@@ -570,6 +580,9 @@ async fn get_most_recent_messages(
         && let Some(authid) = auth.auth_service_user_id
         && authid != user_id.0
     {
+        return Err(ProductionAuthMissing.into());
+    }
+    if prod.is_prod() && auth.auth_service_user_id.is_none() {
         return Err(ProductionAuthMissing.into());
     }
 
@@ -626,6 +639,9 @@ async fn get_product_in_conversation(
         && let Some(authid) = auth.auth_service_user_id
         && authid != user_id.0
     {
+        return Err(ProductionAuthMissing.into());
+    }
+    if prod.is_prod() && auth.auth_service_user_id.is_none() {
         return Err(ProductionAuthMissing.into());
     }
 
