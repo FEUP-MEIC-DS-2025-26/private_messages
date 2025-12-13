@@ -1,4 +1,4 @@
-use std::num::ParseIntError;
+use std::{iter::Inspect, num::ParseIntError};
 
 use crate::{
     BackendInfoUpdater, IsProd,
@@ -64,6 +64,8 @@ pub fn create_services() -> actix_web::Scope {
         // DONE: Doc'ed
         .service(login)
         // DONE: Doc'ed
+        .service(me)
+        // DONE: Doc'ed
         .service(get_conversations)
         // DONE: Doc'ed
         .service(get_peer)
@@ -118,6 +120,7 @@ async fn default_service() -> impl Responder {
                 Try:
                     /api/chat
                              |- /login                              ---> Enables internal cookie.
+                             |- /me                                 ---> Returns the user id given the user cookie.
                              |- /conversation                       ---> (GET) Lists conversations a user is in. (POST) Starts a conversation.
                                              |- /{convo_id}/peer    ---> Gets the jumpseller_id of the peer.
                                              |- /{convo_id}/latest  ---> Gets the latest message.
@@ -224,6 +227,28 @@ async fn login(
     Ok(HttpResponse::Ok())
 }
 
+#[get("/me")]
+async fn me(
+    user: Identity,
+    prod: Data<IsProd>,
+    auth: Query<AuthService>,
+) -> Result<impl Responder> {
+    let id = parse_cookie(user.id()?)?;
+    
+    if prod.is_prod()
+        && let Some(authid) = auth.auth_service_user_id
+        && authid != id
+    {
+        return Err(ProductionAuthMissing.into());
+    }
+    
+    if prod.is_prod() && auth.auth_service_user_id.is_none() {
+        return Err(ProductionAuthMissing.into());
+    }
+    
+    Ok(Json(Credential { id }))
+}
+
 // FIXME: usr_id needs be usr_token
 #[get("/conversation")]
 async fn get_conversations(
@@ -239,6 +264,10 @@ async fn get_conversations(
         && let Some(authid) = auth.auth_service_user_id
         && authid != user_id
     {
+        return Err(ProductionAuthMissing.into());
+    }
+    
+    if prod.is_prod() && auth.auth_service_user_id.is_none() {
         return Err(ProductionAuthMissing.into());
     }
 
