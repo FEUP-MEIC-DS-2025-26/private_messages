@@ -6,7 +6,7 @@ import ChatPreview, { ChatPreviewProps } from './ChatPreview';
 import SearchBar from './SearchBar';
 import { UserMessageProps } from './UserMessage';
 import ErrorPage from './ErrorPage';
-import { fetcher } from '../utils';
+import { fetcher, login } from '../utils';
 
   
 interface InboxProps {
@@ -18,11 +18,7 @@ interface InboxProps {
 
 async function getChats(URL: string, userID: number) : Promise<ChatPreviewProps[]> {
   // login
-  await fetch(`${URL}/login?id=${userID}`, { credentials: 'include' }).then(async (res) => {
-    if (!res.ok) {
-      throw new Error(await res.text());
-    }
-  });
+  await login(URL, userID);
 
   // fetch the conversations
   const conversationIDs: number[] = await fetcher(`${URL}/conversation`);

@@ -40,3 +40,9 @@ export const fetcher = (URL: string) =>
     }
     throw new Error(await res.text());
   });
+
+export const login = async (URL: string, userID: number) => await fetch(`${URL}/login?id=${userID}`, { credentials: 'include' }).then(async (res) => {
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+  });

@@ -7,7 +7,7 @@ import ChatHeader from './ChatHeader';
 import UserMessage, { UserMessageProps } from './UserMessage';
 import MessageInput from './MessageInput';
 import { Divider, List, ListItem } from '@mui/material';
-import { fetcher } from '../utils';
+import { fetcher, login } from '../utils';
 
   
 interface ChatProps {
@@ -73,14 +73,6 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
   });
   */
 
-  if (messageId == -1) {
-    fetcher(`${url}/latest`).then(({ id }) => { setMessageId(id); });
-  }
-
-  if (messages.length == 0) {
-    getMessages(url, userID).then(msgs => { setMessages(msgs); });
-  }
-
   // This prevents the user from scrolling up
   /*
   // automatically scroll the last message into view
@@ -98,28 +90,42 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
   }, [messages]);
   */
 
-  useEffect(() => {
-    const intervalId = setInterval(async () => {
-      // msgId is only -1 when the data hasn't been fetched yet. No matter the result, msgId cannot be -1 afterwards
-      if (messageId != -1) {
-        const latestMessageId: number = await fetcher(`${backendURL}/api/chat/conversation/${id}/latest`).then(({ id }) => id);
-        if (latestMessageId !== null && latestMessageId !== undefined) {
-          const newMessages: UserMessageProps[] = await pollMessages(backendURL, userID, messageId, latestMessageId);
+  try {
+    if (messageId == -1) {
+      fetcher(`${url}/latest`).then(({ id }) => { setMessageId(id); });
+    }
 
-          if (newMessages && newMessages.length > 0) {
-            /*
-             * The first message is the latest one, the second one is the second-to-latest and so on
-             * Reversing the array sorts the messages chronologically - no need for timestamps
-             */
-            newMessages.reverse();
-            setMessageId(latestMessageId);
-            setMessages([...messages, ...newMessages]);
+    if (messages.length == 0) {
+      getMessages(url, userID).then(msgs => { setMessages(msgs); });
+    }
+
+
+    useEffect(() => {
+      const intervalId = setInterval(async () => {
+        // msgId is only -1 when the data hasn't been fetched yet. No matter the result, msgId cannot be -1 afterwards
+        if (messageId != -1) {
+          const latestMessageId: number = await fetcher(`${backendURL}/api/chat/conversation/${id}/latest`).then(({ id }) => id);
+          if (latestMessageId !== null && latestMessageId !== undefined) {
+            const newMessages: UserMessageProps[] = await pollMessages(backendURL, userID, messageId, latestMessageId);
+
+            if (newMessages && newMessages.length > 0) {
+              /*
+               * The first message is the latest one, the second one is the second-to-latest and so on
+               * Reversing the array sorts the messages chronologically - no need for timestamps
+               */
+              newMessages.reverse();
+              setMessageId(latestMessageId);
+              setMessages([...messages, ...newMessages]);
+            }
           }
         }
-      }
-    }, 5000);
-    return () => clearInterval(intervalId);
-  }, [messages]);
+      }, 5000);
+      return () => clearInterval(intervalId);
+    }, [messages]);
+  } catch (e) {
+    // login
+    login(`${backendURL}/api/chat`, userID);
+  }
 
   const updateMessages = async (latestMessageId: number) => {
     const newMessages: UserMessageProps[] = await pollMessages(backendURL, userID, messageId, latestMessageId);
