@@ -9,7 +9,6 @@ import MessageInput from './MessageInput';
 import { Divider, List, ListItem } from '@mui/material';
 import { fetcher, login } from '../utils';
 
-  
 interface ChatProps {
   backendURL: string;
   id: number;
@@ -17,28 +16,34 @@ interface ChatProps {
   goToInbox: () => void;
 }
 
+async function getMessages(
+  URL: string,
+  userID: number,
+): Promise<UserMessageProps[]> {
+  const messages: any[] = await fetcher(`${URL}/recent`).then(
+    ({ content }) => content,
+  );
 
-async function getMessages(URL: string, userID: number) : Promise<UserMessageProps[]> {
-  const messages: any[] = await fetcher(`${URL}/recent`).then(({ content }) => content);
-
-  return messages.map(message => ({
+  return messages.map((message) => ({
     isFromUser: message.sender_jsid === userID,
     content: message.msg.contents,
     timestamp: new Date(message.msg.timestamp),
-    visible: true
+    visible: true,
   }));
-};
+}
 
 async function pollMessages(
   backendURL: string,
   userID: number,
   stateMessageId: number,
-  latestMessageId: number
+  latestMessageId: number,
 ): Promise<UserMessageProps[]> {
   const newMessages = [];
   let currentId: number = latestMessageId;
   while (stateMessageId != currentId) {
-    const message: any = await fetcher(`${backendURL}/api/chat/message/${currentId}`);
+    const message: any = await fetcher(
+      `${backendURL}/api/chat/message/${currentId}`,
+    );
 
     currentId = message.previous_msg;
     const messageContent = message.content;
@@ -48,7 +53,7 @@ async function pollMessages(
       isFromUser: messageContent.sender_jsid === userID,
       content: messageContent.msg.contents,
       timestamp: new Date(messageContent.msg.timestamp),
-      visible: true
+      visible: true,
     });
   }
 
@@ -92,22 +97,32 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
 
   try {
     if (messageId == -1) {
-      fetcher(`${url}/latest`).then(({ id }) => { setMessageId(id); });
+      fetcher(`${url}/latest`).then(({ id }) => {
+        setMessageId(id);
+      });
     }
 
     if (messages.length == 0) {
-      getMessages(url, userID).then(msgs => { setMessages(msgs); });
+      getMessages(url, userID).then((msgs) => {
+        setMessages(msgs);
+      });
     }
-
 
     useEffect(() => {
       const intervalId = setInterval(async () => {
         // msgId is only -1 when the data hasn't been fetched yet. No matter the result, msgId cannot be -1 afterwards
         try {
           if (messageId != -1) {
-            const latestMessageId: number = await fetcher(`${backendURL}/api/chat/conversation/${id}/latest`).then(({ id }) => id);
+            const latestMessageId: number = await fetcher(
+              `${backendURL}/api/chat/conversation/${id}/latest`,
+            ).then(({ id }) => id);
             if (latestMessageId !== null && latestMessageId !== undefined) {
-              const newMessages: UserMessageProps[] = await pollMessages(backendURL, userID, messageId, latestMessageId);
+              const newMessages: UserMessageProps[] = await pollMessages(
+                backendURL,
+                userID,
+                messageId,
+                latestMessageId,
+              );
 
               if (newMessages && newMessages.length > 0) {
                 /*
@@ -132,7 +147,12 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
   }
 
   const updateMessages = async (latestMessageId: number) => {
-    const newMessages: UserMessageProps[] = await pollMessages(backendURL, userID, messageId, latestMessageId);
+    const newMessages: UserMessageProps[] = await pollMessages(
+      backendURL,
+      userID,
+      messageId,
+      latestMessageId,
+    );
     if (newMessages.length > 0) {
       newMessages.reverse();
       setMessageId(latestMessageId);
@@ -141,7 +161,12 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
   };
 
   const filter = (text: string) => {
-    setMessages(messages.map(message => ({...message, visible: message.content.includes(text) })));
+    setMessages(
+      messages.map((message) => ({
+        ...message,
+        visible: message.content.toLowerCase().includes(text.toLowerCase()),
+      })),
+    );
   };
 
   return (
@@ -169,11 +194,13 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
             overflow: 'auto',
           }}
         >
-          {messages.filter(({ visible }) => visible).map((message: UserMessageProps, index: number) => (
-            <ListItem key={`message-${index}`} sx={{ py: 0 }}>
-              <UserMessage {...message} />
-            </ListItem>
-          ))}
+          {messages
+            .filter(({ visible }) => visible)
+            .map((message: UserMessageProps, index: number) => (
+              <ListItem key={`message-${index}`} sx={{ py: 0 }}>
+                <UserMessage {...message} />
+              </ListItem>
+            ))}
         </List>
       ) : (
         <div>Loading...</div>
