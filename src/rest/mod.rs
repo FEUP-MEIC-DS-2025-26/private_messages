@@ -1,4 +1,4 @@
-use std::{iter::Inspect, num::ParseIntError};
+use std::num::ParseIntError;
 
 use crate::{
     BackendInfoUpdater, IsProd,
@@ -186,6 +186,11 @@ struct Credential {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct MaybeCredential {
+    id: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct AuthService {
     auth_service_user_id: Option<i64>,
 }
@@ -206,7 +211,7 @@ async fn login(
     js: Data<jumpseller::Client>,
     prod: Data<IsProd>,
     auth: Query<AuthService>,
-    user: Query<Credential>,
+    user: Query<MaybeCredential>,
     req: HttpRequest,
 ) -> Result<impl Responder> {
     let user_id = if let Some(user_id) = auth.auth_service_user_id {
@@ -216,7 +221,9 @@ async fn login(
         if prod.is_prod() {
             return Err(ProductionAuthMissing.into());
         }
-        let user_id = user.id;
+        let Some(user_id) = user.id else {
+            return Err(ProductionAuthMissing.into());
+        };
         jumpseller_update_user(&db, &js, user_id).await?;
         user_id
     };
@@ -234,18 +241,18 @@ async fn me(
     auth: Query<AuthService>,
 ) -> Result<impl Responder> {
     let id = parse_cookie(user.id()?)?;
-    
+
     if prod.is_prod()
         && let Some(authid) = auth.auth_service_user_id
         && authid != id
     {
         return Err(ProductionAuthMissing.into());
     }
-    
+
     if prod.is_prod() && auth.auth_service_user_id.is_none() {
         return Err(ProductionAuthMissing.into());
     }
-    
+
     Ok(Json(Credential { id }))
 }
 
@@ -266,7 +273,7 @@ async fn get_conversations(
     {
         return Err(ProductionAuthMissing.into());
     }
-    
+
     if prod.is_prod() && auth.auth_service_user_id.is_none() {
         return Err(ProductionAuthMissing.into());
     }
