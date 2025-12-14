@@ -85,6 +85,7 @@ pub trait Database {
         conversation: &Self::ConversationId,
     ) -> Result<(), Self::Error>;
 
+    #[allow(dead_code)]
     async fn belongs_to_seller(
         &self,
         seller_id: &Self::UserId,

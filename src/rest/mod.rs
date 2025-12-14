@@ -482,11 +482,11 @@ async fn start_conversation(
 
     let their_id = UserId(their_id);
 
-    data.read()
-        .await
-        .belongs_to_seller(&their_id, &form.product_jumpseller_id.into())
-        .await
-        .w()?;
+    // data.read()
+    //     .await
+    //     .belongs_to_seller(&their_id, &form.product_jumpseller_id.into())
+    //     .await
+    //     .w()?;
     let res = data
         .write()
         .await
