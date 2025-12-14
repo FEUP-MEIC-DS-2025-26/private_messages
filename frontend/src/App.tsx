@@ -7,6 +7,7 @@ import Inbox from './components/Inbox';
 import Chat from './components/Chat';
 import { login, me } from './utils';
 import ErrorPage from './components/ErrorPage';
+import NewConversation from './components/NewConversation';
 
 // hard-coded user (only for the prototype)
 const DEFAULT_USER_ID = 1;
@@ -59,6 +60,10 @@ export default function App() {
         <Route
           path=":id"
           element={<Chat backendURL={backendURL} userID={userID} />}
+        />
+        <Route
+          path="new"
+          element={<NewConversation backendURL={backendURL} userID={userID} />}
         />
       </Routes>
     </Box>
