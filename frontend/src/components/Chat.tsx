@@ -17,6 +17,11 @@ interface ChatProps {
   goToInbox: () => void;
 }
 
+/**
+ * Fetches the chat messages from the backend.
+ * @param {string} URL - the URL
+ * @param {string} userID - the user's JumpSeller ID
+ */
 async function getMessages(
   URL: string,
   userID: number,
@@ -61,7 +66,8 @@ async function pollMessages(
   return newMessages;
 }
 
-export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
+export default function Chat({ backendURL, userID }: ChatProps) {
+  const { id } = useParams();
   const url = `${backendURL}/api/chat/conversation/${id}`;
 
   if (!id) {
@@ -183,10 +189,14 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
         height: '100%',
       }}
     >
-      <ChatHeader backendURL={backendURL} id={id} goToInbox={goToInbox} />
+      {/* header */}
+      <ChatHeader backendURL={backendURL} id={id} />
       <Divider />
+      
       <SearchBar filter={filter} />
       <Divider />
+      
+      {/* chat */}
       {messages ? (
         <List
           ref={messageListRef}
