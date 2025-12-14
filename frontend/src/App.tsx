@@ -1,3 +1,5 @@
+import { Routes, Route } from 'react-router-dom';
+import { Box } from '@mui/material';
 import { useEffect, useState } from 'react';
 
 // components
@@ -46,23 +48,19 @@ export default function App() {
       />
     );
   }
-
+    
   return (
-    <div style={{ height: '80vh' }}>
-      {chatID ? (
-        <Chat
-          backendURL={backendURL}
-          userID={userID}
-          id={chatID}
-          goToInbox={() => setChatID(null)}
+    <Box sx={{ height: '80vh' }}>
+      <Routes>
+        <Route
+          index
+          element={<Inbox backendURL={backendURL} userID={userID} />}
         />
-      ) : (
-        <Inbox
-          backendURL={backendURL}
-          userID={userID}
-          goToChat={(id) => setChatID(id)}
+        <Route
+          path=":id"
+          element={<Chat backendURL={backendURL} userID={userID} />}
         />
-      )}
-    </div>
+      </Routes>
+    </Box>
   );
 }

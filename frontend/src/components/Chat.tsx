@@ -1,5 +1,6 @@
 import { Box } from '@mui/material';
-import { Ref, useRef, useState, useEffect } from 'react';
+import { Ref, useLayoutEffect, useRef, useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import SearchBar from './SearchBar';
 
 // components
@@ -16,6 +17,11 @@ interface ChatProps {
   goToInbox: () => void;
 }
 
+/**
+ * Fetches the chat messages from the backend.
+ * @param {string} URL - the URL
+ * @param {string} userID - the user's JumpSeller ID
+ */
 async function getMessages(
   URL: string,
   userID: number,
@@ -60,9 +66,15 @@ async function pollMessages(
   return newMessages;
 }
 
-export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
+export default function Chat({ backendURL, userID }: ChatProps) {
+  const { id } = useParams();
   const url = `${backendURL}/api/chat/conversation/${id}`;
 
+  if (!id) {
+    return <div>Loading...</div>;
+  }
+
+  // variables for the messages
   const messageListRef: Ref<HTMLUListElement> = useRef(null);
   const [messageId, setMessageId] = useState<number>(-1);
   const [messages, setMessages] = useState<UserMessageProps[]>([]);
@@ -177,20 +189,24 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
         height: '100%',
       }}
     >
-      <ChatHeader backendURL={backendURL} id={id} goToInbox={goToInbox} />
+      {/* header */}
+      <ChatHeader backendURL={backendURL} id={id} />
       <Divider />
+      
       <SearchBar filter={filter} />
       <Divider />
+      
+      {/* chat */}
       {messages ? (
         <List
           ref={messageListRef}
           sx={{
+            flexGrow: 1,
             display: 'flex',
             flexDirection: 'column',
             py: '16px',
             maxHeight: '100%',
             gap: '8px',
-            flexGrow: 1,
             overflow: 'auto',
           }}
         >
@@ -206,7 +222,7 @@ export default function Chat({ backendURL, id, userID, goToInbox }: ChatProps) {
         <div>Loading...</div>
       )}
 
-      {/* Text bar */}
+      {/* text bar */}
       <MessageInput
         backendURL={backendURL}
         id={id}

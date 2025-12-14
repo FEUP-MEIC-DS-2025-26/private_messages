@@ -9,9 +9,10 @@ import ErrorPage from './ErrorPage';
 import { fetcher, login } from '../utils';
 
 interface InboxProps {
+  /** The URL that points to the backend. */
   backendURL: string;
+  /** The user's JumpSeller ID. */
   userID: number;
-  goToChat: (id: number) => void;
 }
 
 async function getChats(
@@ -83,7 +84,7 @@ async function getChats(
   }));
 }
 
-export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
+export default function Inbox({ backendURL, userID }: InboxProps) {
   const [chats, setChats] = useState<ChatPreviewProps[]>([]);
 
   if (chats.length == 0) {
@@ -120,18 +121,19 @@ export default function Inbox({ backendURL, userID, goToChat }: InboxProps) {
     <>
       <SearchBar filter={filterChats} />
       <List sx={{ width: 1 }}>
-        {chats
-          .filter(({ visible }) => visible)
-          .map((chat: ChatPreviewProps, index: number) => (
-            <Fragment key={`chat-${chat.id}`}>
-              <ListItem onClick={() => goToChat(chat.id)} sx={{ py: 0 }}>
-                <ChatPreview {...chat} />
-              </ListItem>
-              {index + 1 < chats.length && (
-                <Divider variant="middle" component="li" aria-hidden />
-              )}
-            </Fragment>
-          ))}
+        {chats.filter(({ visible }) => visible).map((chat: ChatPreviewProps, index: number) => (
+          <Fragment key={`chat-${chat.id}`}>
+            {/** chat preview */}
+            <ListItem sx={{ py: 0 }}>
+              <ChatPreview {...chat} />
+            </ListItem>
+  
+            {/** divider */}
+            {index + 1 < chats.length && (
+              <Divider variant="middle" component="li" aria-hidden />
+            )}
+          </Fragment>
+        ))}
       </List>
     </>
   );
