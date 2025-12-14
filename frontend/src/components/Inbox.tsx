@@ -108,7 +108,7 @@ export default function Inbox({ backendURL, userID }: InboxProps) {
     />
   }
 
-  if (chats) {  
+  if (chats && chats.length > 0) {  
     const filterChats = (text: string) => {
       text = text.toLowerCase();
 
