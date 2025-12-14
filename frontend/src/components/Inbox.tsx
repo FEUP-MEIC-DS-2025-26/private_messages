@@ -1,4 +1,4 @@
-import { Divider, List, ListItem } from '@mui/material';
+import { Divider, List, ListItem, Box, Typography } from '@mui/material';
 import { Fragment } from 'react/jsx-runtime';
 import { useEffect, useState } from 'react';
 
@@ -100,7 +100,7 @@ export default function Inbox({ backendURL, userID }: InboxProps) {
     }
   }, []);
   
-  if (chatError != null) {
+  if (chatError) {
     return <ErrorPage
       message="It seems you are not supposed to see this..."
       error={chatError}
@@ -108,40 +108,55 @@ export default function Inbox({ backendURL, userID }: InboxProps) {
     />
   }
 
-  const filterChats = (text: string) => {
-    text = text.toLowerCase();
+  if (chats) {  
+    const filterChats = (text: string) => {
+      text = text.toLowerCase();
 
-    setChats(
-      chats.map((chat) => ({
-        ...chat,
-        visible:
-          chat.name.toLowerCase().includes(text) ||
-          chat.username.toLowerCase().includes(text) ||
-          chat.product.toLowerCase().includes(text),
-      })),
+      setChats(
+        chats.map((chat) => ({
+          ...chat,
+          visible:
+            chat.name.toLowerCase().includes(text) ||
+            chat.username.toLowerCase().includes(text) ||
+            chat.product.toLowerCase().includes(text),
+        })),
+      );
+    };
+
+    return (
+      <>
+        <SearchBar filter={filterChats} />
+        <List sx={{ width: 1 }}>
+          {chats
+            .filter(({ visible }) => visible)
+            .map((chat: ChatPreviewProps, index: number) => (
+              <Fragment key={`chat-${chat.id}`}>
+                {/** chat preview */}
+                <ListItem sx={{ py: 0 }}>
+                  <ChatPreview {...chat} />
+                </ListItem>
+
+                {/** divider */}
+                {index + 1 < chats.length && (
+                  <Divider variant="middle" component="li" aria-hidden />
+                )}
+              </Fragment>
+            ))}
+        </List>
+      </>
     );
-  };
-
-  return (
-    <>
-      <SearchBar filter={filterChats} />
-      <List sx={{ width: 1 }}>
-        {chats
-          .filter(({ visible }) => visible)
-          .map((chat: ChatPreviewProps, index: number) => (
-            <Fragment key={`chat-${chat.id}`}>
-              {/** chat preview */}
-              <ListItem sx={{ py: 0 }}>
-                <ChatPreview {...chat} />
-              </ListItem>
-
-              {/** divider */}
-              {index + 1 < chats.length && (
-                <Divider variant="middle" component="li" aria-hidden />
-              )}
-            </Fragment>
-          ))}
-      </List>
-    </>
-  );
+  } else {
+    return <Box
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Typography variant="h4">No chats to display.</Typography>
+      <Typography variant="h5">Please come back later when you've begun chatting.</Typography>
+    </Box>;
+  }
 }
