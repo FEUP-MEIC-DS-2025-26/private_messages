@@ -1,6 +1,6 @@
 import { Divider, List, ListItem } from '@mui/material';
 import { Fragment } from 'react/jsx-runtime';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import ChatPreview, { ChatPreviewProps } from './ChatPreview';
 import SearchBar from './SearchBar';
@@ -85,22 +85,27 @@ async function getChats(
 }
 
 export default function Inbox({ backendURL, userID }: InboxProps) {
-  const [chats, setChats] = useState<ChatPreviewProps[]>([]);
+  const [chats, setChats] = useState<ChatPreviewProps[] | null>(null);
+  const [chatError, setChatError] = useState<Error | null>(null);
 
-  if (chats.length == 0) {
-    try {
-      getChats(`${backendURL}/api/chat`, userID).then((chacha20_poly1305) => {
-        setChats(chacha20_poly1305);
-      });
-    } catch (e) {
-      return (
-        <ErrorPage
-          message="It seems you are not supposed to see this..."
-          error={e}
-          redirectURL={`${backendURL}/auth`}
-        />
-      );
+  useEffect(() => {
+    if (chats == null) {
+      try {
+        getChats(`${backendURL}/api/chat`, userID).then((chacha20_poly1305) => {
+          setChats(chacha20_poly1305);
+        });
+      } catch (e: any) {
+        setChatError(e);
+      }
     }
+  }, []);
+  
+  if (chatError != null) {
+    return <ErrorPage
+      message="It seems you are not supposed to see this..."
+      error={chatError}
+      redirectURL={`${backendURL}/auth`}
+    />
   }
 
   const filterChats = (text: string) => {
@@ -121,19 +126,21 @@ export default function Inbox({ backendURL, userID }: InboxProps) {
     <>
       <SearchBar filter={filterChats} />
       <List sx={{ width: 1 }}>
-        {chats.filter(({ visible }) => visible).map((chat: ChatPreviewProps, index: number) => (
-          <Fragment key={`chat-${chat.id}`}>
-            {/** chat preview */}
-            <ListItem sx={{ py: 0 }}>
-              <ChatPreview {...chat} />
-            </ListItem>
-  
-            {/** divider */}
-            {index + 1 < chats.length && (
-              <Divider variant="middle" component="li" aria-hidden />
-            )}
-          </Fragment>
-        ))}
+        {chats
+          .filter(({ visible }) => visible)
+          .map((chat: ChatPreviewProps, index: number) => (
+            <Fragment key={`chat-${chat.id}`}>
+              {/** chat preview */}
+              <ListItem sx={{ py: 0 }}>
+                <ChatPreview {...chat} />
+              </ListItem>
+
+              {/** divider */}
+              {index + 1 < chats.length && (
+                <Divider variant="middle" component="li" aria-hidden />
+              )}
+            </Fragment>
+          ))}
       </List>
     </>
   );

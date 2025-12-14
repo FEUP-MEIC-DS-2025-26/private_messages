@@ -12,9 +12,7 @@ import { fetcher, login } from '../utils';
 
 interface ChatProps {
   backendURL: string;
-  id: number;
   userID: number;
-  goToInbox: () => void;
 }
 
 /**
