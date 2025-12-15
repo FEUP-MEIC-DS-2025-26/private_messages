@@ -11,7 +11,7 @@ export interface ChatPreviewProps {
   userID: number;
   name: string;
   username: string;
-  lastMessage: UserMessageProps;
+  lastMessage: UserMessageProps | null;
   profilePictureURL: string;
   unreadMessages: number;
   product: string;
@@ -91,10 +91,10 @@ export default function ChatPreview({
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              fontStyle: lastMessage.isFromUser ? 'italic' : 'normal',
+              fontStyle: lastMessage ? (lastMessage.isFromUser ? 'italic' : 'normal') : 'normal',
             }}
           >
-            {lastMessage.content}
+            {lastMessage ? lastMessage.content : ''}
           </Typography>
           {/** last message timestamp */}
           <Typography
@@ -106,7 +106,7 @@ export default function ChatPreview({
               textOverflow: 'ellipsis',
             }}
           >
-            {formatDate(lastMessage.timestamp)}
+            {lastMessage ? formatDate(lastMessage.timestamp) : ''}
           </Typography>
         </Box>
       </Box>

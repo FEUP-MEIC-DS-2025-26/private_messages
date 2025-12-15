@@ -43,22 +43,26 @@ async function getChats(
   );
 
   // fetch the last message from each conversation
-  const lastMessages: UserMessageProps[] = await Promise.all(
+  const lastMessages: (UserMessageProps | null)[] = await Promise.all(
     conversationIDs.map((id: number) =>
       fetcher(`${URL}/conversation/${id}/latest`)
-        .then(({ id }) => id)
-        .then((messageID: number) => fetcher(`${URL}/message/${messageID}`))
-        .then(({ content }) => content)
-        .then((content) => {
-          const message = content.msg;
-
-          return {
-            isFromUser: content.sender_jsid === userID,
-            content: message.contents,
-            timestamp: new Date(message.timestamp),
-            visible: true,
-          };
-        }),
+        .then(({ id }: { id: number | null }) => {
+          if (id) {
+            return fetcher(`${URL}/message/${id}`)
+              .then(({ content }) => content)
+              .then((content) => {
+                const message = content.msg;
+                return {
+                  isFromUser: content.sender_jsid === userID,
+                  content: message.contents,
+                  timestamp: new Date(message.timestamp),
+                  visible: true,
+                };
+              });
+          } else {
+            return null
+          }
+        })
     ),
   );
 
