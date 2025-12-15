@@ -6,6 +6,7 @@ use crate::{
         Database,
         sqlite::{
             ConversationId, DbError, Message, MessageId, Product, ProductId, SQLiteDB, UserId,
+            UserProfile,
         },
     },
     jumpseller::{self, JumpSellerErr},
@@ -52,8 +53,42 @@ async fn jumpseller_update_user(
     js: &jumpseller::Client,
     user_id: i64,
 ) -> Result<(), DbError> {
-    if let Ok(profile) = js.get_user(user_id).await.w() {
-        db.write().await.add_user(&profile).await.w()?;
+    match js.get_user(user_id).await.w() {
+        Ok(profile) => {
+            db.write().await.add_user(&profile).await.w()?;
+        }
+        Err(JumpSellerErr::ResponseErr(_, Some(reqwest::StatusCode::NOT_FOUND))) => {
+            // User not found
+            let found = db
+                .read()
+                .await
+                .get_user_profile(&UserId(user_id))
+                .await
+                .w()
+                .is_ok();
+            if !found {
+                let profile =
+                    UserProfile::new(user_id, "notfound".to_string(), "Not Found".to_string());
+                db.write().await.add_user(&profile).await.w()?;
+            }
+        }
+        Err(_) => {
+            let found = db
+                .read()
+                .await
+                .get_user_profile(&UserId(user_id))
+                .await
+                .w()
+                .is_ok();
+            if !found {
+                let profile = UserProfile::new(
+                    user_id,
+                    "js_error".to_string(),
+                    "JumpSeller Failure".to_string(),
+                );
+                db.write().await.add_user(&profile).await.w()?;
+            }
+        }
     }
     Ok(())
 }
