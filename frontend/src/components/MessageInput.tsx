@@ -1,23 +1,24 @@
-import { useRef, useState } from 'react';
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
-import { useSWRConfig } from 'swr';
-
-// icons
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPaperPlane, faSmile } from '@fortawesome/free-solid-svg-icons';
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react';
 import {
   Box,
   IconButton,
   InputAdornment,
   Popover,
   TextField,
+  useTheme,
 } from '@mui/material';
+import { useRef, useState } from 'react';
+import { useSWRConfig } from 'swr';
+
+// icons
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPaperPlane, faSmile } from '@fortawesome/free-solid-svg-icons';
 
 interface MessageInputProps {
   /** The URL that points to the backend. */
   backendURL: string;
   /** The unique chat identifier. */
-  id: number;
+  id: string;
   updateMessages: (latestMessageID: number) => void;
 }
 
@@ -29,13 +30,14 @@ export default function MessageInput({
   id,
   updateMessages,
 }: MessageInputProps) {
+  const theme = useTheme();
+  const { mutate } = useSWRConfig(); // to force SWR to refetch the messages
+
+  // variables for the emoji anchor
   const inputRef = useRef<HTMLInputElement>(null);
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLButtonElement | null>(
     null,
   );
-
-  // to force SWR to refetch the messages
-  const { mutate } = useSWRConfig();
 
   /**
    * A function for sending messages.
@@ -133,7 +135,10 @@ export default function MessageInput({
           horizontal: 'right',
         }}
       >
-        <EmojiPicker onEmojiClick={handleEmojiClick} />
+        <EmojiPicker
+          onEmojiClick={handleEmojiClick}
+          theme={theme.palette.mode as Theme}
+        />
       </Popover>
     </Box>
   );

@@ -1,3 +1,8 @@
+resource "google_storage_bucket" "database" {
+  name = var.bucket_name
+  location = var.region
+}
+
 resource "google_cloud_run_v2_service" "backend" {
   name     = var.backend_name
   location = var.region
@@ -13,6 +18,20 @@ resource "google_cloud_run_v2_service" "backend" {
       env {
         name = "GOOGLE_APPLICATION_CREDENTIALS"
         value = "./local/pubsub.json"
+      }
+      
+      volume_mounts {
+        name = var.bucket_name
+        mount_path = "/mnt/database"
+      }
+    }
+    
+    volumes {
+      name = var.bucket_name
+      gcs {
+        bucket = var.bucket_name
+        read_only = false
+        // mount_options = ???
       }
     }
   }
@@ -47,6 +66,11 @@ resource "google_cloud_run_v2_service" "frontend" {
       env {
         name  = "PUBLIC_BACKEND_URL"
         value = "https://api.madeinportugal.store"
+      }
+      
+      env {
+        name  = "NODE_ENV"
+        value = "production"
       }
     }
   }

@@ -22,9 +22,15 @@ impl SQLiteDB {
             Sqlite::create_database(url).await?;
         }
         let rng = StdRng::from_os_rng();
-        let pool = SqlitePoolOptions::new().connect_lazy(url)?;
+        let pool = SqlitePoolOptions::new().connect(url).await?;
+
         let mut db = Self { pool, suite, rng };
         db.set_schema().await?;
+
+        let admin_profile = UserProfile::new_clone(1, "admin", "Admin");
+
+        db.add_user(&admin_profile).await?;
+
         Ok(db)
     }
 

@@ -1,29 +1,25 @@
 import { Badge, Box, Divider, ListItemButton, Typography } from '@mui/material';
+import { Link } from 'react-router-dom';
 
 // components
 import ProfilePicture from './ProfilePicture';
+import { UserMessageProps } from './UserMessage';
+import { formatDate } from '../utils';
 
 export interface ChatPreviewProps {
-  /** The unique identifier of the conversation. */
   id: number;
-  /** The display name of the user. */
+  userID: number;
   name: string;
-  /** The user's username. */
   username: string;
-  /** The URL of the user's profile picture. */
+  lastMessage: UserMessageProps | null;
   profilePictureURL: string;
-  /** The number of unread messages from the user. */
   unreadMessages: number;
-  /** The last message sent by the user */
-  lastMessage: string;
-  /** The product the conversation pertains to */
   product: string;
+  visible: boolean;
 }
 
-/**
- * A preview of the chat with a given user.
- */
 export default function ChatPreview({
+  id,
   name,
   username,
   profilePictureURL,
@@ -33,6 +29,8 @@ export default function ChatPreview({
 }: ChatPreviewProps) {
   return (
     <ListItemButton
+      component={Link}
+      to={String(id)}
       sx={{
         display: 'flex',
         alignItems: 'center',
@@ -51,7 +49,7 @@ export default function ChatPreview({
         <ProfilePicture name={name} URL={profilePictureURL} size={56} />
       </Badge>
 
-      <Box>
+      <Box sx={{ minWidth: 0, flexGrow: 1 }}>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           {/** display name */}
           <Typography component="strong" variant="body1" fontWeight="bold">
@@ -77,8 +75,40 @@ export default function ChatPreview({
             {product}
           </Typography>
         </Box>
-        {/** last message */}
-        <Typography variant="body2">{lastMessage}</Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 3,
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          {/** last message */}
+          <Typography
+            variant="body2"
+            sx={{
+              flexGrow: 1,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              fontStyle: lastMessage ? (lastMessage.isFromUser ? 'italic' : 'normal') : 'normal',
+            }}
+          >
+            {lastMessage ? lastMessage.content : ''}
+          </Typography>
+          {/** last message timestamp */}
+          <Typography
+            variant="caption"
+            sx={{
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {lastMessage ? formatDate(lastMessage.timestamp) : ''}
+          </Typography>
+        </Box>
       </Box>
     </ListItemButton>
   );
