@@ -112,11 +112,11 @@ export default function Chat({ backendURL, userID }: ChatProps) {
       });
     }
 
-    // if (messages.length == 0) {
-    //   getMessages(url, userID).then((msgs) => {
-    //     setMessages(msgs);
-    //   });
-    // }
+    if (messages.length == 0) {
+      getMessages(url, userID).then((msgs) => {
+        setMessages(msgs);
+      });
+    }
 
     useEffect(() => {
       const intervalId = setInterval(async () => {
